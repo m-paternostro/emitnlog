@@ -56,6 +56,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Skip if no changesets
+        id: check_changesets
+        run: |
+          if ! ls .changeset/*.md > /dev/null 2>&1; then
+            echo "No changeset files found. Skipping this job."
+            exit 0
+          fi
+
       - name: Setup NodeJs
         uses: actions/setup-node@v4
         with:
