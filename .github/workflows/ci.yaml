@@ -68,6 +68,6 @@ jobs:
       - name: Run Changeset
         uses: changesets/action@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
         with:
           publish: false
