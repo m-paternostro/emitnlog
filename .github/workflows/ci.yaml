@@ -56,24 +56,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Skip if no changesets
+      - name: Look for changesets
         id: check_changesets
         run: |
-          if ! ls .changeset/*.md > /dev/null 2>&1; then
+          if ls .changeset/*.md > /dev/null 2>&1; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+          else
             echo "No changeset files found. Skipping this job."
-            exit 0
+            echo "has_changesets=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup NodeJs
+        if: steps.check_changesets.outputs.has_changesets == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
+        if: steps.check_changesets.outputs.has_changesets == 'true'
         run: npm ci
 
       - name: Run Changeset
+        if: steps.check_changesets.outputs.has_changesets == 'true'
         uses: changesets/action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.CHANGESETS_TOKEN }}
