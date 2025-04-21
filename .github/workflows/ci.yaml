@@ -45,37 +45,6 @@ jobs:
       - name: Validate (runs everything)
         run: npm run validate
 
-      - name: Code Coverage Report
-        uses: ./.github/actions/code-coverage
-
-      - name: Setup Pages
-        if: github.ref == 'refs/heads/main'
-        uses: actions/configure-pages@v3
-
-      - name: Upload artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './coverage'
-
-  deploy-coverage:
-    if: github.ref == 'refs/heads/main'
-    needs: validate
-
-    permissions:
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
   changeset:
     name: Changeset
     runs-on: ubuntu-latest
