@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate (build, lint, format, test, smoke-test)
+      - name: Validate (runs everything)
         run: npm run validate
 
       - name: Code Coverage Report

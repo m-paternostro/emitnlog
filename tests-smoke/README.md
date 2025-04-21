@@ -33,7 +33,7 @@ npm run test:smoke:build
 This will:
 
 1. Pack the package into a tarball (building first if using test:smoke:build)
-2. Install it in the smoke-tests directory
+2. Install it in the `tests-smoke` directory
 3. Run both ESM and CJS tests
 4. Clean up afterward
 
@@ -41,10 +41,10 @@ You can also run the script directly:
 
 ```bash
 # Run smoke tests using current build
-node smoke-tests/run.js
+node tests-smoke/run.js
 
 # Run smoke tests with a fresh build
-node smoke-tests/run.js --build
+node tests-smoke/run.js --build
 ```
 
 ## How It Works
@@ -52,6 +52,6 @@ node smoke-tests/run.js --build
 The smoke tests simulate how a real user would consume the package:
 
 1. The package is built and packed into a tarball
-2. The tarball is installed in the smoke-tests directory
+2. The tarball is installed in the `tests-smoke` directory
 3. Tests import from the installed package
 4. Tests verify that imports work and basic functionality is accessible

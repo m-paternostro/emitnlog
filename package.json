@@ -82,8 +82,8 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:coverage:open": "open ./coverage/index.html",
-    "test:smoke": "node smoke-tests/run.js",
-    "test:smoke:build": "node smoke-tests/run.js --build",
+    "test:smoke": "node tests-smoke/run.js",
+    "test:smoke:build": "node tests-smoke/run.js --build",
     "validate": "npm run build:ts && npm run build && npm run format:check && npm run lint:check",
     "postvalidate": "npm run test:coverage && npm run test:smoke"
   },
