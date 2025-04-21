@@ -56,13 +56,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Look for changesets
+      - name: Check changesets
         id: check_changesets
+        shell: bash
         run: |
+          echo "Checking for changesets..."
           if ls .changeset/*.md > /dev/null 2>&1; then
             echo "has_changesets=true" >> $GITHUB_OUTPUT
           else
-            echo "No changeset files found. Skipping this job."
+            echo "No changeset files found."
             echo "has_changesets=false" >> $GITHUB_OUTPUT
           fi
 
