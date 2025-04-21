@@ -22,5 +22,5 @@ No tags, no manual version bumps, no manual publishing — it's all handled for 
 Before merging a PR with public changes (new features, fixes, etc.), run:
 
 ```bash
-npx changeset
+npm run changeset
 ```
