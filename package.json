@@ -90,13 +90,13 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.2",
-    "@eslint/js": "^9.24.0",
+    "@eslint/js": "^9.25.1",
     "@jest/globals": "^29.7.0",
     "@stylistic/eslint-plugin": "^4.2.0",
     "@types/eslint-config-prettier": "^6.11.3",
-    "eslint": "^9.24.0",
+    "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
-    "eslint-import-resolver-typescript": "^4.3.2",
+    "eslint-import-resolver-typescript": "^4.3.4",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-no-only-tests": "^3.3.0",
     "eslint-plugin-require-node-import-prefix": "^0.0.2",
@@ -111,6 +111,6 @@
     "tsup": "^8.4.0",
     "type-fest": "^4.39.1",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.29.1"
+    "typescript-eslint": "^8.31.0"
   }
 }
