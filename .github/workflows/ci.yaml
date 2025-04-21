@@ -1,0 +1,99 @@
+name: CI
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 20
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.vscode/**'
+      - 'coverage/**'
+      - '**.md'
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    paths-ignore:
+      - '.vscode/**'
+      - 'coverage/**'
+      - 'docs/**'
+      - '**.md'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJs
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate (build, lint, format, test, smoke-test)
+        run: npm run validate
+
+      - name: Code Coverage Report
+        uses: ./.github/actions/code-coverage
+
+      - name: Setup Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: './coverage'
+
+  deploy-coverage:
+    if: github.ref == 'refs/heads/main'
+    needs: validate
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
+
+  changeset:
+    name: Changeset
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJs
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Changeset
+        uses: changesets/action@v1
+        with:
+          publish: false

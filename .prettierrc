@@ -1,0 +1,11 @@
+{
+  "plugins": ["prettier-plugin-jsdoc"],
+  "singleQuote": true,
+  "trailingComma": "all",
+  "semi": true,
+  "printWidth": 120,
+  "objectWrap": "collapse",
+  "jsdocCommentLineStrategy": "multiline",
+  "jsdocPreferCodeFences": true,
+  "tsdoc": true
+}

@@ -1,0 +1,8 @@
+# Generated package file
+*.tgz
+
+# Dependencies
+node_modules/
+
+# Coverage
+coverage/

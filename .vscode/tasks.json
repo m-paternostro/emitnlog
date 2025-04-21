@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "task: dev:restart:eslint",
+      "detail": "Restarts the ESLint server",
+      "command": "${command:eslint.restart}"
+    },
+    {
+      "label": "task: dev:restart:typescript",
+      "detail": "Restarts the TS server",
+      "command": "${command:typescript.restartTsServer}"
+    },
+    { "label": "task: dev:stop:jest", "detail": "Stops Jest", "command": "${command:io.orta.jest.stop}" },
+    { "label": "task: dev:start:jest", "detail": "Starts Jest", "command": "${command:io.orta.jest.start}" },
+    {
+      "label": "task: dev:restart:jest",
+      "detail": "Restarts Jest",
+      "dependsOrder": "sequence",
+      "dependsOn": ["task: dev:stop:jest", "task: dev:start:jest"]
+    },
+    {
+      "label": "task: dev:restart:servers",
+      "detail": "Restarts both the TS and ESLint servers",
+      "dependsOrder": "sequence",
+      "dependsOn": ["task: dev:restart:typescript", "task: dev:restart:eslint"]
+    }
+  ]
+}
