@@ -1,6 +1,6 @@
 {
   "name": "emitnlog",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Emit n' Log: a library with a modern implementation of an event notification and a logging system",
   "author": {
     "name": "Marcelo Paternostro",
