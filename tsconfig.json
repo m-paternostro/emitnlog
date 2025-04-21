@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.prod.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
+}
