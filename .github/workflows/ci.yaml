@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           echo "Checking for changesets..."
-          if ls .changeset/*.md > /dev/null 2>&1; then
+          if [ -n "$(find .changeset -name '*.md' ! -name 'README.md')" ]; then
             echo "has_changesets=true" >> $GITHUB_OUTPUT
           else
             echo "No changeset files found."
