@@ -432,7 +432,7 @@ console.log(result); // 'done'
 
 Useful for coordinating async operations manually, like event-driven triggers or testing deferred resolution.
 
-### poll
+### startPolling
 
 Continuously runs an operation at intervals until stopped or a condition is met:
 
