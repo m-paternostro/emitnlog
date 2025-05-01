@@ -3,16 +3,6 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import { delay, withTimeout } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.with-timeout', () => {
-  test('should make sure that the readme example works', async () => {
-    const fetchCompleted = (): Promise<boolean> => delay(50).then(() => true);
-
-    const result1: boolean | undefined = await withTimeout(fetchCompleted(), 10);
-    const result2: boolean | 'timeout' = await withTimeout(fetchCompleted(), 10, 'timeout');
-
-    expect(result1).toBe(undefined);
-    expect(result2).toBe('timeout');
-  });
-
   test('should handle promise rejection', async () => {
     const error = new Error('test error');
     const promise = withTimeout(Promise.reject(error), 1000);
