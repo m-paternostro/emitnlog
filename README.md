@@ -362,6 +362,21 @@ function handleStatus(status: Status): string {
 }
 ```
 
+### isNotNullable
+
+Type guard for filtering out `null` and `undefined` values:
+
+```ts
+import { isNotNullable } from 'emitnlog/utils';
+
+const values: Array<string | null | undefined> = ['a', null, 'b', undefined, 'c'];
+const filtered: string[] = values.filter(isNotNullable);
+
+console.log(filtered); // ['a', 'b', 'c']
+```
+
+Useful when working with APIs that return possibly nullable values, or when narrowing types for safe usage.
+
 ---
 
 ## 📘 API Docs

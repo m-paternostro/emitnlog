@@ -1,3 +1,5 @@
+import { isNotNullable } from './is-not-nullable';
+
 /**
  * Options for the stringify function
  */
@@ -59,7 +61,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
 
     const stringifyInternal = (val: unknown, depth = 0): string => {
       try {
-        if (depth > maxDepth && typeof val === 'object' && val !== null) {
+        if (depth > maxDepth && typeof val === 'object' && isNotNullable(val)) {
           return Array.isArray(val) ? `Array(${val.length})` : '[object Object]';
         }
 
@@ -143,7 +145,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
                     try {
                       if (key === '') return val2;
 
-                      if (typeof val2 === 'object' && val2 !== null) {
+                      if (typeof val2 === 'object' && isNotNullable(val2)) {
                         if (seen.has(val2)) {
                           return '[Circular]';
                         }
