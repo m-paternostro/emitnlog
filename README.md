@@ -1,3 +1,9 @@
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/m-paternostro/emitnlog/blob/main/LICENSE)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/m-paternostro/emitnlog)](https://github.com/m-paternostro/emitnlog/releases)
+[![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?logo=npm&logoColor=white)](https://www.npmjs.com/package/emitnlog)
+[![Version](https://img.shields.io/github/package-json/v/m-paternostro/emitnlog)](https://github.com/m-paternostro/emitnlog/blob/main/package.json)
+[![CI](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml/badge.svg)](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml)
+
 # 🚦 Emit n' Log
 
 A modern, type-safe library for logging and event notifications in JavaScript/TypeScript apps.
