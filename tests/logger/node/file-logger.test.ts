@@ -366,7 +366,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     });
 
     test('should retry on appendFile failure', async () => {
-      const logger = new FileLogger({ filePath: testLogFile, maxRetries: 3, retryDelayMs: 10 });
+      const logger = new FileLogger({ filePath: testLogFile, retryLimit: 3, retryDelayMs: 10 });
 
       logger.info('This should eventually succeed');
 

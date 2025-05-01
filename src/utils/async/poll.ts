@@ -4,8 +4,8 @@ import { createDeferredValue } from './deferred-value.ts';
 import { delay } from './delay.ts';
 
 /**
- * Polls a function at regular intervals until a condition is met, a timeout occurs, or it's manually stopped. Returns
- * both a method to stop polling and a promise that resolves with the last result.
+ * Polls a function at regular intervals until a condition is met, a timeout occurs, maximum retries are reached, or
+ * it's manually stopped. Returns both a method to stop polling and a promise that resolves with the last result.
  *
  * The polling operation handles both synchronous and asynchronous (Promise-returning) functions. If the operation
  * throws an error or rejects, polling continues but the error is logged. If a previous asynchronous operation is still
@@ -52,6 +52,17 @@ import { delay } from './delay.ts';
  * }
  * ```
  *
+ * @example Polling with maximum retries
+ *
+ * ```ts
+ * const { wait } = startPolling(() => checkJobStatus(jobId), 2000, {
+ *   retryLimit: 5, // Stop after 5 attempts
+ *   logger: console,
+ * });
+ *
+ * const finalStatus = await wait;
+ * ```
+ *
  * @example Manual control of polling
  *
  * ```ts
@@ -71,6 +82,7 @@ import { delay } from './delay.ts';
  * @param options Optional configuration
  * @param options.invokeImmediately Whether to invoke the operation immediately or instead wait for the first interval
  * @param options.timeout Maximum time in milliseconds to poll before auto-stopping
+ * @param options.retryLimit Maximum number of times to call the operation before auto-stopping
  * @param options.interrupt Function that evaluates each result and returns true if polling should stop
  * @param options.logger Logger to capture polling events and errors
  * @returns An object with a `close()` method to manually stop polling and a `wait` Promise that resolves with the last
@@ -83,14 +95,15 @@ export const startPolling = <T, const V = undefined>(
     readonly invokeImmediately?: boolean;
     readonly timeout?: number;
     readonly timeoutValue?: V;
-    readonly interrupt?: (result: unknown) => boolean;
+    readonly retryLimit?: number;
+    readonly interrupt?: (result: unknown, invocationIndex: number) => boolean;
     readonly logger?: Logger;
   },
 ): { readonly wait: Promise<T | V | undefined>; readonly close: () => Promise<void> } => {
   const deferred = createDeferredValue<T | V | undefined>();
 
   let resolving = false;
-  let invocations = 0;
+  let invocationIndex = -1;
   let active = true;
   let lastResult: T | V | undefined;
 
@@ -101,9 +114,17 @@ export const startPolling = <T, const V = undefined>(
       return;
     }
 
-    invocations++;
+    invocationIndex++;
+
+    // Check if we've reached the maximum number of retries
+    if (options?.retryLimit !== undefined && invocationIndex >= options.retryLimit) {
+      logger.d`emitnlog.poll: reached maximum retries (${options.retryLimit})`;
+      void close();
+      return;
+    }
+
     try {
-      logger.d`emitnlog.poll: invoking the operation for the ${invocations} time`;
+      logger.d`emitnlog.poll: invoking the operation for the ${invocationIndex + 1} time`;
       const result = operation();
 
       if (result instanceof Promise) {
@@ -112,7 +133,7 @@ export const startPolling = <T, const V = undefined>(
           .then((value) => {
             lastResult = value;
 
-            if (options?.interrupt && options.interrupt(value)) {
+            if (options?.interrupt && options.interrupt(value, invocationIndex)) {
               void close();
             }
           })
@@ -128,7 +149,7 @@ export const startPolling = <T, const V = undefined>(
 
       lastResult = result;
 
-      if (options?.interrupt && options.interrupt(result)) {
+      if (options?.interrupt && options.interrupt(result, invocationIndex)) {
         void close();
         return;
       }
@@ -137,15 +158,16 @@ export const startPolling = <T, const V = undefined>(
     }
   };
 
-  const close = (): Promise<void> => {
+  const close = async (): Promise<void> => {
     if (active) {
       active = false;
 
-      logger.d`emitnlog.poll: closing the poll after ${invocations} invocations`;
+      logger.d`emitnlog.poll: closing the poll after ${invocationIndex + 1} invocations`;
       clearInterval(intervalId);
       deferred.resolve(lastResult);
     }
-    return deferred.promise.then(() => undefined);
+
+    await deferred.promise;
   };
 
   if (options?.invokeImmediately) {

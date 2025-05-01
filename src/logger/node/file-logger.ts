@@ -45,7 +45,7 @@ export type FileLoggerOptions = {
   /**
    * Number of retries to attempt for file operations (default: 0)
    */
-  maxRetries?: number;
+  retryLimit?: number;
 
   /**
    * Delay between retries in milliseconds (default: 500)
@@ -86,7 +86,7 @@ export type FileLoggerOptions = {
  *   keepAnsiColors: true, // Preserve color codes
  *   omitArgs: true, // Don't include additional arguments
  *   errorHandler: (err) => myCustomErrorReporter(err),
- *   maxRetries: 3, // Retry file operations up to 3 times
+ *   retryLimit: 3, // Retry file operations up to 3 times
  *   retryDelayMs: 500, // Wait 500ms between retries
  * });
  *
@@ -116,7 +116,7 @@ export type FileLoggerOptions = {
  * // Create a file logger with retry capabilities (useful for unreliable storage)
  * const reliableLogger = new FileLogger({
  *   filePath: '/network/share/logs/app.log',
- *   maxRetries: 5, // Retry up to 5 times
+ *   retryLimit: 5, // Retry up to 5 times
  *   retryDelayMs: 1000, // Wait 1 second between retries
  *   errorHandler: (err) => {
  *     console.error('Failed to write log after multiple retries:', err);
@@ -157,7 +157,7 @@ export class FileLogger extends BaseLogger {
   /**
    * The maximum number of retries for file operations
    */
-  private readonly maxRetries: number;
+  private readonly retryLimit: number;
 
   /**
    * The delay between retries in milliseconds
@@ -197,7 +197,7 @@ export class FileLogger extends BaseLogger {
     const keepAnsiColors = isString ? false : (filePathOrOptions.keepAnsiColors ?? false);
     const omitArgs = isString ? false : (filePathOrOptions.omitArgs ?? false);
     const flushDelayMs = isString ? 20 : (filePathOrOptions.flushDelayMs ?? 20);
-    const maxRetries = isString ? 0 : (filePathOrOptions.maxRetries ?? 0);
+    const retryLimit = isString ? 0 : (filePathOrOptions.retryLimit ?? 0);
     const retryDelayMs = isString ? 500 : (filePathOrOptions.retryDelayMs ?? 500);
     const errorHandler = isString ? undefined : filePathOrOptions.errorHandler;
 
@@ -211,7 +211,7 @@ export class FileLogger extends BaseLogger {
     this.keepAnsiColors = keepAnsiColors;
     this.omitArgs = omitArgs;
     this.flushDelayMs = flushDelayMs;
-    this.maxRetries = maxRetries;
+    this.retryLimit = retryLimit;
     this.retryDelayMs = retryDelayMs;
     this.errorHandler =
       errorHandler ??
@@ -262,7 +262,7 @@ export class FileLogger extends BaseLogger {
   }
 
   private async appendFile(content: string): Promise<void> {
-    if (this.maxRetries <= 0) {
+    if (this.retryLimit <= 0) {
       await fs.appendFile(this.filePath, content, 'utf8');
       return;
     }
@@ -277,12 +277,12 @@ export class FileLogger extends BaseLogger {
         }
       },
       this.retryDelayMs,
-      { timeout: this.retryDelayMs * this.maxRetries, interrupt: (result) => result === true, invokeImmediately: true },
+      { retryLimit: this.retryLimit, interrupt: (result) => result === true, invokeImmediately: true },
     );
 
     const result = await wait;
     if (result !== true) {
-      throw new Error(`Failed to write to log file ${this.filePath} after ${this.maxRetries} attempts`);
+      throw new Error(`Failed to write to log file ${this.filePath} after ${this.retryLimit} attempts`);
     }
   }
 

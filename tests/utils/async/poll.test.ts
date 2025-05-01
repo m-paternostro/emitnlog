@@ -188,14 +188,14 @@ describe('emitnlog.utils.poll', () => {
 
     expect(asyncOperation).toHaveBeenCalledTimes(1);
     expect(interrupt).toHaveBeenCalledTimes(1);
-    expect(interrupt).toHaveBeenCalledWith('continue');
+    expect(interrupt).toHaveBeenCalledWith('continue', 0);
 
     jest.advanceTimersByTime(1000);
     await flushFakeTimePromises();
 
     expect(asyncOperation).toHaveBeenCalledTimes(2);
     expect(interrupt).toHaveBeenCalledTimes(2);
-    expect(interrupt).toHaveBeenCalledWith('stop');
+    expect(interrupt).toHaveBeenCalledWith('stop', 1);
 
     // No more calls after interrupt returns true
     jest.advanceTimersByTime(5000);
@@ -292,5 +292,64 @@ describe('emitnlog.utils.poll', () => {
     expect(logger).toHaveLoggedWith('debug', /closing the poll after \d+ invocations/);
 
     await close();
+  });
+
+  test('should stop polling after retryLimit is reached', async () => {
+    const logger = createTestLogger();
+    const operation = jest.fn().mockReturnValue('result');
+
+    const { wait } = startPolling(operation, 1000, { retryLimit: 3, logger });
+
+    expect(operation).toHaveBeenCalledTimes(0);
+
+    jest.advanceTimersByTime(1000);
+    expect(operation).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(1000);
+    expect(operation).toHaveBeenCalledTimes(2);
+
+    jest.advanceTimersByTime(1000);
+    expect(operation).toHaveBeenCalledTimes(3);
+
+    // This should trigger retryLimit
+    jest.advanceTimersByTime(1000);
+    await flushFakeTimePromises();
+
+    // No more calls after retryLimit
+    jest.advanceTimersByTime(5000);
+    expect(operation).toHaveBeenCalledTimes(3);
+    expect(logger).toHaveLoggedWith('debug', 'reached maximum retries (3)');
+
+    await expect(wait).resolves.toBe('result');
+  });
+
+  test('should stop polling based on the earliest of retryLimit, timeout or interrupt', async () => {
+    const logger = createTestLogger();
+    const operation = jest
+      .fn()
+      .mockReturnValueOnce('first')
+      .mockReturnValueOnce('second')
+      .mockReturnValueOnce('stop')
+      .mockReturnValue('should not reach');
+
+    const interrupt = jest.fn((val: unknown): boolean => val === 'stop');
+
+    const { wait } = startPolling(operation, 1000, { retryLimit: 5, timeout: 5000, interrupt, logger });
+
+    jest.advanceTimersByTime(1000);
+    expect(operation).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(1000);
+    expect(operation).toHaveBeenCalledTimes(2);
+
+    jest.advanceTimersByTime(1000);
+    expect(operation).toHaveBeenCalledTimes(3);
+    await flushFakeTimePromises();
+
+    // Should have stopped on interrupt condition (third call returns 'stop')
+    jest.advanceTimersByTime(5000);
+    expect(operation).toHaveBeenCalledTimes(3);
+
+    await expect(wait).resolves.toBe('stop');
   });
 });
