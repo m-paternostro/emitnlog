@@ -6,6 +6,7 @@ import * as path from 'node:path';
 
 import { tee } from '../../../src/logger/index.ts';
 import { FileLogger } from '../../../src/logger/node/index.ts';
+import { delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.logger.node.FileLogger', () => {
   const testDir = path.join(os.tmpdir(), `file-logger-test-${Date.now()}`);
@@ -43,7 +44,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     logger.info('Test message');
 
     // Wait a bit for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(50);
 
     const content = await readLogFile();
     expect(content).toContain('Test message');
@@ -83,7 +84,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     // This would normally be colored by FormattedLogger
     logger.info('Colored message');
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(50);
 
     const content = await readLogFile();
     expect(content).not.toMatch(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/);
@@ -97,7 +98,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     logger.info('Test in nested directory');
 
     // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(50);
 
     expect(await fileExists(nestedDir)).toBe(true);
     expect(await fileExists(nestedLogFile)).toBe(true);
@@ -129,7 +130,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     // We can't directly log this, but we can use the write method which is being tested
     logger['emitLine']('debug', coloredText, []);
 
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(50);
 
     const content = await readLogFile(testLogFile + '.colors');
     // Should contain the ANSI codes
@@ -150,7 +151,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       forcedErrorLogger.info('This should trigger error handling');
 
       // Wait for async operations
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await delay(100);
 
       // Error handler should have been called at least once
       expect(mockErrorHandler).toHaveBeenCalled();
@@ -171,8 +172,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
     // Test logging
     combinedLogger.info('Test message for both loggers');
 
-    // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for flushing
+    await delay(50);
 
     // Verify both files have the content
     const content1 = await readLogFile(testLogFile);
@@ -193,8 +194,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
     // Log with additional arguments
     logger.info('Message with args', error, obj, primitive);
 
-    // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Wait for closing
+    await logger.close();
 
     // Read the log file
     const content = await readLogFile();
@@ -221,7 +222,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     logger.info('Message with args', { should: 'not appear' });
 
     // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(50);
 
     // Read the log file
     const content = await readLogFile();
@@ -267,7 +268,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     circularLogger.info('Circular reference test', circular);
 
     // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(50);
 
     // Read the log file
     const circularContent = await readLogFile(circularLogFile);
@@ -281,19 +282,57 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
   test('should handle null and undefined arguments', async () => {
     const logger = new FileLogger(testLogFile);
-
-    // Log with null and undefined
     logger.info('Null and undefined test', null, undefined);
 
-    // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
-
-    // Read the log file
+    await delay(50);
     const content = await readLogFile();
 
-    // Verify null and undefined were properly formatted
     expect(content).toContain('Null and undefined test');
     expect(content).toContain('null');
     expect(content).toContain('undefined');
+  });
+
+  test('should handle multiple log entries, with different delays between them', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, flushDelayMs: 10 });
+
+    for (let i = 1; i <= 50; i++) {
+      logger.info(`line ${i}`);
+    }
+
+    await delay(10);
+
+    for (let i = 51; i <= 60; i++) {
+      logger.info(`line ${i}`);
+      // eslint-disable-next-line no-await-in-loop
+      await delay(5);
+    }
+
+    for (let i = 61; i <= 70; i++) {
+      logger.info(`line ${i}`);
+      // eslint-disable-next-line no-await-in-loop
+      await delay(15);
+    }
+
+    await logger.close();
+
+    const content = await readLogFile();
+    const lines = content.split('\n');
+    expect(lines.length).toBe(71);
+    for (let i = 1; i <= 70; i++) {
+      expect(lines[i - 1]).toMatch(new RegExp(`.+ line ${i}$`));
+    }
+    expect(lines[70]).toBe('');
+  });
+
+  test('should not write after closing', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, flushDelayMs: 10 });
+
+    logger.info('Test message 1');
+    await logger.close();
+    logger.info('Test message 2');
+
+    await delay(20);
+    const content = await readLogFile();
+    expect(content).toMatch(new RegExp(`.+ Test message 1\n$`));
   });
 });

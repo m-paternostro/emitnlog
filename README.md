@@ -383,6 +383,33 @@ console.log(filtered); // ['a', 'b', 'c']
 
 Useful when working with APIs that return possibly nullable values, or when narrowing types for safe usage.
 
+### delay
+
+Waits for a specified duration before continuing:
+
+```ts
+import { delay } from 'emitnlog/utils';
+
+await delay(500); // wait 500ms
+console.log('This logs after half a second');
+```
+
+Often useful in cooldowns, stabilization intervals, and tests.
+
+### withTimeout
+
+Wraps a promise to enforce a timeout, optionally falling back to a value:
+
+```ts
+import { withTimeout } from 'emitnlog/utils';
+
+const fetchCompleted = (): Promise<boolean> => {...};
+const result1: boolean | undefined = await withTimeout(fetchCompleted(), 1000);
+const result2: boolean | 'timeout' = await withTimeout(fetchCompleted(), 1000, 'timeout');
+```
+
+Returns the original promise result if it resolves in time, otherwise returns the fallback. Helpful for safe async handling in flaky environments.
+
 ---
 
 ## 📘 API Docs

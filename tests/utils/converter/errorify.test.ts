@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { errorify } from '../../src/utils/index.ts';
+import { errorify } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.errorify', () => {
   test('should return the original error if the value is already an Error', () => {

@@ -1,4 +1,4 @@
-import { isNotNullable } from './is-not-nullable';
+import { isNotNullable } from '../common/is-not-nullable.ts';
 
 /**
  * Options for the stringify function

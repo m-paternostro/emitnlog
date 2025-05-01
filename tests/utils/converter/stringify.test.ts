@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { stringify } from '../../src/utils/index.ts';
+import { stringify } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.stringify', () => {
   test('should stringify primitive values correctly', () => {
