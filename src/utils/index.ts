@@ -1,4 +1,6 @@
+export * from './async/deferred-value.ts';
 export * from './async/delay.ts';
+export * from './async/poll.ts';
 export * from './async/with-timeout.ts';
 export * from './common/exhaustive-check.ts';
 export * from './common/is-not-nullable.ts';
