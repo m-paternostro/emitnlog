@@ -199,6 +199,7 @@ export default ts.config([
   {
     name: 'neutral',
     files: ['src/**/*.ts'],
+    languageOptions: { globals: { setTimeout: 'readonly' } },
     rules: {
       'no-restricted-imports': [
         'error',

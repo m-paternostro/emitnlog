@@ -2,8 +2,10 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { errorify } from '../../utils/errorify.ts';
-import { stringify } from '../../utils/stringify.ts';
+import { delay } from '../../utils/async/delay.ts';
+import { errorify } from '../../utils/converter/errorify.ts';
+import { stringify } from '../../utils/converter/stringify.ts';
+import { withTimeout } from '../../utils/index.ts';
 import { BaseLogger } from '../base-logger.ts';
 import { emitColorfulLine, emitLine } from '../formatter.ts';
 import type { LogLevel } from '../logger.ts';
@@ -11,7 +13,7 @@ import type { LogLevel } from '../logger.ts';
 /**
  * Configuration options for the FileLogger
  */
-export type SimpleFileLoggerOptions = {
+export type FileLoggerOptions = {
   /**
    * The minimum severity level for log entries (default: 'info')
    */
@@ -28,6 +30,11 @@ export type SimpleFileLoggerOptions = {
    * log methods will be serialized and included in the log
    */
   omitArgs?: boolean;
+
+  /**
+   * The delay in milliseconds between buffer flushes (default: 20)
+   */
+  flushDelayMs?: number;
 
   /**
    * Error handler callback for file operations If not provided, errors will be thrown
@@ -106,27 +113,48 @@ export class FileLogger extends BaseLogger {
   private readonly omitArgs: boolean;
 
   /**
-   * A promise that resolves when the directory is created
-   */
-  private readonly initPromise: Promise<void>;
-
-  /**
    * Error handler function
    */
   private readonly errorHandler: (error: unknown) => void;
 
   /**
-   * Creates a new SimpleFileLogger that writes to a file.
+   * The delay in milliseconds between buffer flushes
+   */
+  private readonly flushDelayMs: number;
+
+  /**
+   * A promise that resolves when the previous write operation is completed
+   */
+  private writePromise: Promise<void>;
+
+  /**
+   * Buffer of lines to write to the file
+   */
+  private buffer: string[] = [];
+
+  /**
+   * Whether the buffer write is scheduled
+   */
+  private flushScheduled = false;
+
+  /**
+   * Whether the logger is closed
+   */
+  private closed = false;
+
+  /**
+   * Creates a new FileLogger that writes to a file.
    *
    * @param filePathOrOptions Either a string path to the log file, or a configuration object
    */
-  public constructor(filePathOrOptions: string | ({ filePath: string } & SimpleFileLoggerOptions)) {
+  public constructor(filePathOrOptions: string | ({ filePath: string } & FileLoggerOptions)) {
     const isString = typeof filePathOrOptions === 'string';
 
     const filePath = isString ? filePathOrOptions : filePathOrOptions.filePath;
     const level = isString ? undefined : filePathOrOptions.level;
     const keepAnsiColors = isString ? false : (filePathOrOptions.keepAnsiColors ?? false);
     const omitArgs = isString ? false : (filePathOrOptions.omitArgs ?? false);
+    const flushDelayMs = isString ? 20 : (filePathOrOptions.flushDelayMs ?? 20);
     const errorHandler = isString ? undefined : filePathOrOptions.errorHandler;
 
     super(level);
@@ -137,7 +165,7 @@ export class FileLogger extends BaseLogger {
 
     this.keepAnsiColors = keepAnsiColors;
     this.omitArgs = omitArgs;
-
+    this.flushDelayMs = flushDelayMs;
     this.errorHandler =
       errorHandler ??
       ((error) => {
@@ -154,7 +182,7 @@ export class FileLogger extends BaseLogger {
       this.filePath = path.join(os.tmpdir(), filePath);
     }
 
-    this.initPromise = this.createLogDirectory().catch(this.errorHandler);
+    this.writePromise = this.createLogDirectory().catch(this.errorHandler);
   }
 
   /**
@@ -166,24 +194,61 @@ export class FileLogger extends BaseLogger {
   }
 
   protected override emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
+    if (this.closed) {
+      return;
+    }
+
     const content = this.keepAnsiColors
       ? emitColorfulLine(level, message)
       : emitLine(level, message.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, ''));
 
-    const lines: string[] = [content];
-    if (!this.omitArgs && args.length) {
-      lines.push('args:');
+    this.buffer.push(content);
 
+    if (!this.omitArgs && args.length) {
+      this.buffer.push('args:');
       for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         const formattedArg = stringify(arg, { includeStack: true, pretty: true, maxDepth: 3 });
-        lines.push(`[${i}] ${formattedArg}`);
+        this.buffer.push(`[${i}] ${formattedArg}`);
       }
+      this.buffer.push('');
     }
-    lines.push('');
 
-    void this.initPromise.then(async () => {
-      await fs.appendFile(this.filePath, lines.join('\n'), 'utf8').catch(this.errorHandler);
-    });
+    this.flush();
+  }
+
+  /**
+   * Flushes the buffer to the file.
+   */
+  public flush(): void {
+    if (this.flushScheduled) {
+      return;
+    }
+
+    if (!this.buffer.length) {
+      this.flushScheduled = false;
+      return;
+    }
+
+    this.flushScheduled = true;
+    this.writePromise = this.writePromise
+      .then(() => delay(this.flushDelayMs))
+      .then(async () => {
+        const linesToWrite = this.buffer.splice(0).join('\n') + '\n';
+        this.flushScheduled = false;
+        await fs.appendFile(this.filePath, linesToWrite, 'utf8').catch(this.errorHandler);
+      });
+  }
+
+  /**
+   * Closes the logger by flushes the buffer to the file.
+   */
+  public close(timeoutMs?: number): Promise<void> {
+    if (!this.closed) {
+      this.closed = true;
+      this.flush();
+    }
+
+    return timeoutMs !== undefined ? withTimeout(this.writePromise, timeoutMs) : this.writePromise;
   }
 }

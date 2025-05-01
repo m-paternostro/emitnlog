@@ -1,5 +1,5 @@
-import { exhaustiveCheck } from '../utils/exhaustive-check.ts';
-import { stringify } from '../utils/stringify.ts';
+import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
+import { stringify } from '../utils/converter/stringify.ts';
 import type { Logger, LogLevel, LogMessage } from './logger.ts';
 
 /**
