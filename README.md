@@ -135,7 +135,7 @@ For persistent logging in Node.js environments:
 import { FileLogger } from 'emitnlog/logger/node';
 
 // Simple file logger (writes to OS temp directory if path is relative)
-const logger = new FileLogger('app.log');
+const logger = new FileLogger('app.log', 'debug');
 logger.i`Application started at ${new Date()}`;
 
 // Advanced configuration
@@ -415,6 +415,36 @@ const result2: boolean | 'timeout' = await withTimeout(fetchCompleted(), 1000, '
 ```
 
 Returns the original promise result if it resolves in time, otherwise returns the fallback. Helpful for safe async handling in flaky environments.
+
+### createDeferredValue
+
+Creates a promise that can be resolved or rejected later:
+
+```ts
+import { createDeferredValue } from 'emitnlog/utils';
+
+const deferred = createDeferredValue<string>();
+
+setTimeout(() => deferred.resolve('done'), 1000);
+const result = await deferred.promise;
+console.log(result); // 'done'
+```
+
+Useful for coordinating async operations manually, like event-driven triggers or testing deferred resolution.
+
+### poll
+
+Continuously runs an operation at intervals until stopped or a condition is met:
+
+```ts
+import { poll } from 'emitnlog/utils';
+
+const { wait, close } = poll(fetchStatus, 1000, { interrupt: (result) => result === 'done', timeout: 10_000 });
+
+const final = await wait;
+```
+
+Polling stops automatically on timeout or interrupt. Call `close()` to stop early. Works with sync or async functions and handles exceptions safely.
 
 ---
 

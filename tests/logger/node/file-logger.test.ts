@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { afterEach } from 'node:test';
 
 import { tee } from '../../../src/logger/index.ts';
 import { FileLogger } from '../../../src/logger/node/index.ts';
@@ -40,6 +41,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
   test('should create a log file and write to it', async () => {
     const logger = new FileLogger(testLogFile);
+    expect(logger.level).toBe('info');
 
     logger.info('Test message');
 
@@ -52,7 +54,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
   test('should handle home directory expansion with tilde', async () => {
     const homeRelativePath = '~/test-logger-home.log';
-    const logger = new FileLogger(homeRelativePath);
+    const logger = new FileLogger(homeRelativePath, 'debug');
+    expect(logger.level).toBe('debug');
 
     expect(logger.filePath).toContain(os.homedir());
     expect(logger.filePath).not.toContain('~');
@@ -334,5 +337,45 @@ describe('emitnlog.logger.node.FileLogger', () => {
     await delay(20);
     const content = await readLogFile();
     expect(content).toMatch(new RegExp(`.+ Test message 1\n$`));
+  });
+
+  describe('handling errors', () => {
+    let failCount = 2;
+    const spy = jest.fn();
+    const realAppendFile = fs.appendFile;
+
+    beforeEach(() => {
+      fs.appendFile = jest.fn(async (...args: unknown[]) => {
+        spy();
+        if (failCount-- > 0) {
+          throw new Error('Simulated write failure');
+        }
+        await realAppendFile(...(args as Parameters<typeof fs.appendFile>));
+      });
+    });
+
+    afterEach(() => {
+      fs.appendFile = realAppendFile;
+    });
+
+    test('should fail without retry', async () => {
+      const logger = new FileLogger(testLogFile);
+      logger.info('This should fail');
+      await expect(() => logger.close()).rejects.toThrow('Simulated write failure');
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    test('should retry on appendFile failure', async () => {
+      const logger = new FileLogger({ filePath: testLogFile, maxRetries: 3, retryDelayMs: 10 });
+
+      logger.info('This should eventually succeed');
+
+      await logger.close();
+
+      const content = await fs.readFile(testLogFile, 'utf8');
+      expect(content).toContain('This should eventually succeed');
+
+      expect(spy).toHaveBeenCalledTimes(3);
+    });
   });
 });
