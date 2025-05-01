@@ -12,12 +12,12 @@ Practical utilities for modern TypeScript projects:
 
 ## 🗺 Table of Contents
 
-- [Installation](#🛠-installation)
-- [Features](#✨-features)
-- [Logger](#📋-logger)
-- [Event Notifier](#🔔-event-notifier)
-- [Logger + Notifier Combined](#🧩-logger--notifier-combined)
-- [Utilities](#🔧-utilities)
+- [Installation](#-installation)
+- [Features](#-features)
+- [Logger](#-logger)
+- [Event Notifier](#-event-notifier)
+- [Logger + Notifier Combined](#-logger--notifier-combined)
+- [Utilities](#-utilities)
 
 ---
 
