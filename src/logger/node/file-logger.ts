@@ -3,7 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { delay } from '../../utils/async/delay.ts';
-import { poll } from '../../utils/async/poll.ts';
+import { startPolling } from '../../utils/async/poll.ts';
 import { withTimeout } from '../../utils/async/with-timeout.ts';
 import { errorify } from '../../utils/converter/errorify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
@@ -267,7 +267,7 @@ export class FileLogger extends BaseLogger {
       return;
     }
 
-    const { wait } = poll(
+    const { wait } = startPolling(
       async () => {
         try {
           await fs.appendFile(this.filePath, content, 'utf8');

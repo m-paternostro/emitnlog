@@ -437,9 +437,9 @@ Useful for coordinating async operations manually, like event-driven triggers or
 Continuously runs an operation at intervals until stopped or a condition is met:
 
 ```ts
-import { poll } from 'emitnlog/utils';
+import { startPolling } from 'emitnlog/utils';
 
-const { wait, close } = poll(fetchStatus, 1000, { interrupt: (result) => result === 'done', timeout: 10_000 });
+const { wait, close } = startPolling(fetchStatus, 1000, { interrupt: (result) => result === 'done', timeout: 10_000 });
 
 const final = await wait;
 ```

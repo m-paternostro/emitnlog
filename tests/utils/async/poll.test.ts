@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { poll } from '../../../src/utils/index.ts';
+import { startPolling } from '../../../src/utils/index.ts';
 import { createTestLogger, flushFakeTimePromises } from '../../jester.setup.ts';
 
 describe('emitnlog.utils.poll', () => {
@@ -14,7 +14,7 @@ describe('emitnlog.utils.poll', () => {
 
   test('should call operation at specified intervals', async () => {
     const operation = jest.fn().mockReturnValue('result');
-    const { close } = poll(operation, 1000);
+    const { close } = startPolling(operation, 1000);
 
     expect(operation).toHaveBeenCalledTimes(0);
 
@@ -33,7 +33,7 @@ describe('emitnlog.utils.poll', () => {
   test('should resolve wait with the last result when closed', async () => {
     const operation = jest.fn().mockReturnValueOnce('first').mockReturnValueOnce('second').mockReturnValue('third');
 
-    const { wait, close } = poll(operation, 1000);
+    const { wait, close } = startPolling(operation, 1000);
 
     jest.advanceTimersByTime(2000);
     await close();
@@ -50,7 +50,7 @@ describe('emitnlog.utils.poll', () => {
 
     const interrupt = jest.fn((val: unknown): boolean => val === 'stop');
 
-    const { wait } = poll(operation, 1000, { invokeImmediately: true, interrupt });
+    const { wait } = startPolling(operation, 1000, { invokeImmediately: true, interrupt });
 
     expect(operation).toHaveBeenCalledTimes(1);
     expect(interrupt).toHaveBeenCalledTimes(1);
@@ -73,7 +73,7 @@ describe('emitnlog.utils.poll', () => {
   test('should stop polling after timeout', async () => {
     const operation = jest.fn().mockReturnValue('result');
 
-    const { wait } = poll(operation, 1000, { timeout: 3500 });
+    const { wait } = startPolling(operation, 1000, { timeout: 3500 });
 
     expect(operation).toHaveBeenCalledTimes(0);
 
@@ -93,7 +93,7 @@ describe('emitnlog.utils.poll', () => {
   test('should stop polling after timeout and return timeoutValue', async () => {
     const operation = jest.fn().mockReturnValue('result');
 
-    const { wait } = poll(operation, 1000, { timeout: 3500, timeoutValue: 'timeout' });
+    const { wait } = startPolling(operation, 1000, { timeout: 3500, timeoutValue: 'timeout' });
 
     expect(operation).toHaveBeenCalledTimes(0);
 
@@ -119,7 +119,7 @@ describe('emitnlog.utils.poll', () => {
         }),
     );
 
-    const { wait, close } = poll(asyncOperation, 1000);
+    const { wait, close } = startPolling(asyncOperation, 1000);
 
     jest.advanceTimersByTime(1000);
 
@@ -149,7 +149,7 @@ describe('emitnlog.utils.poll', () => {
         }),
     );
 
-    poll(asyncOperation, 1000);
+    startPolling(asyncOperation, 1000);
 
     expect(asyncOperation).toHaveBeenCalledTimes(0);
 
@@ -179,7 +179,7 @@ describe('emitnlog.utils.poll', () => {
 
     const interrupt = jest.fn((val: unknown): boolean => val === 'stop');
 
-    const { wait } = poll(asyncOperation, 1000, { interrupt });
+    const { wait } = startPolling(asyncOperation, 1000, { interrupt });
 
     expect(asyncOperation).toHaveBeenCalledTimes(0);
 
@@ -217,7 +217,7 @@ describe('emitnlog.utils.poll', () => {
       })
       .mockReturnValue('final');
 
-    const { wait, close } = poll(operation, 1000, { invokeImmediately: true, logger });
+    const { wait, close } = startPolling(operation, 1000, { invokeImmediately: true, logger });
 
     expect(operation).toHaveBeenCalledTimes(1);
     expect(logger).toHaveLoggedWith('error', 'test error');
@@ -244,7 +244,7 @@ describe('emitnlog.utils.poll', () => {
       .mockImplementationOnce(() => Promise.reject(new Error('another rejection')))
       .mockImplementation(() => Promise.resolve('final'));
 
-    const { wait, close } = poll(operation, 1000, { logger });
+    const { wait, close } = startPolling(operation, 1000, { logger });
 
     expect(operation).toHaveBeenCalledTimes(0);
 
@@ -273,7 +273,7 @@ describe('emitnlog.utils.poll', () => {
     const logger = createTestLogger();
     const operation = jest.fn().mockReturnValue('result');
 
-    const { close } = poll(operation, 1000, { logger, timeout: 2500 });
+    const { close } = startPolling(operation, 1000, { logger, timeout: 2500 });
 
     expect(logger).not.toHaveLoggedWith('debug', /.*/);
 

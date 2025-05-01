@@ -15,7 +15,7 @@ import { delay } from './delay.ts';
  *
  * ```ts
  * // Poll every 5 seconds until manually stopped
- * const closeable = poll(() => fetchLatestData(), 5_000);
+ * const closeable = startPolling(() => fetchLatestData(), 5_000);
  *
  * // Stop polling after 30 seconds
  * await delay(30_000).then(close);
@@ -27,7 +27,9 @@ import { delay } from './delay.ts';
  * @example Basic polling until a condition is met
  *
  * ```ts
- * const { wait, close } = poll(() => fetchStatus(), 1000, { interrupt: (status) => status === 'completed' });
+ * const { wait, close } = startPolling(() => fetchStatus(), 1000, {
+ *   interrupt: (status) => status === 'completed',
+ * });
  *
  * // Later get the final result
  * const finalStatus = await wait;
@@ -36,7 +38,7 @@ import { delay } from './delay.ts';
  * @example Polling with timeout
  *
  * ```ts
- * const { wait } = poll(() => checkJobStatus(jobId), 2000, {
+ * const { wait } = startPolling(() => checkJobStatus(jobId), 2000, {
  *   timeout: 30000, // Stop after 30 seconds
  *   interrupt: (status) => ['completed', 'failed'].includes(status),
  *   logger: console,
@@ -53,15 +55,15 @@ import { delay } from './delay.ts';
  * @example Manual control of polling
  *
  * ```ts
- * const poller = poll(() => fetchDataPoints(), 5000);
+ * const poll = startPolling(() => fetchDataPoints(), 5000);
  *
  * // Stop polling after some external event
  * eventEmitter.on('stop-polling', () => {
- *   poller.close();
+ *   poll.close();
  * });
  *
  * // Get the last result when polling stops
- * const lastDataPoints = await poller.wait;
+ * const lastDataPoints = await poll.wait;
  * ```
  *
  * @param operation Function to execute on each poll interval. Can return a value or a Promise.
@@ -74,7 +76,7 @@ import { delay } from './delay.ts';
  * @returns An object with a `close()` method to manually stop polling and a `wait` Promise that resolves with the last
  *   result when polling stops
  */
-export const poll = <T, const V = undefined>(
+export const startPolling = <T, const V = undefined>(
   operation: () => T | Promise<T>,
   interval: number,
   options?: {
