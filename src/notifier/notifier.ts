@@ -32,7 +32,7 @@ export type EventNotifier<T, E = Error> = {
    * @param listener A function that will be called with the notified event
    * @returns A closeable to unregister the listener (all listeners are unregistered when the notifier is closed).
    */
-  onEvent: (listener: (event: T) => unknown) => { close: () => void };
+  onEvent: OnEvent<T>;
 
   /**
    * Notifies all registered listeners with the provided event.
@@ -75,3 +75,10 @@ export type EventNotifier<T, E = Error> = {
    */
   close: () => void;
 };
+
+/**
+ * A type-safe event subscription that can be closed.
+ *
+ * @template T The type of events this subscription will handle
+ */
+export type OnEvent<T> = (listener: (event: T) => unknown) => { close: () => void };

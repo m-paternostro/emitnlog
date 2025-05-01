@@ -252,12 +252,18 @@ subscription.close();
 Here's an example that uses both the logger and the event notifier:
 
 ```ts
+import type { OnEvent } from 'emitnlog/notifier';
 import { createEventNotifier } from 'emitnlog/notifier';
 import { ConsoleLogger } from 'emitnlog/logger';
 
 type Progress = { filename: string; percent: number };
 
-class FileUploader {
+interface Uploader {
+  onProgress: OnEvent<Progress>;
+  upload(filename: string): void;
+}
+
+class FileUploader implements Uploader {
   private _logger = new ConsoleLogger('debug');
   private _notifier = createEventNotifier<Progress>();
   public onProgress = this._notifier.onEvent;
