@@ -32,7 +32,7 @@ export type EventNotifier<T, E = Error> = {
    * @param listener A function that will be called with the notified event
    * @returns A closeable to unregister the listener (all listeners are unregistered when the notifier is closed).
    */
-  onEvent: OnEvent<T>;
+  readonly onEvent: OnEvent<T>;
 
   /**
    * Notifies all registered listeners with the provided event.
@@ -59,21 +59,21 @@ export type EventNotifier<T, E = Error> = {
    *
    * @param event The event to send to all listeners or a function that returns such event.
    */
-  notify: (event: T | (() => T)) => void;
+  readonly notify: (event: T | (() => T)) => void;
 
   /**
    * Sets an error handler for the notifier. This handler will be called when a listener throws an error.
    *
    * @param handler A function that will be called with any errors thrown by listeners.
    */
-  onError: (handler: (error: E) => void) => void;
+  readonly onError: (handler: (error: E) => void) => void;
 
   /**
    * Closes the notifier and removes all listeners.
    *
    * @warning Failing to call close() on subscriptions or the notifier itself may lead to memory leaks.
    */
-  close: () => void;
+  readonly close: () => void;
 };
 
 /**
@@ -81,4 +81,4 @@ export type EventNotifier<T, E = Error> = {
  *
  * @template T The type of events this subscription will handle
  */
-export type OnEvent<T> = (listener: (event: T) => unknown) => { close: () => void };
+export type OnEvent<T> = (listener: (event: T) => unknown) => { readonly close: () => void };

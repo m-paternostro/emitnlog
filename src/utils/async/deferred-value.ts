@@ -4,8 +4,19 @@
  * @template T - The type of the promise's value.
  */
 export type DeferredValue<T> = {
+  /**
+   * The promise that can be resolved or rejected.
+   */
   readonly promise: Promise<T>;
+
+  /**
+   * Resolves the promise with a value.
+   */
   readonly resolve: (value: T) => void;
+
+  /**
+   * Rejects the promise with a reason.
+   */
   readonly reject: (reason?: unknown) => void;
 };
 
