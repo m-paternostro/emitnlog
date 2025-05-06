@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.2.1
+
+### Patch Changes
+
+- 63dfd36: Add readonly to types and better documentation
+
 ## 0.2.0
 
 ### Minor Changes
