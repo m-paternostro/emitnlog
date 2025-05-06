@@ -7,23 +7,23 @@ export type StringifyOptions = {
   /**
    * Whether to include stack traces for errors (default: false)
    */
-  includeStack?: boolean;
+  readonly includeStack?: boolean;
 
   /**
    * Whether to prettify the output with indentation (default: false)
    */
-  pretty?: boolean;
+  readonly pretty?: boolean;
 
   /**
    * Maximum depth for recursive object serialization (default: 5)
    */
-  maxDepth?: number;
+  readonly maxDepth?: number;
 
   /**
    * Format dates using the local locale instead of ISO format (default: false) When true, uses `toLocaleString()`
    * instead of `toISOString()`
    */
-  useLocale?: boolean;
+  readonly useLocale?: boolean;
 };
 
 /**

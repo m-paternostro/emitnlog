@@ -5,7 +5,7 @@ import { BaseLogger } from '../../src/logger/index.ts';
 import type { OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
 
-describe('emitnlog.utils.with-timeout', () => {
+describe('emitnlog.logger-notifier', () => {
   test('should make sure that the readme example works', async () => {
     type Progress = { filename: string; percent: number };
 

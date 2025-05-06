@@ -18,39 +18,39 @@ export type FileLoggerOptions = {
   /**
    * The minimum severity level for log entries (default: 'info')
    */
-  level?: LogLevel;
+  readonly level?: LogLevel;
 
   /**
    * Whether to keep ANSI color codes in log output (default: false) When false (default), ANSI color codes are stripped
    * from log output
    */
-  keepAnsiColors?: boolean;
+  readonly keepAnsiColors?: boolean;
 
   /**
    * Whether to omit additional args in log output (default: false) When false (default), additional arguments passed to
    * log methods will be serialized and included in the log
    */
-  omitArgs?: boolean;
+  readonly omitArgs?: boolean;
 
   /**
    * The delay in milliseconds between buffer flushes (default: 20)
    */
-  flushDelayMs?: number;
+  readonly flushDelayMs?: number;
 
   /**
    * Error handler callback for file operations If not provided, errors will be thrown
    */
-  errorHandler?: (error: unknown) => void;
+  readonly errorHandler?: (error: unknown) => void;
 
   /**
    * Number of retries to attempt for file operations (default: 0)
    */
-  retryLimit?: number;
+  readonly retryLimit?: number;
 
   /**
    * Delay between retries in milliseconds (default: 500)
    */
-  retryDelayMs?: number;
+  readonly retryDelayMs?: number;
 };
 
 /**
@@ -277,7 +277,7 @@ export class FileLogger extends BaseLogger {
         }
       },
       this.retryDelayMs,
-      { retryLimit: this.retryLimit, interrupt: (result) => result === true, invokeImmediately: true },
+      { retryLimit: this.retryLimit, interrupt: (result) => result, invokeImmediately: true },
     );
 
     const result = await wait;

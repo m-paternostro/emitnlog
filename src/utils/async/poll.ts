@@ -4,6 +4,48 @@ import { createDeferredValue } from './deferred-value.ts';
 import { delay } from './delay.ts';
 
 /**
+ * Configuration options for polling operations.
+ *
+ * @template T The type of value that the polling operation returns
+ * @template V The type of value to return when a timeout occurs
+ */
+export type PollingOptions<T, V> = {
+  /**
+   * Whether to invoke the operation immediately or instead wait for the first interval.
+   */
+  readonly invokeImmediately?: boolean;
+
+  /**
+   * Maximum time in milliseconds to poll before auto-stopping.
+   */
+  readonly timeout?: number;
+
+  /**
+   * Value to return when a timeout occurs.
+   */
+  readonly timeoutValue?: V;
+
+  /**
+   * Maximum number of times to call the operation before auto-stopping.
+   */
+  readonly retryLimit?: number;
+
+  /**
+   * Function that evaluates each result and returns true if polling should stop.
+   *
+   * @param result The result returned by the operation
+   * @param invocationIndex The current invocation count (0-based)
+   * @returns `true` to stop polling, `false` to continue
+   */
+  readonly interrupt?: (result: T, invocationIndex: number) => boolean;
+
+  /**
+   * Logger to capture polling events and errors.
+   */
+  readonly logger?: Logger;
+};
+
+/**
  * Polls a function at regular intervals until a condition is met, a timeout occurs, maximum retries are reached, or
  * it's manually stopped. Returns both a method to stop polling and a promise that resolves with the last result.
  *
@@ -79,26 +121,14 @@ import { delay } from './delay.ts';
  *
  * @param operation Function to execute on each poll interval. Can return a value or a Promise.
  * @param interval Time in milliseconds between poll attempts
- * @param options Optional configuration
- * @param options.invokeImmediately Whether to invoke the operation immediately or instead wait for the first interval
- * @param options.timeout Maximum time in milliseconds to poll before auto-stopping
- * @param options.retryLimit Maximum number of times to call the operation before auto-stopping
- * @param options.interrupt Function that evaluates each result and returns true if polling should stop
- * @param options.logger Logger to capture polling events and errors
+ * @param options Optional configuration for polling behavior
  * @returns An object with a `close()` method to manually stop polling and a `wait` Promise that resolves with the last
  *   result when polling stops
  */
 export const startPolling = <T, const V = undefined>(
   operation: () => T | Promise<T>,
   interval: number,
-  options?: {
-    readonly invokeImmediately?: boolean;
-    readonly timeout?: number;
-    readonly timeoutValue?: V;
-    readonly retryLimit?: number;
-    readonly interrupt?: (result: unknown, invocationIndex: number) => boolean;
-    readonly logger?: Logger;
-  },
+  options?: PollingOptions<T, V>,
 ): { readonly wait: Promise<T | V | undefined>; readonly close: () => Promise<void> } => {
   const deferred = createDeferredValue<T | V | undefined>();
 
