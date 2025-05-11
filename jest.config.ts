@@ -7,7 +7,7 @@ const config: Config = {
   testRegex: '/tests/.*\\.test\\.ts$',
   transform: { '^.+\\.ts$': ['ts-jest', { useESM: true, tsconfig: 'tsconfig.json' }] },
   moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
-  coverageReporters: ['html', 'text', 'text-summary', 'cobertura'],
+  coverageReporters: ['html', 'text', 'text-summary', 'cobertura', 'json-summary'],
 };
 
 export default config;
