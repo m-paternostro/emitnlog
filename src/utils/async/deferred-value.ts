@@ -10,9 +10,24 @@ export type DeferredValue<T> = {
   readonly promise: Promise<T>;
 
   /**
+   * Whether the promise has been resolved.
+   */
+  readonly resolved: boolean;
+
+  /**
+   * Whether the promise has been rejected.
+   */
+  readonly rejected: boolean;
+
+  /**
+   * Whether the promise has been settled.
+   */
+  readonly settled: boolean;
+
+  /**
    * Resolves the promise with a value.
    */
-  readonly resolve: (value: T) => void;
+  readonly resolve: (value: T | PromiseLike<T>) => void;
 
   /**
    * Rejects the promise with a reason.
@@ -63,13 +78,52 @@ export type DeferredValue<T> = {
  * @returns An object containing the promise and functions to resolve or reject it.
  */
 export const createDeferredValue = <T = void>(): DeferredValue<T> => {
-  let resolve: (value: T) => void;
+  let resolve: (value: T | PromiseLike<T>) => void;
   let reject: (reason?: unknown) => void;
 
+  let resolved = false;
+  let rejected = false;
+
   const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
+    resolve = (value) => {
+      if (resolved || rejected) {
+        return;
+      }
+
+      resolved = true;
+      res(value);
+    };
+
+    reject = (reason) => {
+      if (resolved || rejected) {
+        return;
+      }
+
+      rejected = true;
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      rej(reason);
+    };
   });
 
-  return { promise, resolve: resolve!, reject: reject! };
+  return {
+    get promise() {
+      return promise;
+    },
+
+    get resolved() {
+      return resolved;
+    },
+
+    get rejected() {
+      return rejected;
+    },
+
+    get settled() {
+      return resolved || rejected;
+    },
+
+    resolve: resolve!,
+
+    reject: reject!,
+  };
 };
