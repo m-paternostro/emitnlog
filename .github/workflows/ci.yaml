@@ -46,13 +46,17 @@ jobs:
         run: npm run validate
 
       - name: Prepare public directory
-        if: github.ref_name == 'mp/coverage2'
+        if: >
+          (github.ref_name == 'mp/coverage2') ||
+          (github.event_name == 'pull_request' && github.head_ref == 'mp/coverage2')
         run: |
           mkdir -p ./public/coverage
           cp -r ./coverage/* ./public/coverage/
 
       - name: Extract coverage and generate badge
-        if: github.ref_name == 'mp/coverage2'
+        if: >
+          (github.ref_name == 'mp/coverage2') ||
+          (github.event_name == 'pull_request' && github.head_ref == 'mp/coverage2')
         id: badge
         run: |
           LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
@@ -67,11 +71,15 @@ jobs:
             -o ./public/coverage/coverage-badge.svg
 
       - name: Configure GitHub Pages
-        if: github.ref_name == 'mp/coverage2'
+        if: >
+          (github.ref_name == 'mp/coverage2') ||
+          (github.event_name == 'pull_request' && github.head_ref == 'mp/coverage2')
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: github.ref_name == 'mp/coverage2'
+        if: >
+          (github.ref_name == 'mp/coverage2') ||
+          (github.event_name == 'pull_request' && github.head_ref == 'mp/coverage2')
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./public
@@ -80,7 +88,9 @@ jobs:
     name: Deploy Site
     needs: validate
     runs-on: ubuntu-latest
-    if: github.ref_name == 'mp/coverage2'
+    if: >
+      (github.ref_name == 'mp/coverage2') ||
+      (github.event_name == 'pull_request' && github.head_ref == 'mp/coverage2')
     permissions:
       pages: write
       id-token: write
