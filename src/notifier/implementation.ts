@@ -1,4 +1,4 @@
-import type { EventNotifier } from './notifier.ts';
+import type { EventNotifier } from './definition.ts';
 
 /**
  * Creates a type-safe event notifier.
