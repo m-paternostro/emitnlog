@@ -2,7 +2,7 @@ name: Generate Coverage Report and Badge
 
 on:
   push:
-    branches: [mp/coverage]
+    branches: [main]
   pull_request:
 
 permissions:
