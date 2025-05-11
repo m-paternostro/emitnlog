@@ -1,9 +1,12 @@
 /**
- * A promise that can be resolved or rejected by external clients.
+ * A value the exposes a promise that can be resolved or rejected by external clients.
+ *
+ * Clients should cache the DeferredValue instance itself rather than its properties (like `promise`). This enables
+ * proper usage of features like `renew()`, which may creates a new internal promise.
  *
  * @template T - The type of the promise's value.
  */
-export type DeferredValue<T> = {
+export interface DeferredValue<T> {
   /**
    * The promise that can be resolved or rejected.
    */
@@ -20,25 +23,67 @@ export type DeferredValue<T> = {
   readonly rejected: boolean;
 
   /**
-   * Whether the promise has been settled.
+   * Whether the promise has been settled, i.e., if it has been resolved or rejected.
    */
   readonly settled: boolean;
 
   /**
-   * Resolves the promise with a value.
+   * Resolves the deferred value's promise with a value. Calling this method has no effect if the deferred value is
+   * already settled.
    */
   readonly resolve: (value: T | PromiseLike<T>) => void;
 
   /**
-   * Rejects the promise with a reason.
+   * Rejects the deferred value's promise with a reason. Calling this method has no effect if the deferred value is
+   * already settled.
    */
   readonly reject: (reason?: unknown) => void;
-};
+
+  /**
+   * Resets a settled (i.e., resolved or rejected) promise to an unsettled state, allowing the same deferred value
+   * instance to be used in a new asynchronous operation after the previous one has completed. Calling this method has
+   * no effect if the deferred value is not settled (i.e., if its promise is neither resolved nor rejected.)
+   *
+   * @example Reusing a deferred value
+   *
+   * ```ts
+   * const deferred = createDeferredValue<string>();
+   *
+   * // First use
+   * deferred.resolve('first');
+   * await deferred.promise; // resolves to "first"
+   *
+   * // Renew for second use
+   * deferred.renew();
+   * deferred.resolve('second');
+   * await deferred.promise; // resolves to "second"
+   * ```
+   *
+   * @example Chainable usage
+   *
+   * ```ts
+   * const deferred = createDeferredValue<number>();
+   * deferred.resolve(1);
+   * await deferred.promise;
+   *
+   * // Chain renew and resolve
+   * deferred.renew().resolve(2);
+   * await deferred.promise; // resolves to 2
+   * ```
+   *
+   * @returns The same deferred value instance, allowing for method chaining.
+   */
+  readonly renew: () => this;
+}
 
 /**
- * Creates a promise that can be resolved or rejected by external clients. This is useful for scenarios where you need
- * to control when a promise resolves or rejects from outside the promise's executor function, such as in event-driven
- * architectures, manual coordination of asynchronous operations, or implementing custom waiting mechanisms.
+ * Creates deferred value that exposes a promise that can be resolved or rejected by external clients. This is useful
+ * for scenarios where you need to control when a promise resolves or rejects from outside the promise's executor
+ * function, such as in event-driven architectures, manual coordination of asynchronous operations, or implementing
+ * custom waiting mechanisms.
+ *
+ * Clients should cache the DeferredValue instance itself rather than destructuring its properties (like `promise`).
+ * This ensures proper usage of features like `renew()`, which may creates a new internal promise.
  *
  * @example Basic usage
  *
@@ -61,7 +106,7 @@ export type DeferredValue<T> = {
  *
  * ```ts
  * // Create a deferred that will be resolved when an event occurs
- * function waitForEvent(emitter: EventEmitter, eventName: string): Promise<any> {
+ * function waitForEvent(notifier: EventNotifier, eventName: string): Promise<any> {
  *   const deferred = createDeferredValue<any>();
  *
  *   const handler = (data: any) => {
@@ -69,7 +114,7 @@ export type DeferredValue<T> = {
  *     emitter.off(eventName, handler);
  *   };
  *
- *   emitter.on(eventName, handler);
+ *   notifier.onEvent(eventName, handler);
  *   return deferred.promise;
  * }
  * ```
@@ -84,28 +129,31 @@ export const createDeferredValue = <T = void>(): DeferredValue<T> => {
   let resolved = false;
   let rejected = false;
 
-  const promise = new Promise<T>((res, rej) => {
-    resolve = (value) => {
-      if (resolved || rejected) {
-        return;
-      }
+  const createPromise = () =>
+    new Promise<T>((res, rej) => {
+      resolve = (value) => {
+        if (resolved || rejected) {
+          return;
+        }
 
-      resolved = true;
-      res(value);
-    };
+        resolved = true;
+        res(value);
+      };
 
-    reject = (reason) => {
-      if (resolved || rejected) {
-        return;
-      }
+      reject = (reason) => {
+        if (resolved || rejected) {
+          return;
+        }
 
-      rejected = true;
-      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-      rej(reason);
-    };
-  });
+        rejected = true;
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        rej(reason);
+      };
+    });
 
-  return {
+  let promise = createPromise();
+
+  const deferred: DeferredValue<T> = {
     get promise() {
       return promise;
     },
@@ -122,8 +170,25 @@ export const createDeferredValue = <T = void>(): DeferredValue<T> => {
       return resolved || rejected;
     },
 
-    resolve: resolve!,
+    resolve: (value) => {
+      resolve!(value);
+    },
 
-    reject: reject!,
+    reject: (reason) => {
+      reject!(reason);
+    },
+
+    renew: () => {
+      if (deferred.settled) {
+        resolved = false;
+        rejected = false;
+
+        promise = createPromise();
+      }
+
+      return deferred;
+    },
   };
+
+  return deferred;
 };

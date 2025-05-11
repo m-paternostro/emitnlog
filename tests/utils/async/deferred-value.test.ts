@@ -44,6 +44,71 @@ describe('emitnlog.utils.deferred-value', () => {
       expect(deferred.resolved).toBe(false);
       expect(deferred.rejected).toBe(true);
     });
+
+    test('should renew a settled deferred and allow new resolution', async () => {
+      const deferred = createDeferredValue<number>();
+
+      // First resolution
+      setTimeout(() => deferred.resolve(42), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).resolves.toBe(42);
+      expect(deferred.settled).toBe(true);
+
+      // Renew
+      const renewed = deferred.renew();
+      expect(renewed).toBe(deferred); // Should return the same object
+      expect(deferred.settled).toBe(false);
+      expect(deferred.resolved).toBe(false);
+      expect(deferred.rejected).toBe(false);
+
+      // Second resolution
+      setTimeout(() => deferred.resolve(100), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).resolves.toBe(100);
+      expect(deferred.settled).toBe(true);
+    });
+
+    test('should renew a settled deferred and allow new rejection', async () => {
+      const deferred = createDeferredValue<number>();
+
+      // First resolution
+      setTimeout(() => deferred.resolve(42), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).resolves.toBe(42);
+
+      // Renew
+      deferred.renew();
+      expect(deferred.settled).toBe(false);
+
+      // Now reject the renewed promise
+      const error = new Error('renewed rejection');
+      setTimeout(() => deferred.reject(error), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).rejects.toThrow('renewed rejection');
+      expect(deferred.settled).toBe(true);
+      expect(deferred.rejected).toBe(true);
+    });
+
+    test('should allow multiple renew cycles with different resolutions', async () => {
+      const deferred = createDeferredValue<string>();
+
+      // First cycle
+      setTimeout(() => deferred.resolve('first'), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).resolves.toBe('first');
+
+      // Second cycle
+      deferred.renew();
+      setTimeout(() => deferred.reject(new Error('second')), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).rejects.toThrow('second');
+
+      // Third cycle
+      deferred.renew();
+      setTimeout(() => deferred.resolve('third'), 1000);
+      jest.advanceTimersByTime(1000);
+      await expect(deferred.promise).resolves.toBe('third');
+    });
   });
 
   test('should update resolved state after resolution', async () => {
@@ -89,5 +154,71 @@ describe('emitnlog.utils.deferred-value', () => {
     deferred.reject(new Error('first error'));
     deferred.reject(new Error('second error')); // This should be ignored
     await expect(deferred.promise).rejects.toThrow('first error');
+  });
+
+  describe('renew functionality', () => {
+    test('should do nothing when renewing a non-settled deferred', async () => {
+      const deferred = createDeferredValue<number>();
+      const originalPromise = deferred.promise;
+
+      // Renew shouldn't do anything since it's not settled
+      deferred.renew();
+
+      expect(deferred.promise).toBe(originalPromise); // Promise should be the same
+      expect(deferred.settled).toBe(false);
+
+      // Should still be resolvable
+      deferred.resolve(42);
+      await expect(deferred.promise).resolves.toBe(42);
+    });
+
+    test('should create a new promise when renewing a resolved deferred', async () => {
+      const deferred = createDeferredValue<number>();
+
+      // Resolve the deferred
+      deferred.resolve(42);
+      await deferred.promise;
+
+      const originalPromise = deferred.promise;
+      deferred.renew();
+
+      expect(deferred.promise).not.toBe(originalPromise); // Should be a new promise
+      expect(deferred.settled).toBe(false);
+      expect(deferred.resolved).toBe(false);
+    });
+
+    test('should create a new promise when renewing a rejected deferred', async () => {
+      const deferred = createDeferredValue<number>();
+
+      // Reject the deferred
+      deferred.reject(new Error('original rejection'));
+      try {
+        await deferred.promise;
+      } catch {
+        // Ignore the rejection, we just need to ensure the promise is settled
+      }
+
+      const originalPromise = deferred.promise;
+      deferred.renew();
+
+      expect(deferred.promise).not.toBe(originalPromise); // Should be a new promise
+      expect(deferred.settled).toBe(false);
+      expect(deferred.rejected).toBe(false);
+    });
+
+    test('should be chainable with resolution/rejection', async () => {
+      const deferred = createDeferredValue<number>();
+
+      deferred.resolve(1);
+      await deferred.promise;
+
+      // Chain renew and resolve
+      deferred.renew().resolve(2);
+      await expect(deferred.promise).resolves.toBe(2);
+
+      // Chain renew and reject
+      deferred.renew().reject(new Error('chained rejection'));
+      await expect(deferred.promise).rejects.toThrow('chained rejection');
+    });
   });
 });
