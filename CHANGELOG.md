@@ -1,5 +1,16 @@
 # emitnlog
 
+## 0.3.0
+
+### Minor Changes
+
+- fbe25d9: Add `waitNextEvent` method to notifier allowing promise-based listeners.
+- efb7358: Adding `renew` to deferredValue (and also indicating if it has been settled)
+
+### Patch Changes
+
+- af99872: Exposing the test coverage as a badge
+
 ## 0.2.1
 
 ### Patch Changes
