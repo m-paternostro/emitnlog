@@ -45,6 +45,49 @@ jobs:
       - name: Validate (runs everything)
         run: npm run validate
 
+      - name: Prepare public directory
+        if: github.ref == 'refs/heads/mp/coverage2'
+        run: |
+          mkdir -p ./public/coverage
+          cp -r ./coverage/* ./public/coverage/
+
+      - name: Extract coverage and generate badge
+        if: github.ref == 'refs/heads/mp/coverage2'
+        id: badge
+        run: |
+          LINES=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          PERCENT=$(printf "%.1f" "$LINES")
+          COLOR="red"
+          if (( $(echo "$PERCENT >= 90" | bc -l) )); then COLOR="brightgreen";
+          elif (( $(echo "$PERCENT >= 80" | bc -l) )); then COLOR="green";
+          elif (( $(echo "$PERCENT >= 70" | bc -l) )); then COLOR="yellowgreen";
+          elif (( $(echo "$PERCENT >= 60" | bc -l) )); then COLOR="yellow";
+          elif (( $(echo "$PERCENT >= 50" | bc -l) )); then COLOR="orange"; fi
+          curl -s "https://img.shields.io/badge/coverage-${PERCENT//./%2E}%25-$COLOR.svg?logo=jest" \
+            -o ./public/coverage/coverage-badge.svg
+
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/mp/coverage2'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/mp/coverage2'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy-site:
+    name: Deploy Site
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/mp/coverage2'
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+
   changeset:
     name: Changeset
     runs-on: ubuntu-latest
