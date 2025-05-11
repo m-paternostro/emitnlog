@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import { createEventNotifier } from '../../src/notifier/index.ts';
+import { delay } from '../../src/utils/index.ts';
 
 describe('emitnlog.notifier', () => {
   let notifier: ReturnType<typeof createEventNotifier<string>>;
@@ -187,5 +188,139 @@ describe('emitnlog.notifier', () => {
 
     expect(startEvents).toEqual([]);
     expect(stopEvents).toEqual([]);
+  });
+
+  // waitForEvent tests
+  describe('waitForEvent', () => {
+    test('should resolve with the next notified event and without any listeners', async () => {
+      const eventPromise = notifier.waitForEvent();
+      notifier.notify('test event');
+      const result = await eventPromise;
+      expect(result).toBe('test event');
+    });
+
+    test('should resolve with function events', async () => {
+      const eventPromise = notifier.waitForEvent();
+      notifier.notify(() => 'dynamic event');
+      const result = await eventPromise;
+      expect(result).toBe('dynamic event');
+    });
+
+    test('should work alongside onEvent listeners', async () => {
+      const events: string[] = [];
+      notifier.onEvent((event) => events.push(event));
+
+      const eventPromise = notifier.waitForEvent();
+
+      let invocationCount = 0;
+      notifier.notify(() => {
+        invocationCount++;
+        return 'test event';
+      });
+
+      const result = await eventPromise;
+      expect(result).toBe('test event');
+      expect(events).toEqual(['test event']);
+      expect(invocationCount).toBe(1);
+    });
+
+    test('should resolve to the same event when waitForEvent is called multiple times', async () => {
+      const promise1 = notifier.waitForEvent();
+      const promise2 = notifier.waitForEvent();
+
+      let invocationCount = 0;
+      notifier.notify(() => {
+        invocationCount++;
+        return 'first event';
+      });
+
+      const result1 = await promise1;
+
+      notifier.notify(() => {
+        invocationCount++;
+        return 'second event';
+      });
+
+      const result2 = await promise2;
+
+      expect(result1).toBe('first event');
+      expect(result2).toBe('first event');
+      expect(invocationCount).toBe(1);
+    });
+
+    test('should not be affected by listener errors', async () => {
+      const errors: Error[] = [];
+      notifier.onError((error) => errors.push(error));
+
+      notifier.onEvent(() => {
+        throw new Error('listener error');
+      });
+
+      const eventPromise = notifier.waitForEvent();
+      notifier.notify('test event');
+
+      const result = await eventPromise;
+      expect(result).toBe('test event');
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toBe('listener error');
+    });
+
+    test('should not create new promise for each waitForEvent call between event notifications', async () => {
+      const promise1 = notifier.waitForEvent();
+      const promise2 = notifier.waitForEvent();
+
+      expect(promise1).toBe(promise2);
+
+      notifier.notify('event1');
+
+      const result1 = await promise1;
+      const result2 = await promise2;
+
+      expect(result1).toBe('event1');
+      expect(result2).toBe('event1');
+
+      const promise3 = notifier.waitForEvent();
+      expect(promise3).not.toBe(promise1);
+
+      let resolvedEvent: string | undefined;
+      void promise3.then((event) => (resolvedEvent = event));
+
+      void delay(50).then(() => notifier.notify('event2'));
+      await expect(notifier.waitForEvent()).resolves.toBe('event2');
+      expect(resolvedEvent).toBe('event2');
+    });
+
+    test('should still work after the notifier has been closed and reopened', async () => {
+      notifier.close();
+      const eventPromise = notifier.waitForEvent();
+      notifier.notify('after close');
+      const result = await eventPromise;
+      expect(result).toBe('after close');
+    });
+
+    test('should work in a loop as shown in the example', async () => {
+      const values = ['first', 'second', 'third', 'fourth', 'fifth'];
+
+      const notifyingPromises = values.map((value) => delay(5).then(() => notifier.notify(value)));
+
+      const events: string[] = [];
+      const waitForEvents = async () => {
+        for (let i = 0; i < values.length; i++) {
+          // eslint-disable-next-line no-await-in-loop
+          const value = await notifier.waitForEvent();
+          events.push(value);
+        }
+      };
+      void waitForEvents();
+
+      for (let i = 0; i < values.length; i++) {
+        // eslint-disable-next-line no-await-in-loop
+        await notifyingPromises[i];
+      }
+
+      await delay(10);
+
+      expect(events).toEqual(values);
+    });
   });
 });
