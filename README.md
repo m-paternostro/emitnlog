@@ -3,6 +3,7 @@
 [![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?logo=npm&logoColor=white)](https://www.npmjs.com/package/emitnlog)
 [![Version](https://img.shields.io/github/package-json/v/m-paternostro/emitnlog)](https://github.com/m-paternostro/emitnlog/blob/main/package.json)
 [![CI](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml/badge.svg)](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml)
+[![Coverage](https://m-paternostro.github.io/emitnlog/coverage/coverage-badge.svg)](https://m-paternostro.github.io/emitnlog/coverage/)
 
 # 🚦 Emit n' Log
 
