@@ -35,6 +35,47 @@ export type EventNotifier<T, E = Error> = {
   readonly onEvent: OnEvent<T>;
 
   /**
+   * Returns a promise that resolves to the next event notified by this notifier.
+   *
+   * This method allows clients to await a single event without registering a persistent listener. It is especially
+   * useful in scenarios where the client prefers a promise-based flow or only needs to observe the next occurrence of
+   * an event.
+   *
+   * The returned promise:
+   *
+   * - Resolves with the next notified event
+   * - Never rejects
+   * - Does not interfere with existing listeners. Moreover, the promise is resolved after the listeners are notified.
+   *
+   * It is important to notice that the returned promise is tied to a single event: to wait for a subsequent event after
+   * the returned promise is settled, call `waitForEvent()` again. Also, avoid caching the returned promise unless the
+   * intent is to observe only the next event.
+   *
+   * @example Basic usage
+   *
+   * ```ts
+   * const notifier = createEventNotifier<string>();
+   *
+   * const event = await notifier.waitForEvent();
+   * console.log(`Received event: ${event}`);
+   * ```
+   *
+   * @example Using in a loop
+   *
+   * ```ts
+   * async function logNext5(notifier: EventNotifier<string>) {
+   *   for (let i = 0; i < 5; i++) {
+   *     const value = await notifier.waitForEvent();
+   *     console.log(`Received #${i + 1}:`, value);
+   *   }
+   * }
+   * ```
+   *
+   * @returns A promise that resolves to the next event.
+   */
+  readonly waitForEvent: () => Promise<T>;
+
+  /**
    * Notifies all registered listeners with the provided event.
    *
    * This method:
@@ -62,7 +103,7 @@ export type EventNotifier<T, E = Error> = {
   readonly notify: (event: T | (() => T)) => void;
 
   /**
-   * Sets an error handler for the notifier. This handler will be called when a listener throws an error.
+   * Sets the error handler for the notifier, to be called whenever a listener throws an error.
    *
    * @param handler A function that will be called with any errors thrown by listeners.
    */

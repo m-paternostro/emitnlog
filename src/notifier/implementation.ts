@@ -1,4 +1,6 @@
-import type { EventNotifier } from './notifier.ts';
+import type { DeferredValue } from '../utils/async/deferred-value.ts';
+import { createDeferredValue } from '../utils/async/deferred-value.ts';
+import type { EventNotifier } from './definition.ts';
 
 /**
  * Creates a type-safe event notifier.
@@ -68,6 +70,7 @@ import type { EventNotifier } from './notifier.ts';
 export const createEventNotifier = <T, E = Error>(): EventNotifier<T, E> => {
   const listeners = new Set<(event: T) => unknown>();
   let errorHandler: ((error: E) => void) | undefined;
+  let deferredEvent: DeferredValue<T> | undefined;
 
   return {
     close: () => {
@@ -84,8 +87,10 @@ export const createEventNotifier = <T, E = Error>(): EventNotifier<T, E> => {
       };
     },
 
+    waitForEvent: () => (deferredEvent || (deferredEvent = createDeferredValue<T>())).promise,
+
     notify: (event: T | (() => T)) => {
-      if (!listeners.size) {
+      if (!listeners.size && !deferredEvent) {
         return;
       }
 
@@ -101,6 +106,11 @@ export const createEventNotifier = <T, E = Error>(): EventNotifier<T, E> => {
             errorHandler(error as E);
           }
         }
+      }
+
+      if (deferredEvent) {
+        deferredEvent.resolve(event);
+        deferredEvent = undefined;
       }
     },
 
