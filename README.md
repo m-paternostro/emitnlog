@@ -9,13 +9,12 @@
 
 A modern, type-safe library for logging and event notifications in JavaScript/TypeScript apps.
 
-Practical utilities for modern TypeScript projects:
+Practical utilities for modern projects:
 
 - Clear logs with structured data and lazy evaluation
 - Lightweight observables without full-blown streams
 - Zero dependencies
-
----
+- Built with TypeScript from the ground up with precise types and full type inference, while remaining lightweight and fully functional in JavaScript environments.
 
 ## Table of Contents
 
@@ -26,15 +25,11 @@ Practical utilities for modern TypeScript projects:
 - [Logger + Notifier Combined](#logger--notifier-combined)
 - [Utilities](#utilities)
 
----
-
 ## Installation
 
 ```bash
 npm install emitnlog
 ```
-
----
 
 ## Features
 
@@ -43,8 +38,6 @@ npm install emitnlog
 - **Lazy Evaluation** – compute messages and events only when needed
 - **Multiple Logger Targets** – console, stderr, file, or no-op
 - **Tiny Footprint** – no runtime bloat
-
----
 
 ## Logger
 
@@ -228,8 +221,6 @@ class MyCustomLogger extends BaseLogger {
 }
 ```
 
----
-
 ## Event Notifier
 
 A simple way to implement observable patterns. Listeners only get notified when something happens — and only if they're subscribed.
@@ -275,7 +266,37 @@ notifier.notify(() => {
 subscription.close();
 ```
 
----
+### Promise-based Event Waiting
+
+Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners.
+
+```ts
+import { createEventNotifier } from 'emitnlog/notifier';
+
+const notifier = createEventNotifier<string>();
+
+// Somewhere in an async function
+async function handleNextEvent() {
+  // This will wait until the next event is notified
+  const eventData = await notifier.waitForEvent();
+  console.log(`Received event: ${eventData}`);
+}
+
+// Wait for multiple events sequentially
+async function handleMultipleEvents() {
+  // These will wait for two separate events in sequence
+  const first = await notifier.waitForEvent();
+  const second = await notifier.waitForEvent();
+  console.log(`Got two events: ${first}, ${second}`);
+}
+
+// Caution: This doesn't wait for two separate events!
+// Both promises resolve with the same event
+async function incorrectUsage() {
+  const [event1, event2] = await Promise.all([notifier.waitForEvent(), notifier.waitForEvent()]);
+  // event1 and event2 will be identical
+}
+```
 
 ## Logger + Notifier Combined
 
@@ -476,13 +497,9 @@ const final = await wait;
 
 Polling stops automatically on timeout or interrupt. Call `close()` to stop early. Works with sync or async functions and handles exceptions safely.
 
----
-
 ## API Docs
 
 See source JSDoc for full types and examples.
-
----
 
 ## License
 
