@@ -1,12 +1,13 @@
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
 import { stringify } from '../utils/converter/stringify.ts';
+import { shouldEmitEntry } from './level-utils.ts';
 import type { Logger, LogLevel, LogMessage } from './logger.ts';
 
 /**
  * Base class for logger implementations, providing a complete implementation of the {@link Logger} interface.
  *
- * By default, this logger outputs entries to the console, but subclasses can override the emit methods to direct output
- * elsewhere. The logger filters entries based on the configured minimum severity level.
+ * Logger implementors are strongly encouraged to extend this class to reduce the chances of future modifications
+ * breaking current code.
  */
 export abstract class BaseLogger implements Logger {
   /**
@@ -18,7 +19,7 @@ export abstract class BaseLogger implements Logger {
   /**
    * Additional arguments to include with the next template literal log entry. This is reset after each log operation.
    */
-  private pendingArgs: unknown[] = [];
+  private _pendingArgs: unknown[] = [];
 
   /**
    * Creates a new BaseLogger with the specified minimum severity level.
@@ -27,6 +28,11 @@ export abstract class BaseLogger implements Logger {
    */
   public constructor(level: LogLevel | 'off' = 'info') {
     this.level = level;
+  }
+
+  public args(...args: unknown[]): Logger {
+    this._pendingArgs = args;
+    return this;
   }
 
   public trace(message: LogMessage, ...args: readonly unknown[]): void {
@@ -70,7 +76,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public error(value: unknown, ...args: readonly unknown[]): void {
-    if (this.applicable('error')) {
+    if (this.shouldEmitEntry('error')) {
       if (typeof value === 'function') {
         value = (value as () => unknown)();
       }
@@ -122,7 +128,7 @@ export abstract class BaseLogger implements Logger {
 
   public log(level: LogLevel, message: LogMessage, ...args: readonly unknown[]): void {
     const pendingArgs = this.consumePendingArgs();
-    if (this.applicable(level)) {
+    if (this.shouldEmitEntry(level)) {
       this.emit(level, this.stringify(message), pendingArgs ? [...pendingArgs, ...args] : args);
     }
   }
@@ -200,49 +206,8 @@ export abstract class BaseLogger implements Logger {
    * @param level The log level to check
    * @returns True if the log level is applicable, false otherwise
    */
-  protected applicable(level: LogLevel): boolean {
-    return this.level !== 'off' && this.toLevelWeight(level) <= this.toLevelWeight(this.level);
-  }
-
-  /**
-   * Returns the weight of the log level.
-   *
-   * @param level The log level to get the weight of
-   * @returns The weight of the log level
-   */
-  protected toLevelWeight(level: LogLevel): number {
-    switch (level) {
-      case 'trace':
-        return 8;
-
-      case 'debug':
-        return 7;
-
-      case 'info':
-        return 6;
-
-      case 'notice':
-        return 5;
-
-      case 'warning':
-        return 4;
-
-      case 'error':
-        return 3;
-
-      case 'critical':
-        return 2;
-
-      case 'alert':
-        return 1;
-
-      case 'emergency':
-        return 0;
-
-      default:
-        exhaustiveCheck(level);
-        return 20;
-    }
+  protected shouldEmitEntry(level: LogLevel): boolean {
+    return shouldEmitEntry(this.level, level);
   }
 
   /**
@@ -254,21 +219,16 @@ export abstract class BaseLogger implements Logger {
    */
   protected abstract emitLine(level: LogLevel, message: string, args: readonly unknown[]): void;
 
-  public args(...args: unknown[]): Logger {
-    this.pendingArgs = args;
-    return this;
-  }
-
   /**
    * Consumes and returns the pending arguments, then clears them.
    */
   protected consumePendingArgs(): readonly unknown[] | undefined {
-    if (!this.pendingArgs.length) {
+    if (!this._pendingArgs.length) {
       return undefined;
     }
 
-    const args = this.pendingArgs;
-    this.pendingArgs = [];
+    const args = this._pendingArgs;
+    this._pendingArgs = [];
     return args;
   }
 }

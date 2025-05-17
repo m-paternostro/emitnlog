@@ -64,7 +64,7 @@ describe('emitnlog.logger.BaseLogger', () => {
     logger = new TestLogger('trace');
   });
 
-  describe('Console Logging', () => {
+  describe('Basic Logging', () => {
     test('should log trace messages', () => {
       logger.trace('trace message');
       expect(logger.emittedLines).toHaveLength(1);
@@ -241,6 +241,29 @@ describe('emitnlog.logger.BaseLogger', () => {
       const messageFunction = jest.fn(() => 'expensive message');
       logger.info(messageFunction);
       expect(messageFunction).toHaveBeenCalled();
+    });
+
+    test('should handle lazy message functions', () => {
+      logger.level = 'info';
+
+      let count = 0;
+      const expensiveOperation = () => {
+        count++;
+        return 'result';
+      };
+
+      expect(logger.emittedLines).toEqual([]);
+      expect(count).toBe(0);
+      //
+      logger.info(() => `Computed: ${String(expensiveOperation())}`);
+      logger.debug(() => `Computed: ${String(expensiveOperation())}`);
+      logger.warning(() => `Computed: ${String(expensiveOperation())}`);
+      //
+      expect(logger.emittedLines[0].level).toBe('info');
+      expect(logger.emittedLines[0].message).toBe('Computed: result');
+      expect(logger.emittedLines[1].level).toBe('warning');
+      expect(logger.emittedLines[1].message).toBe('Computed: result');
+      expect(count).toBe(2);
     });
   });
 
@@ -456,6 +479,31 @@ describe('emitnlog.logger.BaseLogger', () => {
         expect(logger.emittedLines[7].level).toBe('emergency');
         expect(logger.emittedLines[7].message).toBe('Emergency with error: Test error');
       });
+    });
+
+    test('should handle lazy message stringification', () => {
+      logger.level = 'info';
+
+      let count = 0;
+      const expensiveStringification = {
+        toString() {
+          count++;
+          return 'result';
+        },
+      };
+
+      expect(logger.emittedLines).toEqual([]);
+      expect(count).toBe(0);
+      //
+      logger.i`Computed: ${expensiveStringification}`;
+      logger.d`Computed: ${expensiveStringification}`;
+      logger.w`Computed: ${expensiveStringification}`;
+      //
+      expect(logger.emittedLines[0].level).toBe('info');
+      expect(logger.emittedLines[0].message).toBe('Computed: result');
+      expect(logger.emittedLines[1].level).toBe('warning');
+      expect(logger.emittedLines[1].message).toBe('Computed: result');
+      expect(count).toBe(2);
     });
   });
 

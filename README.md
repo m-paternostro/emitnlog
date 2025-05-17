@@ -5,30 +5,30 @@
 [![CI](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml/badge.svg)](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml)
 [![Coverage](https://m-paternostro.github.io/emitnlog/coverage/coverage-badge.svg)](https://m-paternostro.github.io/emitnlog/coverage/)
 
-# 🚦 Emit n' Log
+# Emit n' Log
 
 A modern, type-safe library for logging and event notifications in JavaScript/TypeScript apps.
 
 Practical utilities for modern TypeScript projects:
 
-- 🧪 Clear logs with structured data and lazy evaluation
-- 🧩 Lightweight observables without full-blown streams
-- 🛠 Zero dependencies
+- Clear logs with structured data and lazy evaluation
+- Lightweight observables without full-blown streams
+- Zero dependencies
 
 ---
 
-## 🗺 Table of Contents
+## Table of Contents
 
-- [Installation](#-installation)
-- [Features](#-features)
-- [Logger](#-logger)
-- [Event Notifier](#-event-notifier)
-- [Logger + Notifier Combined](#-logger--notifier-combined)
-- [Utilities](#-utilities)
+- [Installation](#installation)
+- [Features](#features)
+- [Logger](#logger)
+- [Event Notifier](#event-notifier)
+- [Logger + Notifier Combined](#logger--notifier-combined)
+- [Utilities](#utilities)
 
 ---
 
-## 🛠 Installation
+## Installation
 
 ```bash
 npm install emitnlog
@@ -36,17 +36,17 @@ npm install emitnlog
 
 ---
 
-## ✨ Features
+## Features
 
-- 📢 **Flexible Logger** with 9 severity levels and template literal magic
-- 🔔 **Type-safe Event Notifier** to broadcast events only when someone's listening
-- 🧵 **Lazy Evaluation** – compute messages and events only when needed
-- 💾 **Multiple Logger Targets** – console, stderr, file, or no-op
-- 📦 **Tiny Footprint** – no runtime bloat
+- **Flexible Logger** with 9 severity levels and template literal magic
+- **Type-safe Event Notifier** to broadcast events only when someone's listening
+- **Lazy Evaluation** – compute messages and events only when needed
+- **Multiple Logger Targets** – console, stderr, file, or no-op
+- **Tiny Footprint** – no runtime bloat
 
 ---
 
-## 📋 Logger
+## Logger
 
 A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rfc5424), supporting both template-literal and traditional logging.
 
@@ -128,6 +128,35 @@ logger.error('Something went wrong', error);
 logger.debug(() => `Expensive operation result: ${computeExpensiveValue()}`);
 ```
 
+### Prefixed Logger
+
+Categorize and organize your logs by adding fixed prefixes:
+
+```ts
+import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
+
+const logger = new ConsoleLogger();
+
+// Create a prefixed logger for a component
+const dbLogger = withPrefix(logger, 'DB: ');
+dbLogger.i`Connected to database`; // Logs: "DB: Connected to database"
+
+// Create a more specific logger with nested prefixes
+const userDbLogger = withPrefix(dbLogger, 'users/');
+userDbLogger.w`User not found: ${userId}`; // Logs: "DB: users/User not found: 123"
+
+// Hover over these in your IDE to see their full prefixes!
+// Type of dbLogger: PrefixedLogger<'DB: '>
+// Type of userDbLogger: PrefixedLogger<'DB: users/'>
+
+// Errors maintain their original objects
+const error = new Error('Connection failed');
+dbLogger.error(error); // Logs the prefixed message while preserving the error object
+
+// Works with all log levels and methods
+dbLogger.d`Query executed in ${queryTime}ms`;
+```
+
 ### File Logging (Node.js only)
 
 For persistent logging in Node.js environments:
@@ -201,7 +230,7 @@ class MyCustomLogger extends BaseLogger {
 
 ---
 
-## 🔔 Event Notifier
+## Event Notifier
 
 A simple way to implement observable patterns. Listeners only get notified when something happens — and only if they're subscribed.
 
@@ -248,7 +277,7 @@ subscription.close();
 
 ---
 
-## 🧩 Logger + Notifier Combined
+## Logger + Notifier Combined
 
 Here's an example that uses both the logger and the event notifier:
 
@@ -292,7 +321,7 @@ uploader.upload('video.mp4');
 subscription.close();
 ```
 
-## 🔧 Utilities
+## Utilities
 
 A set of helpful utilities used internally but also available for direct use:
 
@@ -449,12 +478,12 @@ Polling stops automatically on timeout or interrupt. Call `close()` to stop earl
 
 ---
 
-## 📘 API Docs
+## API Docs
 
 See source JSDoc for full types and examples.
 
 ---
 
-## 📄 License
+## License
 
 MIT

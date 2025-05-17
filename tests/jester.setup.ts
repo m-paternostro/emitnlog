@@ -36,12 +36,12 @@ export type TestLogger = ReturnType<typeof createTestLogger>;
  *
  * @returns A logger that can be used to test log messages.
  */
-export const createTestLogger = (): jest.Mocked<Logger> => {
+export const createTestLogger = (level: LogLevel = 'debug'): jest.Mocked<Logger> => {
   const logger = new (class extends BaseLogger {
     protected emitLine(): void {
       return;
     }
-  })('debug');
+  })(level);
 
   jest.spyOn(logger, 'log');
   jest.spyOn(logger as unknown as { emitLine: jest.Mock }, 'emitLine');

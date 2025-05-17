@@ -1,5 +1,5 @@
 /**
- * Inspired by RFC5424, with an additional 'trace' level for ultra-detailed logging.
+ * The possible levels for the Logger, inspired by RFC5424, with an additional 'trace' level for ultra-detailed logging.
  *
  * The severity levels are assumed to be numerically ascending from most important to least important.
  *
@@ -36,7 +36,7 @@ export type LogLevel = 'trace' | 'debug' | 'info' | 'notice' | 'warning' | 'erro
  * - Entries logged with debug(), info(), or notice() methods will be filtered out
  * - Entries logged with warning(), error(), critical(), alert(), or emergency() will be emitted
  */
-export type Logger = {
+export interface Logger {
   /**
    * The current minimum severity level of the logger.
    *
@@ -539,7 +539,7 @@ export type Logger = {
    * @param args Additional arguments to include in the log entry
    */
   readonly log: (level: LogLevel, message: LogMessage, ...args: unknown[]) => void;
-};
+}
 
 /**
  * Type representing the content of a log entry. Can be a primitive value or a function that returns a primitive value.
