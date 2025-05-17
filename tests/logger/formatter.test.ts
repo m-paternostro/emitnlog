@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it, jest, test } from '@jest/globals';
 
 import type { LogLevel } from '../../src/logger/index.ts';
 import { emitColorfulLine, emitLine } from '../../src/logger/index.ts';
@@ -36,31 +36,31 @@ describe('formatter', () => {
       expect(result).toContain(message);
     });
 
-    it('handles empty messages', () => {
+    test('handles empty messages', () => {
       const result = emitLine('info', '');
       expect(result).toMatch(/Sun Jan 01 2023.+\[info     \] /);
     });
 
-    it('handles messages with special characters', () => {
+    test('handles messages with special characters', () => {
       const result = emitLine('debug', 'Message with \n new line and "quotes"');
       expect(result).toContain('Message with \n new line and "quotes"');
       expect(result).toContain('[debug    ]');
     });
 
-    it('handles extremely long messages', () => {
+    test('handles extremely long messages', () => {
       const longMessage = 'a'.repeat(1000);
       const result = emitLine('info', longMessage);
       expect(result).toContain(longMessage);
       expect(result).toContain('[info     ]');
     });
 
-    it('handles messages with emoji', () => {
+    test('handles messages with emoji', () => {
       const message = '😀 Smiley face emoji message 🚀';
       const result = emitLine('info', message);
       expect(result).toContain(message);
     });
 
-    it('properly pads all log levels to 9 characters', () => {
+    test('properly pads all log levels to 9 characters', () => {
       const levels: LogLevel[] = [
         'trace',
         'debug',
@@ -106,33 +106,33 @@ describe('formatter', () => {
       expect(result).toContain(message);
     });
 
-    it('handles empty messages', () => {
+    test('handles empty messages', () => {
       const result = emitColorfulLine('info', '');
       expect(result).toContain('\x1b[2mSun Jan 01 2023');
       expect(result).toContain('\x1b[36m[info     ]\x1b[0m');
     });
 
-    it('handles messages with special characters', () => {
+    test('handles messages with special characters', () => {
       const result = emitColorfulLine('warning', 'Warning: \nMultiline\ntext with "quotes"');
       expect(result).toContain('Warning: \nMultiline\ntext with "quotes"');
       expect(result).toContain('\x1b[33m[warning  ]\x1b[0m');
     });
 
-    it('handles extremely long messages', () => {
+    test('handles extremely long messages', () => {
       const longMessage = 'a'.repeat(1000);
       const result = emitColorfulLine('error', longMessage);
       expect(result).toContain(longMessage);
       expect(result).toContain('\x1b[31m[error    ]\x1b[0m');
     });
 
-    it('handles messages with emoji', () => {
+    test('handles messages with emoji', () => {
       const message = '😀 Smiley face emoji message 🚀';
       const result = emitColorfulLine('info', message);
       expect(result).toContain(message);
       expect(result).toContain('\x1b[36m[info     ]\x1b[0m');
     });
 
-    it('properly applies ANSI escape sequences for different log levels', () => {
+    test('properly applies ANSI escape sequences for different log levels', () => {
       // Test trace (dim)
       expect(emitColorfulLine('trace', 'test')).toContain('\x1b[2m[trace    ]\x1b[0m');
 
@@ -147,7 +147,7 @@ describe('formatter', () => {
   describe('terminalFormatter', () => {
     // Using private methods indirectly through emitColorfulLine
 
-    it('applies dim formatting to timestamps in all log levels', () => {
+    test('applies dim formatting to timestamps in all log levels', () => {
       const levels: LogLevel[] = [
         'trace',
         'debug',
@@ -167,12 +167,12 @@ describe('formatter', () => {
       }
     });
 
-    it('preserves whitespace in formatted messages', () => {
+    test('preserves whitespace in formatted messages', () => {
       const result = emitColorfulLine('info', '  Indented message with    spaces  ');
       expect(result).toContain('  Indented message with    spaces  ');
     });
 
-    it('maintains ANSI color code structure with reset marker at the end', () => {
+    test('maintains ANSI color code structure with reset marker at the end', () => {
       // Check that all ANSI color codes end with reset marker \x1b[0m
       const result = emitColorfulLine('error', 'Error message');
 

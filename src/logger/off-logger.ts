@@ -14,23 +14,33 @@ export const OFF_LOGGER: Logger = {
   },
 
   args: () => OFF_LOGGER,
+
   trace: () => void {},
   t: () => void {},
+
   debug: () => void {},
   d: () => void {},
+
   info: () => void {},
   i: () => void {},
+
   notice: () => void {},
   n: () => void {},
+
   warning: () => void {},
   w: () => void {},
+
   error: () => void {},
   e: () => void {},
+
   critical: () => void {},
   c: () => void {},
+
   alert: () => void {},
   a: () => void {},
+
   emergency: () => void {},
   em: () => void {},
+
   log: () => void {},
 } as const;
