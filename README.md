@@ -15,8 +15,6 @@ Practical utilities for modern TypeScript projects:
 - Lightweight observables without full-blown streams
 - Zero dependencies
 
----
-
 ## Table of Contents
 
 - [Installation](#installation)
@@ -26,15 +24,11 @@ Practical utilities for modern TypeScript projects:
 - [Logger + Notifier Combined](#logger--notifier-combined)
 - [Utilities](#utilities)
 
----
-
 ## Installation
 
 ```bash
 npm install emitnlog
 ```
-
----
 
 ## Features
 
@@ -43,8 +37,6 @@ npm install emitnlog
 - **Lazy Evaluation** – compute messages and events only when needed
 - **Multiple Logger Targets** – console, stderr, file, or no-op
 - **Tiny Footprint** – no runtime bloat
-
----
 
 ## Logger
 
@@ -228,8 +220,6 @@ class MyCustomLogger extends BaseLogger {
 }
 ```
 
----
-
 ## Event Notifier
 
 A simple way to implement observable patterns. Listeners only get notified when something happens — and only if they're subscribed.
@@ -274,8 +264,6 @@ notifier.notify(() => {
 // Clean up
 subscription.close();
 ```
-
----
 
 ## Logger + Notifier Combined
 
@@ -476,13 +464,9 @@ const final = await wait;
 
 Polling stops automatically on timeout or interrupt. Call `close()` to stop early. Works with sync or async functions and handles exceptions safely.
 
----
-
 ## API Docs
 
 See source JSDoc for full types and examples.
-
----
 
 ## License
 
