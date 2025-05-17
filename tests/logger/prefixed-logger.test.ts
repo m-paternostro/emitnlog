@@ -42,13 +42,25 @@ describe('emitnlog.logger.prefixed-logger', () => {
     // @ts-expect-error - emptyPrefix2 is a Logger, not a PrefixedLogger<''>
     const emptyPrefix2: PrefixedLogger<''> = withPrefix(logger, '');
     expect(emptyPrefix2).toBe(logger);
+    expect(emptyPrefix2.prefix).toBeUndefined();
 
     const testPrefix1: PrefixedLogger<'test: '> = withPrefix(logger, 'test: ');
     expect(testPrefix1).not.toBe(logger);
+    expect(testPrefix1.prefix).toBe('test: ');
 
     // @ts-expect-error - testPrefix2 is a PrefixedLogger<'test: '>, not a PrefixedLogger<'test'>
     const testPrefix2: PrefixedLogger<'test'> = withPrefix(logger, 'test: ');
     expect(testPrefix2).not.toBe(logger);
+    expect(testPrefix2.prefix).toBe('test: ');
+
+    const combinedPrefix1: PrefixedLogger<'test: test2: '> = withPrefix(testPrefix1, 'test2: ');
+    expect(combinedPrefix1).not.toBe(testPrefix1);
+    expect(combinedPrefix1.prefix).toBe('test: test2: ');
+
+    // @ts-expect-error - combinedPrefix2 is a PrefixedLogger<'test: test2: '>, not a PrefixedLogger<'test2: '>
+    const combinedPrefix2: PrefixedLogger<'test2: '> = withPrefix(testPrefix1, 'test2: ');
+    expect(combinedPrefix2).not.toBe(combinedPrefix1);
+    expect(combinedPrefix2.prefix).toBe('test: test2: ');
   });
 
   describe('logging methods', () => {
@@ -221,8 +233,12 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes', () => {
       const baseLogger = createTestLogger();
-      const appLogger = withPrefix(baseLogger, 'app: ');
-      const userLogger = withPrefix(appLogger, 'user: ');
+
+      const appLogger: PrefixedLogger<'app: '> = withPrefix(baseLogger, 'app: ');
+      expect(appLogger.prefix).toBe('app: ');
+
+      const userLogger: PrefixedLogger<'app: user: '> = withPrefix(appLogger, 'user: ');
+      expect(userLogger.prefix).toBe('app: user: ');
 
       userLogger.info('Profile updated');
 

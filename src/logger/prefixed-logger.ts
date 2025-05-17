@@ -29,6 +29,9 @@ export interface PrefixedLogger<TPrefix extends string = string> extends Logger 
  * This function wraps an existing logger and returns a new logger instance where all log messages are automatically
  * prefixed. This is useful for categorizing logs or distinguishing between different components in your application.
  *
+ * When applied to an already prefixed logger, it preserves the full prefix chain both at runtime and in the type
+ * system, allowing for strongly-typed nested prefixes.
+ *
  * Performance optimizations:
  *
  * - If the prefix is an empty string, the original logger is returned unchanged
@@ -45,8 +48,9 @@ export interface PrefixedLogger<TPrefix extends string = string> extends Logger 
  * // Prefix is maintained with template literals
  * dbLogger.d`Query executed in ${queryTime}ms`; // Logs: "DB: Query executed in 42ms"
  *
- * // Create nested prefixes for hierarchical logging
+ * // Create nested prefixes for hierarchical logging - maintains the full prefix chain
  * const userDbLogger = withPrefix(dbLogger, 'users/');
+ * // Type of userDbLogger is PrefixedLogger<'DB: users/'>
  * userDbLogger.w`User not found: ${userId}`; // Logs: "DB: users/User not found: 123"
  *
  * // Errors maintain their original objects while prefixing the message
@@ -66,21 +70,25 @@ export interface PrefixedLogger<TPrefix extends string = string> extends Logger 
  * @param prefix The prefix to prepend to all log messages
  * @returns A new logger with the specified prefix, or the original logger if prefix is empty.
  */
-export const withPrefix = <TPrefix extends string>(
-  logger: Logger,
+export const withPrefix = <TLogger extends Logger, TPrefix extends string>(
+  logger: TLogger,
   prefix: TPrefix,
-): TPrefix extends '' ? Logger : PrefixedLogger<TPrefix> => {
+): WithPrefixResult<TLogger, TPrefix> => {
   if (prefix === '') {
-    return logger as TPrefix extends '' ? Logger : PrefixedLogger<TPrefix>;
+    return logger as WithPrefixResult<TLogger, TPrefix>;
   }
 
   if (logger === OFF_LOGGER) {
-    return logger as TPrefix extends '' ? Logger : PrefixedLogger<TPrefix>;
+    return OFF_LOGGER as WithPrefixResult<TLogger, TPrefix>;
   }
 
-  const prefixedLogger: PrefixedLogger<TPrefix> = {
+  // Combine the new prefix with any existing prefix
+  const existingPrefix = 'prefix' in logger && typeof logger.prefix === 'string' && logger.prefix ? logger.prefix : '';
+  const combinedPrefix = `${existingPrefix}${prefix}`;
+
+  const prefixedLogger: PrefixedLogger = {
     level: logger.level,
-    prefix,
+    prefix: combinedPrefix,
 
     args(...args: unknown[]) {
       logger.args(...args);
@@ -192,7 +200,7 @@ export const withPrefix = <TPrefix extends string>(
     },
   };
 
-  return prefixedLogger as TPrefix extends '' ? Logger : PrefixedLogger<TPrefix>;
+  return prefixedLogger as WithPrefixResult<TLogger, TPrefix>;
 };
 
 const prefixTemplateString = (strings: TemplateStringsArray, prefix: string): TemplateStringsArray => {
@@ -204,3 +212,13 @@ const prefixTemplateString = (strings: TemplateStringsArray, prefix: string): Te
 };
 
 const toMessage = (message: LogMessage) => (typeof message === 'function' ? message() : message);
+
+type ExtractPrefix<T> = T extends PrefixedLogger<infer P> ? P : '';
+
+type CombinePrefixes<TPrevPrefix extends string, TNewPrefix extends string> = TPrevPrefix extends ''
+  ? TNewPrefix
+  : `${TPrevPrefix}${TNewPrefix}`;
+
+type WithPrefixResult<TLogger extends Logger, TPrefix extends string> = TPrefix extends ''
+  ? TLogger
+  : PrefixedLogger<CombinePrefixes<ExtractPrefix<TLogger>, TPrefix>>;
