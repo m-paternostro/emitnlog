@@ -128,6 +128,35 @@ logger.error('Something went wrong', error);
 logger.debug(() => `Expensive operation result: ${computeExpensiveValue()}`);
 ```
 
+### Prefixed Logger
+
+Categorize and organize your logs by adding fixed prefixes:
+
+```ts
+import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
+
+const logger = new ConsoleLogger();
+
+// Create a prefixed logger for a component
+const dbLogger = withPrefix(logger, 'DB: ');
+dbLogger.i`Connected to database`; // Logs: "DB: Connected to database"
+
+// Create a more specific logger with nested prefixes
+const userDbLogger = withPrefix(dbLogger, 'users/');
+userDbLogger.w`User not found: ${userId}`; // Logs: "DB: users/User not found: 123"
+
+// Hover over these in your IDE to see their full prefixes!
+// Type of dbLogger: PrefixedLogger<'DB: '>
+// Type of userDbLogger: PrefixedLogger<'DB: users/'>
+
+// Errors maintain their original objects
+const error = new Error('Connection failed');
+dbLogger.error(error); // Logs the prefixed message while preserving the error object
+
+// Works with all log levels and methods
+dbLogger.d`Query executed in ${queryTime}ms`;
+```
+
 ### File Logging (Node.js only)
 
 For persistent logging in Node.js environments:
