@@ -199,7 +199,9 @@ export default ts.config([
   {
     name: 'neutral',
     files: ['src/**/*.ts'],
-    languageOptions: { globals: { setTimeout: 'readonly', clearInterval: 'readonly', setInterval: 'readonly' } },
+    languageOptions: {
+      globals: { setTimeout: 'readonly', clearInterval: 'readonly', setInterval: 'readonly', performance: 'readonly' },
+    },
     rules: {
       'no-restricted-imports': [
         'error',
