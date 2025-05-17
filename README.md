@@ -9,11 +9,12 @@
 
 A modern, type-safe library for logging and event notifications in JavaScript/TypeScript apps.
 
-Practical utilities for modern TypeScript projects:
+Practical utilities for modern projects:
 
 - Clear logs with structured data and lazy evaluation
 - Lightweight observables without full-blown streams
 - Zero dependencies
+- Built with TypeScript from the ground up with precise types and full type inference, while remaining lightweight and fully functional in JavaScript environments.
 
 ## Table of Contents
 
