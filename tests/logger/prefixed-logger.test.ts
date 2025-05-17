@@ -117,6 +117,33 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(count).toBe(2);
     });
 
+    test('should handle lazy message functions when using template methods', () => {
+      const emittedLines: string[] = [];
+      const logger = new (class extends BaseLogger {
+        protected emitLine(level: LogLevel, message: string): void {
+          emittedLines.push(`[${level}] ${message}`);
+        }
+      })();
+
+      const prefixedLogger = withPrefix(logger, 'test: ');
+
+      let count = 0;
+      const expensiveOperation = () => {
+        count++;
+        return 'result';
+      };
+
+      expect(emittedLines).toEqual([]);
+      expect(count).toBe(0);
+      //
+      prefixedLogger.i`Computed: ${expensiveOperation}`;
+      prefixedLogger.d`Computed: ${expensiveOperation}`;
+      prefixedLogger.w`Computed: ${expensiveOperation}`;
+      //
+      expect(emittedLines).toEqual(['[info] test: Computed: result', '[warning] test: Computed: result']);
+      expect(count).toBe(2);
+    });
+
     test('should handle lazy message stringification when using template methods', () => {
       const emittedLines: string[] = [];
       const logger = new (class extends BaseLogger {
