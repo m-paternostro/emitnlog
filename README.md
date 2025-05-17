@@ -266,6 +266,38 @@ notifier.notify(() => {
 subscription.close();
 ```
 
+### Promise-based Event Waiting
+
+Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners.
+
+```ts
+import { createEventNotifier } from 'emitnlog/notifier';
+
+const notifier = createEventNotifier<string>();
+
+// Somewhere in an async function
+async function handleNextEvent() {
+  // This will wait until the next event is notified
+  const eventData = await notifier.waitForEvent();
+  console.log(`Received event: ${eventData}`);
+}
+
+// Wait for multiple events sequentially
+async function handleMultipleEvents() {
+  // These will wait for two separate events in sequence
+  const first = await notifier.waitForEvent();
+  const second = await notifier.waitForEvent();
+  console.log(`Got two events: ${first}, ${second}`);
+}
+
+// Caution: This doesn't wait for two separate events!
+// Both promises resolve with the same event
+async function incorrectUsage() {
+  const [event1, event2] = await Promise.all([notifier.waitForEvent(), notifier.waitForEvent()]);
+  // event1 and event2 will be identical
+}
+```
+
 ## Logger + Notifier Combined
 
 Here's an example that uses both the logger and the event notifier:
