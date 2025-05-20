@@ -1,4 +1,4 @@
-import type { Logger, LogLevel } from './logger.ts';
+import type { Logger, LogLevel } from './definition.ts';
 
 /**
  * A logger implementation that does not emit any log entries regardless of level. Useful for completely disabling
