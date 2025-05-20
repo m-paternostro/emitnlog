@@ -1,5 +1,5 @@
+import type { Logger, LogLevel, LogMessage } from './definition.ts';
 import { shouldEmitEntry } from './level-utils.ts';
-import type { Logger, LogLevel, LogMessage } from './logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 const prefixSymbol: unique symbol = Symbol('prefix');

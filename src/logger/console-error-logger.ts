@@ -1,6 +1,6 @@
 import { BaseLogger } from './base-logger.ts';
+import type { LogLevel } from './definition.ts';
 import { emitColorfulLine, emitLine } from './formatter.ts';
-import type { LogLevel } from './logger.ts';
 
 /**
  * A logger that emits log messages to standard error (console.error). By default the lines are emitted with colors.

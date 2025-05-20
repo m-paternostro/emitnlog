@@ -1,5 +1,5 @@
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
-import type { LogLevel } from './logger.ts';
+import type { LogLevel } from './definition.ts';
 
 /**
  * Converts a LogLevel to its corresponding numeric weight value for comparison operations.

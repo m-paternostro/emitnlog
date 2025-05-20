@@ -1,7 +1,7 @@
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
 import { stringify } from '../utils/converter/stringify.ts';
+import type { Logger, LogLevel, LogMessage } from './definition.ts';
 import { shouldEmitEntry } from './level-utils.ts';
-import type { Logger, LogLevel, LogMessage } from './logger.ts';
 
 /**
  * Base class for logger implementations, providing a complete implementation of the {@link Logger} interface.

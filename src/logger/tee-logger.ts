@@ -1,4 +1,4 @@
-import type { Logger, LogLevel, LogMessage } from './logger.ts';
+import type { Logger, LogLevel, LogMessage } from './definition.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 /**

@@ -8,8 +8,8 @@ import { withTimeout } from '../../utils/async/with-timeout.ts';
 import { errorify } from '../../utils/converter/errorify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
 import { BaseLogger } from '../base-logger.ts';
+import type { LogLevel } from '../definition.ts';
 import { emitColorfulLine, emitLine } from '../formatter.ts';
-import type { LogLevel } from '../logger.ts';
 
 /**
  * Configuration options for the FileLogger

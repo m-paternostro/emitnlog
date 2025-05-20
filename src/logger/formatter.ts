@@ -1,6 +1,6 @@
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
 import { stringify } from '../utils/converter/stringify.ts';
-import type { LogLevel } from './logger.ts';
+import type { LogLevel } from './definition.ts';
 
 export const emitLine = (level: LogLevel, message: string): string => {
   const timestamp = stringify(new Date());
