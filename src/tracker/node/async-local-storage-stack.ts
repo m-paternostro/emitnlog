@@ -17,6 +17,7 @@ import { createThreadSafeInvocationStack } from '../stack/implementation.ts';
  * await fetchUser('123');
  * ```
  *
+ * @param options - The options to use to create the stack.
  * @returns A thread-safe `InvocationStack` for Node.js environments.
  */
 export const createAsyncLocalStorageInvocationStack = (options?: { readonly logger: Logger }): InvocationStack => {

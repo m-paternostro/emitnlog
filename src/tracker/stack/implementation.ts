@@ -22,6 +22,7 @@ import type { AsyncStackStorage, InvocationStack } from './definition.ts';
  * await fetchUser('123');
  * ```
  *
+ * @param options - The options to use to create the stack.
  * @returns A synchronous, in-memory invocation stack.
  */
 export const createBasicInvocationStack = (options?: { readonly logger: Logger }): InvocationStack => {

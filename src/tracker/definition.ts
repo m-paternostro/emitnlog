@@ -174,7 +174,14 @@ export type InvocationTracker<TOperation extends string = string> = {
   readonly track: <F extends (...args: Parameters<F>) => ReturnType<F>>(
     operation: TOperation,
     fn: F,
-    options?: { readonly tags?: readonly Tag[] },
+    options?: {
+      /**
+       * The tags to add to the invocation.
+       *
+       * These tags are merged with any tags set when the invocation tracker was created.
+       */
+      readonly tags?: readonly Tag[];
+    },
   ) => F;
 
   /**

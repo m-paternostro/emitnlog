@@ -190,7 +190,10 @@ export class FileLogger extends BaseLogger {
    * @param filePathOrOptions Either a string path to the log file, or a configuration object
    * @param level The minimum severity level for log entries (default: 'info')
    */
-  public constructor(filePathOrOptions: string | ({ filePath: string } & FileLoggerOptions), level?: LogLevel) {
+  public constructor(
+    filePathOrOptions: string | ({ readonly filePath: string } & FileLoggerOptions),
+    level?: LogLevel,
+  ) {
     const isString = typeof filePathOrOptions === 'string';
 
     const filePath = isString ? filePathOrOptions : filePathOrOptions.filePath;
