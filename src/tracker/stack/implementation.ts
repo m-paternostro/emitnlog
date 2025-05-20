@@ -1,4 +1,4 @@
-import type { Logger } from '../../logger/logger.ts';
+import type { Logger } from '../../logger/definition.ts';
 import { OFF_LOGGER } from '../../logger/off-logger.ts';
 import type { InvocationKey } from '../definition.ts';
 import type { AsyncStackStorage, InvocationStack } from './definition.ts';

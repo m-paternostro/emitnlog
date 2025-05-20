@@ -1,6 +1,6 @@
 import type { Writable } from 'type-fest';
 
-import type { Logger } from '../logger/logger.ts';
+import type { Logger } from '../logger/definition.ts';
 import { OFF_LOGGER } from '../logger/off-logger.ts';
 import { withPrefix } from '../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../notifier/implementation.ts';

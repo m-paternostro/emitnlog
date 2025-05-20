@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-import type { Logger } from '../../logger/logger.ts';
+import type { Logger } from '../../logger/definition.ts';
 import type { InvocationKey } from '../definition.ts';
 import type { InvocationStack } from '../stack/definition.ts';
 import { createThreadSafeInvocationStack } from '../stack/implementation.ts';
