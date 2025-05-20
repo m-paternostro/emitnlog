@@ -47,9 +47,14 @@ import { createBasicInvocationStack, createThreadSafeInvocationStack } from './s
  */
 export const createInvocationTracker = <TOperation extends string = string>(options?: {
   /**
-   * A stack implementation to manage parent-child relationships (defaults to a non-thread safe stack).
+   * A stack implementation to manage parent-child relationships. If not specified, the default is thread-safe in node
+   * environments and "simple" in others.
    *
    * The stack is closed when the tracker is closed.
+   *
+   * If multiple trackers share the same stack instance, invocations may form cross-tracker parent-child relationships.
+   * This enables advanced use cases (e.g., linking invocations across components), but should only be done with a
+   * thread-safe stack to avoid incorrect nesting.
    */
   readonly stack?: InvocationStack;
 
@@ -120,8 +125,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         const index = ++counter;
         const invocationLogger = withPrefix(trackedLogger, `.${index}`);
 
-        const currentKey = stack.peek();
-        const parentKey = currentKey?.trackerId === trackerId ? (currentKey as InvocationKey<TOperation>) : undefined;
+        const parentKey = stack.peek();
 
         const key: InvocationKey<TOperation> = {
           id: `${trackerId}.${operation}.${index}`,
@@ -292,13 +296,19 @@ const mergeTags = (
 
 let stackFactory: (options: { readonly logger: Logger }) => InvocationStack = createBasicInvocationStack;
 
-try {
-  // eslint-disable-next-line no-undef
-  if (typeof process !== 'undefined' && typeof process.versions.node === 'string') {
-    const { AsyncLocalStorage } = await import('node:async_hooks');
-    const storage = new AsyncLocalStorage<InvocationKey[]>();
-    stackFactory = (options) => createThreadSafeInvocationStack(storage, options);
+void (async () => {
+  try {
+    // eslint-disable-next-line no-undef
+    if (typeof process !== 'undefined' && typeof process.versions.node === 'string') {
+      const { AsyncLocalStorage } = await import('node:async_hooks');
+      const storage = new AsyncLocalStorage<InvocationKey[]>();
+      stackFactory = (options) => {
+        options.logger.d`creating a thread-safe stack using node:async_hooks`;
+        const stack = createThreadSafeInvocationStack(storage, options);
+        return stack;
+      };
+    }
+  } catch {
+    // Ignore
   }
-} catch {
-  // Ignore
-}
+})();

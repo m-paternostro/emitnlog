@@ -46,8 +46,11 @@ export type Invocation<TOperation extends string = string> = {
 
   /**
    * If present, the key of the parent invocation (from the invocation stack).
+   *
+   * The parent invocation may have been tracked by a different tracker if multiple trackers share the same stack. In
+   * that case, the `operation` may fall outside the current tracker's `TOperation` union.
    */
-  readonly parentKey?: InvocationKey<TOperation>;
+  readonly parentKey?: InvocationKey;
 
   /**
    * If present, the arguments passed to the tracked operation.
