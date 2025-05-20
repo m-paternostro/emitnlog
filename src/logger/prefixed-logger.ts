@@ -31,6 +31,7 @@ export interface PrefixedLogger<TPrefix extends string> extends Logger {
  *
  * This function wraps an existing logger and returns a new logger instance where all log messages are automatically
  * prefixed. This is useful for categorizing logs or distinguishing between different components in your application.
+ * The log level of a prefixed logger is always the same of its "basic" logger.
  *
  * When applied to an already prefixed logger, it preserves the full prefix chain both at runtime and in the type
  * system, allowing for strongly-typed nested prefixes.
@@ -59,7 +60,7 @@ export interface PrefixedLogger<TPrefix extends string> extends Logger {
  *
  * // Errors maintain their original objects while prefixing the message
  * const error = new Error('Connection failed');
- * dbLogger.error(error); // Logs prefixed message but preserves error object in args
+ * dbLogger.error(error); // Logs the 'DB: ' prefixed message but preserves error object in args
  *
  * // Use with conditional logging
  * dbLogger.level = isProduction ? 'info' : 'debug';
@@ -89,14 +90,22 @@ export const withPrefix = <TLogger extends Logger, const TPrefix extends string>
     return OFF_LOGGER as unknown as WithPrefixResult<TLogger, TPrefix>;
   }
 
-  const combinedPrefix =
-    prefixSymbol in logger && typeof logger[prefixSymbol] === 'string' && logger[prefixSymbol]
-      ? `${logger[prefixSymbol]}${prefix}`
-      : prefix;
+  const data = toPrefixedLoggerData(logger);
+  if (data) {
+    prefix = `${data.currentPrefix}${prefix}` as TPrefix;
+    logger = data.basicLogger as TLogger;
+  }
 
   const prefixedLogger: PrefixedLogger<TPrefix> = {
-    level: logger.level,
-    [prefixSymbol]: combinedPrefix as TPrefix,
+    [prefixSymbol]: prefix,
+
+    get level() {
+      return logger.level;
+    },
+
+    set level(value: LogLevel | 'off') {
+      logger.level = value;
+    },
 
     args(...args: unknown[]) {
       logger.args(...args);
@@ -208,7 +217,25 @@ export const withPrefix = <TLogger extends Logger, const TPrefix extends string>
     },
   };
 
+  (prefixedLogger as unknown as { [basicLoggerSymbol]: Logger })[basicLoggerSymbol] = logger;
   return prefixedLogger as WithPrefixResult<TLogger, TPrefix>;
+};
+
+const basicLoggerSymbol: unique symbol = Symbol('basicLogger');
+
+const toPrefixedLoggerData = (
+  logger: Logger,
+): { readonly currentPrefix: string; readonly basicLogger: Logger } | undefined => {
+  if (
+    prefixSymbol in logger &&
+    typeof logger[prefixSymbol] === 'string' &&
+    logger[prefixSymbol] &&
+    basicLoggerSymbol in logger
+  ) {
+    return { currentPrefix: logger[prefixSymbol], basicLogger: logger[basicLoggerSymbol] as Logger };
+  }
+
+  return undefined;
 };
 
 const prefixTemplateString = (
