@@ -1,5 +1,7 @@
 import { describe, expect, jest, test } from '@jest/globals';
 
+import type { IsEqual } from 'type-fest';
+
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
 import { BaseLogger, OFF_LOGGER, shouldEmitEntry, withPrefix } from '../../src/logger/index.ts';
 import { createTestLogger } from '../jester.setup.ts';
@@ -23,50 +25,56 @@ describe('emitnlog.logger.prefixed-logger', () => {
   });
 
   test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
-    const prefixedLogger = withPrefix(OFF_LOGGER, 'test: ');
+    const prefixedLogger = withPrefix(OFF_LOGGER, 'test');
     expect(prefixedLogger).toBe(OFF_LOGGER);
   });
 
-  test('should create a logger with prefix property', () => {
-    const logger = createTestLogger();
-    const prefixedLogger = withPrefix(logger, 'test: ');
-    expect(prefixedLogger.prefix).toBe('test: ');
-  });
-
   test('should return the correct type', () => {
-    const logger = createTestLogger();
+    const assertPrefix = <A extends string, E extends string>(
+      actual: PrefixedLogger<A>,
+      expected: E,
+      _test: IsEqual<A, E>,
+    ): void => {
+      expect(actual).toBeDefined();
+      expect(expected).toBe(expected);
+    };
 
-    const emptyPrefix1: Logger = withPrefix(logger, '');
-    expect(emptyPrefix1).toBe(logger);
+    const logger: Logger = createTestLogger();
 
-    // @ts-expect-error - emptyPrefix2 is a Logger, not a PrefixedLogger<''>
-    const emptyPrefix2: PrefixedLogger<''> = withPrefix(logger, '');
-    expect(emptyPrefix2).toBe(logger);
-    expect(emptyPrefix2.prefix).toBeUndefined();
+    const emptyPrefix = withPrefix(logger, '');
+    expect(emptyPrefix).toBe(logger);
+    assertPrefix(emptyPrefix, '', true);
+    assertPrefix(emptyPrefix, 'test', false);
 
-    const testPrefix1: PrefixedLogger<'test: '> = withPrefix(logger, 'test: ');
-    expect(testPrefix1).not.toBe(logger);
-    expect(testPrefix1.prefix).toBe('test: ');
+    const testPrefix = withPrefix(logger, 'test1');
+    expect(testPrefix).not.toBe(logger);
+    assertPrefix(testPrefix, 'test1', true);
+    assertPrefix(testPrefix, '', false);
+    assertPrefix(testPrefix, 'test', false);
 
-    // @ts-expect-error - testPrefix2 is a PrefixedLogger<'test: '>, not a PrefixedLogger<'test'>
-    const testPrefix2: PrefixedLogger<'test'> = withPrefix(logger, 'test: ');
-    expect(testPrefix2).not.toBe(logger);
-    expect(testPrefix2.prefix).toBe('test: ');
+    const combinedPrefix = withPrefix(testPrefix, '-test2');
+    expect(combinedPrefix).not.toBe(logger);
+    expect(combinedPrefix).not.toBe(testPrefix);
+    assertPrefix(combinedPrefix, 'test1-test2', true);
+    assertPrefix(combinedPrefix, '', false);
+    assertPrefix(combinedPrefix, 'test1', false);
+    assertPrefix(combinedPrefix, '-test2', false);
 
-    const combinedPrefix1: PrefixedLogger<'test: test2: '> = withPrefix(testPrefix1, 'test2: ');
-    expect(combinedPrefix1).not.toBe(testPrefix1);
-    expect(combinedPrefix1.prefix).toBe('test: test2: ');
+    const prefix1 = withPrefix(emptyPrefix, 'prefix1');
+    expect(prefix1).not.toBe(emptyPrefix);
+    assertPrefix(prefix1, 'prefix1', true);
+    assertPrefix(prefix1, '', false);
 
-    // @ts-expect-error - combinedPrefix2 is a PrefixedLogger<'test: test2: '>, not a PrefixedLogger<'test2: '>
-    const combinedPrefix2: PrefixedLogger<'test2: '> = withPrefix(testPrefix1, 'test2: ');
-    expect(combinedPrefix2).not.toBe(combinedPrefix1);
-    expect(combinedPrefix2.prefix).toBe('test: test2: ');
+    const prefix2 = withPrefix(OFF_LOGGER, 'off');
+    expect(prefix2).toBe(OFF_LOGGER);
+    assertPrefix(prefix2, 'off', true);
+    assertPrefix(prefix2, '', false);
   });
 
   describe('logging methods', () => {
     test('should prepend prefix to standard logging methods', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.info('Hello, world!');
       expect(logger).toHaveLoggedWith('info', 'test: Hello, world!');
@@ -80,7 +88,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should prepend prefix to template literal logging methods', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.i`Value is ${42}`;
       expect(logger).toHaveLoggedWith('info', 'test: Value is 42');
@@ -88,6 +96,32 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const testObj = { name: 'test' };
       prefixedLogger.d`Objects: ${testObj}`;
       expect(logger).not.toHaveLoggedWith('debug', 'test: Objects: [object Object]');
+    });
+
+    test('should prepend prefix and message separator to standard logging methods', () => {
+      const logger = createTestLogger();
+      const prefixedLogger = withPrefix(logger, 'test', '-');
+
+      prefixedLogger.info('Hello, world!');
+      expect(logger).toHaveLoggedWith('info', 'test-Hello, world!');
+
+      prefixedLogger.debug('Debug message');
+      expect(logger).toHaveLoggedWith('debug', 'test-Debug message');
+
+      prefixedLogger.warning('Warning message');
+      expect(logger).toHaveLoggedWith('warning', 'test-Warning message');
+    });
+
+    test('should prepend prefix and message separator to template literal logging methods', () => {
+      const logger = createTestLogger();
+      const prefixedLogger = withPrefix(logger, 'test', '-');
+
+      prefixedLogger.i`Value is ${42}`;
+      expect(logger).toHaveLoggedWith('info', 'test-Value is 42');
+
+      const testObj = { name: 'test' };
+      prefixedLogger.d`Objects: ${testObj}`;
+      expect(logger).not.toHaveLoggedWith('debug', 'test-Objects: [object Object]');
     });
 
     test('should handle lazy message functions when using basic methods', () => {
@@ -98,7 +132,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         }
       })();
 
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       let count = 0;
       const expensiveOperation = () => {
@@ -125,7 +159,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         }
       })();
 
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       let count = 0;
       const expensiveOperation = () => {
@@ -152,7 +186,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         }
       })();
 
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       let count = 0;
       const expensiveStringification = {
@@ -175,7 +209,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should properly handle error objects', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
       const error = new Error('Something failed');
 
       prefixedLogger.error(error);
@@ -190,7 +224,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should properly handle error-like objects', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
       const errorObj = { error: 'Custom error data' };
 
       prefixedLogger.error(errorObj);
@@ -208,7 +242,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should check level before processing template literals', () => {
       const logger = createTestLogger();
       logger.level = 'info';
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       // Reset the mock to clearly see if shouldEmitEntry is called
       (shouldEmitEntry as jest.Mock).mockClear();
@@ -226,7 +260,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should respect logger level for standard methods', () => {
       const logger = createTestLogger();
       logger.level = 'warning';
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.info('Info message');
       prefixedLogger.debug('Debug message');
@@ -252,7 +286,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         }
       })();
 
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
       prefixedLogger.args({ id: 123 }, 42).info('User logged in');
       expect(emittedLines[0]).toBe('[info] test: User logged in');
       expect(emittedArgs[0]).toEqual([{ id: 123 }, 42]);
@@ -261,20 +295,32 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should support nested prefixes', () => {
       const baseLogger = createTestLogger();
 
-      const appLogger: PrefixedLogger<'app: '> = withPrefix(baseLogger, 'app: ');
-      expect(appLogger.prefix).toBe('app: ');
+      const appLogger = withPrefix(baseLogger, 'app');
+      const userLogger = withPrefix(appLogger, '.user');
 
-      const userLogger: PrefixedLogger<'app: user: '> = withPrefix(appLogger, 'user: ');
-      expect(userLogger.prefix).toBe('app: user: ');
+      userLogger.w`Profile updated!`;
+      expect(baseLogger).toHaveLoggedWith('warning', 'app.user: Profile updated!');
 
       userLogger.info('Profile updated');
+      expect(baseLogger).toHaveLoggedWith('info', 'app.user: Profile updated');
+    });
 
-      expect(baseLogger).toHaveLoggedWith('info', 'app: user: Profile updated');
+    test('should support nested prefixes with different separators', () => {
+      const baseLogger = createTestLogger();
+
+      const appLogger = withPrefix(baseLogger, 'app', '--');
+      const userLogger = withPrefix(appLogger, '.user', ' ~ ');
+
+      userLogger.w`Profile updated!`;
+      expect(baseLogger).toHaveLoggedWith('warning', 'app.user ~ Profile updated!');
+
+      userLogger.info('Profile updated');
+      expect(baseLogger).toHaveLoggedWith('info', 'app.user ~ Profile updated');
     });
 
     test('should handle the log method with dynamic level', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.log('notice', 'Important notice');
 
@@ -285,7 +331,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
   describe('all log levels', () => {
     test('should prefix all log levels', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.trace('Trace message');
       prefixedLogger.debug('Debug message');
@@ -310,7 +356,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should prefix all short-form template methods', () => {
       const logger = createTestLogger('trace');
-      const prefixedLogger = withPrefix(logger, 'test: ');
+      const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.t`Trace`;
       prefixedLogger.d`Debug`;

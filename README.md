@@ -131,16 +131,16 @@ import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
 const logger = new ConsoleLogger();
 
 // Create a prefixed logger for a component
-const dbLogger = withPrefix(logger, 'DB: ');
+const dbLogger = withPrefix(logger, 'DB');
 dbLogger.i`Connected to database`; // Logs: "DB: Connected to database"
 
-// Create a more specific logger with nested prefixes
-const userDbLogger = withPrefix(dbLogger, 'users/');
-userDbLogger.w`User not found: ${userId}`; // Logs: "DB: users/User not found: 123"
+// Create a more specific logger with nested prefixes and message separator
+const userDbLogger = withPrefix(dbLogger, ':users', ' - ');
+userDbLogger.w`User not found: ${userId}`; // Logs: "DB:users - User not found: 123"
 
 // Hover over these in your IDE to see their full prefixes!
-// Type of dbLogger: PrefixedLogger<'DB: '>
-// Type of userDbLogger: PrefixedLogger<'DB: users/'>
+// Type of dbLogger: PrefixedLogger<'DB'>
+// Type of userDbLogger: PrefixedLogger<'DB:users'>
 
 // Errors maintain their original objects
 const error = new Error('Connection failed');
