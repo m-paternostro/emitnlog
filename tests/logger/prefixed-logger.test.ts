@@ -292,30 +292,117 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(emittedArgs[0]).toEqual([{ id: 123 }, 42]);
     });
 
-    test('should support nested prefixes', () => {
-      const baseLogger = createTestLogger();
+    test('should support nested prefixes with different levels', () => {
+      const logger = createTestLogger();
+      expect(logger.level).toBe('debug');
 
-      const appLogger = withPrefix(baseLogger, 'app');
+      const appLogger = withPrefix(logger, 'app');
+      expect(appLogger).not.toBe(logger);
+      expect(appLogger.level).toBe('debug');
+
+      appLogger.level = 'critical';
+      expect(logger.level).toBe('critical');
+      expect(appLogger.level).toBe('critical');
+
+      const userLogger = withPrefix(appLogger, '.user');
+      expect(userLogger).not.toBe(logger);
+      expect(userLogger).not.toBe(appLogger);
+      expect(userLogger.level).toBe('critical');
+
+      userLogger.level = 'notice';
+      expect(logger.level).toBe('notice');
+      expect(appLogger.level).toBe('notice');
+      expect(userLogger.level).toBe('notice');
+
+      logger.level = 'error';
+      expect(logger.level).toBe('error');
+      expect(appLogger.level).toBe('error');
+      expect(userLogger.level).toBe('error');
+
+      appLogger.level = 'warning';
+      expect(logger.level).toBe('warning');
+      expect(appLogger.level).toBe('warning');
+      expect(userLogger.level).toBe('warning');
+
+      userLogger.level = 'off';
+      expect(logger.level).toBe('off');
+      expect(appLogger.level).toBe('off');
+      expect(userLogger.level).toBe('off');
+    });
+
+    test('should support nested prefixes with basic methods', () => {
+      const emittedLines: string[] = [];
+      const logger = new (class extends BaseLogger {
+        protected emitLine(level: LogLevel, message: string): void {
+          emittedLines.push(`[${level}] ${message}`);
+        }
+      })();
+
+      const appLogger = withPrefix(logger, 'app');
+
+      appLogger.notice('started');
+      expect(emittedLines[0]).toBe('[notice] app: started');
+
+      const userLogger = withPrefix(appLogger, '.user');
+
+      userLogger.warning('Profile updated!');
+      expect(emittedLines[1]).toBe('[warning] app.user: Profile updated!');
+
+      userLogger.info('Profile updated');
+      expect(emittedLines[2]).toBe('[info] app.user: Profile updated');
+
+      appLogger.emergency('done');
+      expect(emittedLines[3]).toBe('[emergency] app: done');
+    });
+
+    test('should support nested prefixes with template methods', () => {
+      const emittedLines: string[] = [];
+      const logger = new (class extends BaseLogger {
+        protected emitLine(level: LogLevel, message: string): void {
+          emittedLines.push(`[${level}] ${message}`);
+        }
+      })();
+
+      const appLogger = withPrefix(logger, 'app');
+
+      appLogger.n`started`;
+      expect(emittedLines[0]).toBe('[notice] app: started');
+
       const userLogger = withPrefix(appLogger, '.user');
 
       userLogger.w`Profile updated!`;
-      expect(baseLogger).toHaveLoggedWith('warning', 'app.user: Profile updated!');
+      expect(emittedLines[1]).toBe('[warning] app.user: Profile updated!');
 
-      userLogger.info('Profile updated');
-      expect(baseLogger).toHaveLoggedWith('info', 'app.user: Profile updated');
+      userLogger.i`Profile updated`;
+      expect(emittedLines[2]).toBe('[info] app.user: Profile updated');
+
+      appLogger.em`done`;
+      expect(emittedLines[3]).toBe('[emergency] app: done');
     });
 
     test('should support nested prefixes with different separators', () => {
-      const baseLogger = createTestLogger();
+      const emittedLines: string[] = [];
+      const logger = new (class extends BaseLogger {
+        protected emitLine(level: LogLevel, message: string): void {
+          emittedLines.push(`[${level}] ${message}`);
+        }
+      })();
 
-      const appLogger = withPrefix(baseLogger, 'app', '--');
+      const appLogger = withPrefix(logger, 'app', '--');
+
+      appLogger.n`started`;
+      expect(emittedLines[0]).toBe('[notice] app--started');
+
       const userLogger = withPrefix(appLogger, '.user', ' ~ ');
 
       userLogger.w`Profile updated!`;
-      expect(baseLogger).toHaveLoggedWith('warning', 'app.user ~ Profile updated!');
+      expect(emittedLines[1]).toBe('[warning] app.user ~ Profile updated!');
 
-      userLogger.info('Profile updated');
-      expect(baseLogger).toHaveLoggedWith('info', 'app.user ~ Profile updated');
+      userLogger.i`Profile updated`;
+      expect(emittedLines[2]).toBe('[info] app.user ~ Profile updated');
+
+      appLogger.em`done`;
+      expect(emittedLines[3]).toBe('[emergency] app--done');
     });
 
     test('should handle the log method with dynamic level', () => {
