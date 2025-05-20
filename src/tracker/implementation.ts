@@ -82,7 +82,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
 
     close: () => {
       if (!closed) {
-        trackerLogger.i`: closing`;
+        trackerLogger.i`closing`;
         closed = true;
 
         invokedNotifier.close();
@@ -101,10 +101,10 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
     },
 
     track: (operation, fn, opt) => {
-      const trackLogger = withPrefix(trackerLogger, `.${operation}`);
+      const trackedLogger = withPrefix(trackerLogger, `.${operation}`);
 
       if (closed) {
-        trackLogger.d`: the tracker is closed`;
+        trackedLogger.d`the tracker is closed`;
         return fn;
       }
 
@@ -118,7 +118,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
       const trackedFn = (...args: Parameters<typeof fn>) => {
         const argsLength = (args as unknown[]).length;
         const index = ++counter;
-        const invocationLogger = withPrefix(trackLogger, `.${index}`);
+        const invocationLogger = withPrefix(trackedLogger, `.${index}`);
 
         const currentKey = stack.peek();
         const parentKey = currentKey?.trackerId === trackerId ? (currentKey as InvocationKey<TOperation>) : undefined;
@@ -209,7 +209,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
           erroredNotifier.notify(invocation);
         };
 
-        invocationLogger.args(args).i`: starting with ${argsLength} args`;
+        invocationLogger.args(args).i`starting with ${argsLength} args`;
         notifyStarted();
 
         let result: unknown;
@@ -219,7 +219,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         } catch (error) {
           const duration = performance.now() - start;
           stack.pop();
-          invocationLogger.args(error).e`: an error was thrown '${error}'`;
+          invocationLogger.args(error).e`an error was thrown '${error}'`;
           notifyErrored(duration, false, error);
 
           throw error;
@@ -228,7 +228,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         if (!isPromiseLike(result)) {
           const duration = performance.now() - start;
           stack.pop();
-          invocationLogger.i`: completed`;
+          invocationLogger.i`completed`;
           notifyCompleted(duration, false, result);
 
           return result;
@@ -238,7 +238,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
           (r) => {
             const duration = performance.now() - start;
             stack.pop();
-            invocationLogger.i`: resolved`;
+            invocationLogger.i`resolved`;
             notifyCompleted(duration, true, r);
 
             return r;
@@ -246,7 +246,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
           (error: unknown) => {
             const duration = performance.now() - start;
             stack.pop();
-            invocationLogger.args(error).e`: rejected`;
+            invocationLogger.args(error).e`rejected`;
             notifyErrored(duration, true, error);
 
             throw error;
