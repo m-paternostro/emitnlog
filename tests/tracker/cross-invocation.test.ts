@@ -1,8 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import type { InvocationTracker, PhasedInvocation } from '../../src/tracker/definition.ts';
-import { createInvocationTracker } from '../../src/tracker/implementation.ts';
-import { createBasicInvocationStack } from '../../src/tracker/stack/implementation.ts';
+import type { InvocationTracker, PhasedInvocation } from '../../src/tracker/index.ts';
+import { createBasicInvocationStack, createInvocationTracker } from '../../src/tracker/index.ts';
 import { createTestLogger } from '../jester.setup.ts';
 
 describe('emitnlog.tracker.cross-invocation', () => {

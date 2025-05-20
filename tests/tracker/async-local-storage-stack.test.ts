@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
-import type { InvocationKey } from '../../src/tracker/definition.ts';
-import { createAsyncLocalStorageInvocationStack } from '../../src/tracker/node/async-local-storage-stack.ts';
+import type { InvocationKey } from '../../src/tracker/index.ts';
+import { createAsyncLocalStorageInvocationStack } from '../../src/tracker/node/index.ts';
 import { createTestLogger } from '../jester.setup.ts';
 
 // Simple function to check if we're in Node.js

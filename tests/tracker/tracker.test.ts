@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import type { Invocation, InvocationTracker, PhasedInvocation, Tag } from '../../src/tracker/definition.ts';
-import { createInvocationTracker } from '../../src/tracker/implementation.ts';
+import type { Invocation, InvocationTracker, PhasedInvocation, Tag } from '../../src/tracker/index.ts';
+import { createInvocationTracker } from '../../src/tracker/index.ts';
 import { createTestLogger, flushFakeTimePromises } from '../jester.setup.ts';
 
 describe('emitnlog.tracker', () => {
