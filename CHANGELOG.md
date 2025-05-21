@@ -1,5 +1,17 @@
 # emitnlog
 
+## 0.4.0
+
+### Minor Changes
+
+- 9d03081: Add Invocation Tracker: a lightweight utility to monitor function calls, built on top of the emit n’ log core components.
+- cfe5c30: PrefixedLogger: use `withPrefix` to automatically add prefixes to log messages
+
+### Patch Changes
+
+- e4c3f63: Rename logger/logger.ts to logger/definition.ts
+- 13b4b5b: Document notifier 'waitForEvent'
+
 ## 0.3.0
 
 ### Minor Changes
