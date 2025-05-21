@@ -342,6 +342,124 @@ uploader.upload('video.mp4');
 subscription.close();
 ```
 
+## Invocation Tracker
+
+The invocation tracker is a focused utility for monitoring function calls — it emits detailed lifecycle events, optionally logs invocation details, and supports metadata tagging. It builds on top of the core emit/log foundation, offering structured observability without requiring external tracing systems or heavy instrumentation. It is also a great example of how to use this library!
+
+You can use the invocation tracker to track any function, and even entire objects or class instances as shown below.
+
+### Basic usage
+
+```ts
+import { createInvocationTracker } from 'emitnlog/tracker';
+
+const tracker = createInvocationTracker({ tags: [{ service: 'auth' }] });
+
+tracker.onCompleted((invocation) => {
+  appLogger.i`✔ ${invocation.key.operation} completed in ${invocation.duration}ms`;
+  updateUI(invocation.args[0]);
+});
+
+const login = tracker.track('login', (user) => {
+  doLogin(user);
+});
+
+login('Cayde');
+```
+
+### Async and nested tracking
+
+The tracker automatically handles both sync and async functions, and can maintain parent-child invocation relationships:
+
+```ts
+import { createInvocationTracker } from 'emitnlog/tracker';
+import { exhaustiveCheck } from 'emitnlog/utils';
+
+// Creates a tracker for two specific operations.
+const tracker = createInvocationTracker<'saveUser' | 'createUser'>();
+
+tracker.onInvoked((invocation) => {
+  const operation = invocation.key.operation;
+  switch (operation) {
+    case 'saveUser':
+      if (invocation.phase === 'completed' && invocation.parentKey?.operation === 'createUser') {
+        void loadNewUserProfile();
+      }
+      break;
+
+    case 'createUser':
+      if (invocation.phase === 'errored') {
+        void handleUserCreationError(invocation.error);
+      }
+      break;
+
+    default:
+      exhaustiveCheck(operation);
+  }
+});
+
+const saveUser = tracker.track('saveUser', async (user) => {
+  await db.insert(user);
+});
+
+const createUser = tracker.track('createUser', async (user) => {
+  await saveUser(user);
+});
+```
+
+### Tracking methods on objects and classes
+
+You can use `trackMethods` to automatically wrap all (or specific) methods on an object or class instance:
+
+```ts
+import { trackMethods } from 'emitnlog/tracker';
+
+const math = {
+  add(a, b) {
+    return a + b;
+  },
+
+  subtract(a, b) {
+    return a - b;
+  },
+};
+
+trackMethods(tracker, math); // wraps all methods
+math.add(1, 2); // tracked!
+```
+
+### Tracking class instances
+
+```ts
+import { trackMethods } from 'emitnlog/tracker';
+
+class UserService {
+  createUser(name) {
+    return { id: 1, name };
+  }
+
+  deleteUser(id) {
+    return true;
+  }
+}
+
+const service = new UserService();
+
+trackMethods(tracker, service, {
+  methods: ['createUser', 'deleteUser'], // optional: only track these
+});
+```
+
+The methods are wrapped in-place and preserve their `this` context. You can also use this with inherited methods or mixins.
+
+### Advanced use
+
+Consult the code documentation to see how you can:
+
+- Pass tags per operation to enrich events
+- Inject a custom stack to control parent-child relationship tracking (useful for advanced tracing or test isolation)
+- Track method names automatically (excluding constructor and built-ins by default)
+
 ## Utilities
 
 A set of helpful utilities used internally but also available for direct use:

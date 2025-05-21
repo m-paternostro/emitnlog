@@ -57,6 +57,26 @@
         "default": "./dist/neutral/notifier/index.cjs"
       }
     },
+    "./tracker": {
+      "import": {
+        "types": "./dist/neutral/tracker/index.d.ts",
+        "default": "./dist/neutral/tracker/index.js"
+      },
+      "require": {
+        "types": "./dist/neutral/tracker/index.d.cts",
+        "default": "./dist/neutral/tracker/index.cjs"
+      }
+    },
+    "./tracker/node": {
+      "import": {
+        "types": "./dist/node/tracker/node/index.d.ts",
+        "default": "./dist/node/tracker/node/index.js"
+      },
+      "require": {
+        "types": "./dist/node/tracker/node/index.d.cts",
+        "default": "./dist/node/tracker/node/index.cjs"
+      }
+    },
     "./utils": {
       "import": {
         "types": "./dist/neutral/utils/index.d.ts",
