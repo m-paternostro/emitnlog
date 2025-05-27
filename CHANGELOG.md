@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.4.1
+
+### Patch Changes
+
+- 0c9e4ca: PrefixedLogger improvements, including appendPrefix and resetPrefix utilities.
+
 ## 0.4.0
 
 ### Minor Changes
