@@ -134,13 +134,13 @@ const logger = new ConsoleLogger();
 const dbLogger = withPrefix(logger, 'DB');
 dbLogger.i`Connected to database`; // Logs: "DB: Connected to database"
 
-// Create a more specific logger with nested prefixes and message separator
-const userDbLogger = withPrefix(dbLogger, ':users', ' - ');
-userDbLogger.w`User not found: ${userId}`; // Logs: "DB:users - User not found: 123"
+// Create nested prefixes for hierarchical logging
+const userDbLogger = withPrefix(dbLogger, 'users');
+userDbLogger.w`User not found: ${userId}`; // Logs: "DB.users: User not found: 123"
 
 // Hover over these in your IDE to see their full prefixes!
 // Type of dbLogger: PrefixedLogger<'DB'>
-// Type of userDbLogger: PrefixedLogger<'DB:users'>
+// Type of userDbLogger: PrefixedLogger<'DB.users'>
 
 // Errors maintain their original objects
 const error = new Error('Connection failed');
@@ -149,6 +149,41 @@ dbLogger.error(error); // Logs the prefixed message while preserving the error o
 // Works with all log levels and methods
 dbLogger.d`Query executed in ${queryTime}ms`;
 ```
+
+#### Building Prefix Hierarchies
+
+For more complex applications, you can build sophisticated prefix hierarchies:
+
+```ts
+import { ConsoleLogger, withPrefix, appendPrefix, resetPrefix } from 'emitnlog/logger';
+
+const logger = new ConsoleLogger();
+
+// Start with a base logger
+const appLogger = withPrefix(logger, 'APP');
+const serviceLogger = appendPrefix(appLogger, 'UserService');
+const repoLogger = appendPrefix(serviceLogger, 'Repository');
+
+repoLogger.i`User data saved`; // Logs: "APP.UserService.Repository: User data saved"
+
+// Switch contexts while preserving the root logger
+const apiLogger = resetPrefix(repoLogger, 'API');
+const v1Logger = appendPrefix(apiLogger, 'v1');
+
+v1Logger.i`Request processed`; // Logs: "API.v1: Request processed"
+
+// Custom separators for different naming conventions
+const moduleLogger = withPrefix(logger, 'Auth', { prefixSeparator: '/', messageSeparator: ' >> ' });
+const tokenLogger = appendPrefix(moduleLogger, 'Token');
+
+tokenLogger.i`Token validated`; // Logs: "Auth/Token >> Token validated"
+```
+
+**Key Functions:**
+
+- `withPrefix(logger, prefix)` - Creates a new prefixed logger or extends an existing prefix chain
+- `appendPrefix(prefixedLogger, suffix)` - Utility to append a prefix to an existing prefixed logger
+- `resetPrefix(logger, newPrefix)` - Utility to replace any existing prefix with a completely new one
 
 ### File Logging (Node.js only)
 

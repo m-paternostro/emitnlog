@@ -3,7 +3,16 @@ import { describe, expect, jest, test } from '@jest/globals';
 import type { IsEqual } from 'type-fest';
 
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
-import { BaseLogger, OFF_LOGGER, shouldEmitEntry, withPrefix } from '../../src/logger/index.ts';
+import {
+  appendPrefix,
+  BaseLogger,
+  inspectPrefixedLogger,
+  isPrefixedLogger,
+  OFF_LOGGER,
+  resetPrefix,
+  shouldEmitEntry,
+  withPrefix,
+} from '../../src/logger/index.ts';
 import { createTestLogger } from '../jester.setup.ts';
 
 // Mock the shouldEmitEntry to track calls
@@ -18,57 +27,351 @@ jest.mock('../../src/logger/level-utils.ts', () => ({
 }));
 
 describe('emitnlog.logger.prefixed-logger', () => {
-  test('should return the original logger when prefix is empty', () => {
-    const logger = createTestLogger();
-    const prefixedLogger = withPrefix(logger, '');
-    expect(prefixedLogger).toBe(logger);
-  });
-
   test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
     const prefixedLogger = withPrefix(OFF_LOGGER, 'test');
     expect(prefixedLogger).toBe(OFF_LOGGER);
   });
 
-  test('should return the correct type', () => {
-    const assertPrefix = <A extends string, E extends string>(
-      actual: PrefixedLogger<A>,
-      expected: E,
-      _test: IsEqual<A, E>,
-    ): void => {
-      expect(actual).toBeDefined();
-      expect(expected).toBe(expected);
-    };
+  describe('type system validation', () => {
+    test('withPrefix should return the correct types', () => {
+      const assertPrefix = <A extends string, E extends string>(
+        actual: PrefixedLogger<A>,
+        expected: E,
+        _test: IsEqual<A, E>,
+      ): void => {
+        expect(actual).toBeDefined();
+        expect(expected).toBe(expected);
+      };
 
-    const logger: Logger = createTestLogger();
+      const logger: Logger = createTestLogger();
 
-    const emptyPrefix = withPrefix(logger, '');
-    expect(emptyPrefix).toBe(logger);
-    assertPrefix(emptyPrefix, '', true);
-    assertPrefix(emptyPrefix, 'test', false);
+      const emptyPrefix = withPrefix(logger, '');
+      expect(emptyPrefix).not.toBe(logger);
+      assertPrefix(emptyPrefix, '', true);
+      assertPrefix(emptyPrefix, 'test', false);
 
-    const testPrefix = withPrefix(logger, 'test1');
-    expect(testPrefix).not.toBe(logger);
-    assertPrefix(testPrefix, 'test1', true);
-    assertPrefix(testPrefix, '', false);
-    assertPrefix(testPrefix, 'test', false);
+      const testPrefix = withPrefix(logger, 'test1');
+      expect(testPrefix).not.toBe(logger);
+      assertPrefix(testPrefix, 'test1', true);
+      assertPrefix(testPrefix, '', false);
+      assertPrefix(testPrefix, 'test', false);
 
-    const combinedPrefix = withPrefix(testPrefix, '-test2');
-    expect(combinedPrefix).not.toBe(logger);
-    expect(combinedPrefix).not.toBe(testPrefix);
-    assertPrefix(combinedPrefix, 'test1-test2', true);
-    assertPrefix(combinedPrefix, '', false);
-    assertPrefix(combinedPrefix, 'test1', false);
-    assertPrefix(combinedPrefix, '-test2', false);
+      const combinedPrefix = withPrefix(testPrefix, 'test2');
+      expect(combinedPrefix).not.toBe(logger);
+      expect(combinedPrefix).not.toBe(testPrefix);
+      assertPrefix(combinedPrefix, 'test1.test2', true);
+      assertPrefix(combinedPrefix, '', false);
+      assertPrefix(combinedPrefix, 'test1', false);
+      assertPrefix(combinedPrefix, 'test2', false);
 
-    const prefix1 = withPrefix(emptyPrefix, 'prefix1');
-    expect(prefix1).not.toBe(emptyPrefix);
-    assertPrefix(prefix1, 'prefix1', true);
-    assertPrefix(prefix1, '', false);
+      const prefix1 = withPrefix(emptyPrefix, 'prefix1');
+      expect(prefix1).not.toBe(emptyPrefix);
+      assertPrefix(prefix1, '.prefix1', true);
+      assertPrefix(prefix1, '', false);
+      assertPrefix(prefix1, 'prefix1', false);
 
-    const prefix2 = withPrefix(OFF_LOGGER, 'off');
-    expect(prefix2).toBe(OFF_LOGGER);
-    assertPrefix(prefix2, 'off', true);
-    assertPrefix(prefix2, '', false);
+      const prefix2 = withPrefix(OFF_LOGGER, 'off');
+      expect(prefix2).toBe(OFF_LOGGER);
+      assertPrefix(prefix2, 'off', true);
+      assertPrefix(prefix2, '', false);
+    });
+
+    test('withPrefix should handle custom separators in types', () => {
+      const assertPrefixWithSeparator = <A extends string, S extends string, E extends string>(
+        actual: PrefixedLogger<A, S>,
+        expectedPrefix: E,
+        expectedSeparator: S,
+        _testPrefix: IsEqual<A, E>,
+        _testSeparator: IsEqual<S, S>,
+      ): void => {
+        expect(actual).toBeDefined();
+        expect(expectedPrefix).toBe(expectedPrefix);
+        expect(expectedSeparator).toBe(expectedSeparator);
+      };
+
+      const logger: Logger = createTestLogger();
+
+      const slashLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
+      assertPrefixWithSeparator(slashLogger, 'API', '/', true, true);
+
+      const nestedSlashLogger = withPrefix(slashLogger, 'v1');
+      assertPrefixWithSeparator(nestedSlashLogger, 'API/v1', '/', true, true);
+    });
+
+    test('withPrefix should handle fallback prefix in types', () => {
+      const assertFallbackPrefix = <A extends string, E extends string>(
+        actual: PrefixedLogger<A>,
+        expected: E,
+        _test: IsEqual<A, E>,
+      ): void => {
+        expect(actual).toBeDefined();
+        expect(expected).toBe(expected);
+      };
+
+      const logger: Logger = createTestLogger();
+
+      const fallbackLogger = withPrefix(logger, 'Service', { fallbackPrefix: 'APP' });
+      assertFallbackPrefix(fallbackLogger, 'APP.Service', true);
+
+      // Fallback should be ignored when applied to already prefixed logger
+      const existingPrefixed = withPrefix(logger, 'DB');
+      const noFallbackLogger = withPrefix(existingPrefixed, 'Users', { fallbackPrefix: 'IGNORED' });
+      assertFallbackPrefix(noFallbackLogger, 'DB.Users', true);
+    });
+
+    test('appendPrefix should return the correct types', () => {
+      const assertAppendedPrefix = <A extends string, S extends string, E extends string>(
+        actual: PrefixedLogger<A, S>,
+        expected: E,
+        _test: IsEqual<A, E>,
+      ): void => {
+        expect(actual).toBeDefined();
+        expect(expected).toBe(expected);
+      };
+
+      const logger: Logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+
+      const userLogger = appendPrefix(dbLogger, 'User');
+      assertAppendedPrefix(userLogger, 'DB.User', true);
+
+      const profileLogger = appendPrefix(userLogger, 'Profile');
+      assertAppendedPrefix(profileLogger, 'DB.User.Profile', true);
+
+      // Test with custom separator
+      const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
+      const v1Logger = appendPrefix(apiLogger, 'v1');
+      assertAppendedPrefix(v1Logger, 'API/v1', true);
+    });
+
+    test('resetPrefix should return the correct types', () => {
+      const assertResetPrefix = <A extends string, S extends string, E extends string>(
+        actual: PrefixedLogger<A, S>,
+        expected: E,
+        _test: IsEqual<A, E>,
+      ): void => {
+        expect(actual).toBeDefined();
+        expect(expected).toBe(expected);
+      };
+
+      const logger: Logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+
+      // Reset should ignore existing prefix
+      const apiLogger = resetPrefix(userLogger, 'API');
+      assertResetPrefix(apiLogger, 'API', true);
+
+      // Reset with custom separator
+      const customLogger = resetPrefix(userLogger, 'Custom', { prefixSeparator: '/' });
+      assertResetPrefix(customLogger, 'Custom', true);
+    });
+  });
+
+  describe('appendPrefix', () => {
+    test('should append prefix to existing prefixed logger', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+
+      userLogger.info('User operation');
+      expect(logger).toHaveLoggedWith('info', 'DB.User: User operation');
+    });
+
+    test('should preserve custom separators when appending', () => {
+      const logger = createTestLogger();
+      const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
+      const v1Logger = appendPrefix(apiLogger, 'v1');
+      const usersLogger = appendPrefix(v1Logger, 'users');
+
+      usersLogger.info('Processing request');
+      expect(logger).toHaveLoggedWith('info', 'API/v1/users: Processing request');
+    });
+
+    test('should preserve custom message separators when appending', () => {
+      const logger = createTestLogger();
+      const sysLogger = withPrefix(logger, 'SYS', { messageSeparator: ' | ' });
+      const authLogger = appendPrefix(sysLogger, 'Auth');
+
+      authLogger.info('Authentication successful');
+      expect(logger).toHaveLoggedWith('info', 'SYS.Auth | Authentication successful');
+    });
+
+    test('should create multiple levels of nesting', () => {
+      const logger = createTestLogger();
+      const serviceLogger = withPrefix(logger, 'UserService');
+      const repositoryLogger = appendPrefix(serviceLogger, 'Repository');
+      const cacheLogger = appendPrefix(repositoryLogger, 'Cache');
+
+      cacheLogger.debug('Cache hit');
+      expect(logger).toHaveLoggedWith('debug', 'UserService.Repository.Cache: Cache hit');
+    });
+
+    test('should maintain level synchronization', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+
+      expect(userLogger.level).toBe(logger.level);
+
+      userLogger.level = 'warning';
+      expect(logger.level).toBe('warning');
+      expect(dbLogger.level).toBe('warning');
+
+      logger.level = 'error';
+      expect(userLogger.level).toBe('error');
+      expect(dbLogger.level).toBe('error');
+    });
+  });
+
+  describe('resetPrefix', () => {
+    test('should reset prefix ignoring existing prefix', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+
+      const apiLogger = resetPrefix(userLogger, 'API');
+
+      apiLogger.info('API operation');
+      expect(logger).toHaveLoggedWith('info', 'API: API operation');
+    });
+
+    test('should work with non-prefixed loggers', () => {
+      const logger = createTestLogger();
+      const apiLogger = resetPrefix(logger, 'API');
+
+      apiLogger.info('API operation');
+      expect(logger).toHaveLoggedWith('info', 'API: API operation');
+    });
+
+    test('should support custom separators', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+
+      const apiLogger = resetPrefix(dbLogger, 'API', { prefixSeparator: '/', messageSeparator: ' >> ' });
+      const v1Logger = appendPrefix(apiLogger, 'v1');
+
+      v1Logger.info('Request processed');
+      expect(logger).toHaveLoggedWith('info', 'API/v1 >> Request processed');
+    });
+
+    test('should extract root logger correctly', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+
+      const cacheLogger = resetPrefix(userLogger, 'Cache');
+      const metricsLogger = resetPrefix(userLogger, 'Metrics');
+
+      // Both should use the same root logger
+      cacheLogger.level = 'warning';
+      expect(metricsLogger.level).toBe('warning');
+      expect(logger.level).toBe('warning');
+    });
+
+    test('should maintain level synchronization with reset logger', () => {
+      const logger = createTestLogger();
+      const complexLogger = withPrefix(logger, 'Complex');
+      const resetLogger = resetPrefix(complexLogger, 'Simple');
+
+      expect(resetLogger.level).toBe(logger.level);
+
+      resetLogger.level = 'critical';
+      expect(logger.level).toBe('critical');
+      expect(complexLogger.level).toBe('critical');
+    });
+  });
+
+  describe('isPrefixedLogger', () => {
+    test('should correctly identify prefixed loggers', () => {
+      const logger = createTestLogger();
+      const prefixedLogger = withPrefix(logger, 'test');
+
+      expect(isPrefixedLogger(logger)).toBe(false);
+      expect(isPrefixedLogger(prefixedLogger)).toBe(true);
+      expect(isPrefixedLogger(OFF_LOGGER)).toBe(false);
+      expect(isPrefixedLogger(null)).toBe(false);
+      expect(isPrefixedLogger(undefined)).toBe(false);
+    });
+
+    test('should identify appended and reset loggers', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+      const apiLogger = resetPrefix(userLogger, 'API');
+
+      expect(isPrefixedLogger(dbLogger)).toBe(true);
+      expect(isPrefixedLogger(userLogger)).toBe(true);
+      expect(isPrefixedLogger(apiLogger)).toBe(true);
+    });
+
+    test('should handle edge cases', () => {
+      const logger = createTestLogger();
+      const emptyPrefixLogger = withPrefix(logger, '');
+
+      expect(isPrefixedLogger(emptyPrefixLogger)).toBe(true);
+    });
+  });
+
+  describe('inspectPrefixedLogger', () => {
+    test('should return undefined for non-prefixed loggers', () => {
+      const logger = createTestLogger();
+
+      expect(inspectPrefixedLogger(logger)).toBeUndefined();
+      expect(inspectPrefixedLogger(OFF_LOGGER)).toBeUndefined();
+    });
+
+    test('should return correct data for prefixed loggers', () => {
+      const logger = createTestLogger();
+      const prefixedLogger = withPrefix(logger, 'test');
+
+      const data = inspectPrefixedLogger(prefixedLogger);
+      expect(data).toBeDefined();
+      expect(data!.rootLogger).toBe(logger);
+      expect(data!.prefix).toBe('test');
+      expect(data!.separator).toBe('.');
+      expect(data!.messageSeparator).toBe(': ');
+    });
+
+    test('should return correct data for nested prefixed loggers', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+
+      const data = inspectPrefixedLogger(userLogger);
+      expect(data).toBeDefined();
+      expect(data!.rootLogger).toBe(logger);
+      expect(data!.prefix).toBe('DB.User');
+      expect(data!.separator).toBe('.');
+      expect(data!.messageSeparator).toBe(': ');
+    });
+
+    test('should return correct data for custom separators', () => {
+      const logger = createTestLogger();
+      const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/', messageSeparator: ' >> ' });
+      const v1Logger = appendPrefix(apiLogger, 'v1');
+
+      const data = inspectPrefixedLogger(v1Logger);
+      expect(data).toBeDefined();
+      expect(data!.rootLogger).toBe(logger);
+      expect(data!.prefix).toBe('API/v1');
+      expect(data!.separator).toBe('/');
+      expect(data!.messageSeparator).toBe(' >> ');
+    });
+
+    test('should return correct data for reset loggers', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const userLogger = appendPrefix(dbLogger, 'User');
+      const apiLogger = resetPrefix(userLogger, 'API', { messageSeparator: ' | ' });
+
+      const data = inspectPrefixedLogger(apiLogger);
+      expect(data).toBeDefined();
+      expect(data!.rootLogger).toBe(logger);
+      expect(data!.prefix).toBe('API');
+      expect(data!.separator).toBe('.');
+      expect(data!.messageSeparator).toBe(' | ');
+    });
   });
 
   describe('logging methods', () => {
@@ -100,7 +403,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should prepend prefix and message separator to standard logging methods', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test', '-');
+      const prefixedLogger = withPrefix(logger, 'test', { messageSeparator: '-' });
 
       prefixedLogger.info('Hello, world!');
       expect(logger).toHaveLoggedWith('info', 'test-Hello, world!');
@@ -114,7 +417,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should prepend prefix and message separator to template literal logging methods', () => {
       const logger = createTestLogger();
-      const prefixedLogger = withPrefix(logger, 'test', '-');
+      const prefixedLogger = withPrefix(logger, 'test', { messageSeparator: '-' });
 
       prefixedLogger.i`Value is ${42}`;
       expect(logger).toHaveLoggedWith('info', 'test-Value is 42');
@@ -343,7 +646,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       appLogger.notice('started');
       expect(emittedLines[0]).toBe('[notice] app: started');
 
-      const userLogger = withPrefix(appLogger, '.user');
+      const userLogger = withPrefix(appLogger, 'user');
 
       userLogger.warning('Profile updated!');
       expect(emittedLines[1]).toBe('[warning] app.user: Profile updated!');
@@ -368,7 +671,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       appLogger.n`started`;
       expect(emittedLines[0]).toBe('[notice] app: started');
 
-      const userLogger = withPrefix(appLogger, '.user');
+      const userLogger = withPrefix(appLogger, 'user');
 
       userLogger.w`Profile updated!`;
       expect(emittedLines[1]).toBe('[warning] app.user: Profile updated!');
@@ -388,18 +691,18 @@ describe('emitnlog.logger.prefixed-logger', () => {
         }
       })();
 
-      const appLogger = withPrefix(logger, 'app', '--');
+      const appLogger = withPrefix(logger, 'app', { messageSeparator: '--' });
 
       appLogger.n`started`;
       expect(emittedLines[0]).toBe('[notice] app--started');
 
-      const userLogger = withPrefix(appLogger, '.user', ' ~ ');
+      const userLogger = withPrefix(appLogger, 'user', { messageSeparator: ' ~ ' });
 
       userLogger.w`Profile updated!`;
-      expect(emittedLines[1]).toBe('[warning] app.user ~ Profile updated!');
+      expect(emittedLines[1]).toBe('[warning] app.user--Profile updated!');
 
       userLogger.i`Profile updated`;
-      expect(emittedLines[2]).toBe('[info] app.user ~ Profile updated');
+      expect(emittedLines[2]).toBe('[info] app.user--Profile updated');
 
       appLogger.em`done`;
       expect(emittedLines[3]).toBe('[emergency] app--done');
@@ -417,7 +720,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
   describe('all log levels', () => {
     test('should prefix all log levels', () => {
-      const logger = createTestLogger();
+      const logger = createTestLogger('trace');
       const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.trace('Trace message');
@@ -464,6 +767,249 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(logger).toHaveLoggedWith('critical', 'test: Critical');
       expect(logger).toHaveLoggedWith('alert', 'test: Alert');
       expect(logger).toHaveLoggedWith('emergency', 'test: Emergency');
+    });
+  });
+
+  describe('integration tests', () => {
+    test('should work with complex prefix hierarchies', () => {
+      const logger = createTestLogger();
+
+      // Create a complex hierarchy
+      const appLogger = withPrefix(logger, 'APP');
+      const serviceLogger = appendPrefix(appLogger, 'UserService');
+      const repoLogger = appendPrefix(serviceLogger, 'Repository');
+      const cacheLogger = appendPrefix(repoLogger, 'Cache');
+
+      // Reset to a different context
+      const apiLogger = resetPrefix(cacheLogger, 'API');
+      const v1Logger = appendPrefix(apiLogger, 'v1');
+      const authLogger = appendPrefix(v1Logger, 'auth');
+
+      // Test logging
+      cacheLogger.info('Cache operation');
+      authLogger.warning('Auth warning');
+
+      expect(logger).toHaveLoggedWith('info', 'APP.UserService.Repository.Cache: Cache operation');
+      expect(logger).toHaveLoggedWith('warning', 'API.v1.auth: Auth warning');
+
+      // Test inspection
+      const cacheData = inspectPrefixedLogger(cacheLogger);
+      const authData = inspectPrefixedLogger(authLogger);
+
+      expect(cacheData!.prefix).toBe('APP.UserService.Repository.Cache');
+      expect(authData!.prefix).toBe('API.v1.auth');
+      expect(cacheData!.rootLogger).toBe(logger);
+      expect(authData!.rootLogger).toBe(logger);
+    });
+
+    test('should handle long prefix chains with type validation', () => {
+      const logger = createTestLogger();
+
+      // Helper function to validate types at compile time
+      const validateType = <T extends string>(prefixedLogger: PrefixedLogger<T>, expectedPrefix: T): void => {
+        expect(prefixedLogger).toBeDefined();
+
+        // Log a message to validate runtime behavior
+        prefixedLogger.info(`Message from ${expectedPrefix}`);
+        expect(logger).toHaveLoggedWith('info', `${expectedPrefix}: Message from ${expectedPrefix}`);
+
+        // Validate inspection data
+        const data = inspectPrefixedLogger(prefixedLogger);
+        expect(data).toBeDefined();
+        expect(data!.prefix).toBe(expectedPrefix);
+        expect(data!.rootLogger).toBe(logger);
+      };
+
+      // Start with withPrefix
+      const level0 = withPrefix(logger, 'L0');
+      validateType(level0, 'L0');
+
+      // Build a chain using appendPrefix
+      const level1 = appendPrefix(level0, 'L1');
+      validateType(level1, 'L0.L1');
+
+      const level2 = appendPrefix(level1, 'L2');
+      validateType(level2, 'L0.L1.L2');
+
+      const level3 = appendPrefix(level2, 'L3');
+      validateType(level3, 'L0.L1.L2.L3');
+
+      const level4 = appendPrefix(level3, 'L4');
+      validateType(level4, 'L0.L1.L2.L3.L4');
+
+      const level5 = appendPrefix(level4, 'L5');
+      validateType(level5, 'L0.L1.L2.L3.L4.L5');
+
+      const level6 = appendPrefix(level5, 'L6');
+      validateType(level6, 'L0.L1.L2.L3.L4.L5.L6');
+
+      const level7 = appendPrefix(level6, 'L7');
+      validateType(level7, 'L0.L1.L2.L3.L4.L5.L6.L7');
+
+      const level8 = appendPrefix(level7, 'L8');
+      validateType(level8, 'L0.L1.L2.L3.L4.L5.L6.L7.L8');
+
+      const level9 = appendPrefix(level8, 'L9');
+      validateType(level9, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9');
+
+      const level10 = appendPrefix(level9, 'L10');
+      validateType(level10, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10');
+
+      const level11 = appendPrefix(level10, 'L11');
+      validateType(level11, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11');
+
+      const level12 = appendPrefix(level11, 'L12');
+      validateType(level12, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12');
+
+      const level13 = appendPrefix(level12, 'L13');
+      validateType(level13, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13');
+
+      const level14 = appendPrefix(level13, 'L14');
+      validateType(level14, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14');
+
+      // Test that all loggers share the same level
+      expect(level14.level).toBe(logger.level);
+      level14.level = 'warning';
+      expect(logger.level).toBe('warning');
+      expect(level0.level).toBe('warning');
+      expect(level7.level).toBe('warning');
+
+      // Test different log levels with the deepest logger
+      level14.debug('This should not appear');
+      level14.warning('This should appear');
+      level14.error('This should also appear');
+
+      expect(logger).not.toHaveLoggedWith('debug', 'This should not appear');
+      expect(logger).toHaveLoggedWith(
+        'warning',
+        'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14: This should appear',
+      );
+      expect(logger).toHaveLoggedWith(
+        'error',
+        'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14: This should also appear',
+      );
+
+      level14.level = 'info';
+
+      // Test template literals
+      const value = 42;
+      level14.i`Template literal with value: ${value}`;
+      expect(logger).toHaveLoggedWith(
+        'info',
+        'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14: Template literal with value: 42',
+      );
+    });
+
+    test('should handle long prefix chains with custom separators', () => {
+      const logger = createTestLogger();
+
+      // Start with custom separators
+      const root = withPrefix(logger, 'ROOT', { prefixSeparator: '/', messageSeparator: ' >> ' });
+
+      // Build a chain with custom separators
+      let current: PrefixedLogger = root;
+      const expectedPrefixes = ['ROOT'];
+
+      for (let i = 1; i <= 10; i++) {
+        current = appendPrefix(current, `LEVEL${i}`);
+        expectedPrefixes.push(`LEVEL${i}`);
+
+        const expectedPrefix = expectedPrefixes.join('/');
+        current.info(`Message from level ${i}`);
+        expect(logger).toHaveLoggedWith('info', `${expectedPrefix} >> Message from level ${i}`);
+
+        // Validate inspection
+        const data = inspectPrefixedLogger(current);
+        expect(data!.prefix).toBe(expectedPrefix);
+        expect(data!.separator).toBe('/');
+        expect(data!.messageSeparator).toBe(' >> ');
+      }
+
+      // Final validation
+      const finalData = inspectPrefixedLogger(current);
+      expect(finalData!.prefix).toBe('ROOT/LEVEL1/LEVEL2/LEVEL3/LEVEL4/LEVEL5/LEVEL6/LEVEL7/LEVEL8/LEVEL9/LEVEL10');
+    });
+
+    test('should handle mixed withPrefix and resetPrefix in long chains', () => {
+      const logger = createTestLogger();
+
+      // Build initial chain
+      let current: PrefixedLogger = withPrefix(logger, 'INITIAL');
+      current = appendPrefix(current, 'CHAIN');
+      current = appendPrefix(current, 'DEEP');
+
+      // Reset and build new chain
+      current = resetPrefix(current, 'RESET');
+
+      // Continue building
+      for (let i = 1; i <= 8; i++) {
+        current = appendPrefix(current, `R${i}`);
+
+        const data = inspectPrefixedLogger(current);
+        expect(data!.rootLogger).toBe(logger);
+
+        // Test logging
+        current.info(`Reset chain level ${i}`);
+        //const expectedPrefix = `RESET${'.R'.repeat(i).replace(/\.R/g, '.R')}${i > 1 ? '' : '1'}`;
+        const actualExpectedPrefix =
+          i === 1 ? 'RESET.R1' : `RESET.${Array.from({ length: i }, (_, idx) => `R${idx + 1}`).join('.')}`;
+
+        expect(logger).toHaveLoggedWith('info', `${actualExpectedPrefix}: Reset chain level ${i}`);
+      }
+
+      // Validate final state
+      const finalData = inspectPrefixedLogger(current);
+      expect(finalData!.prefix).toBe('RESET.R1.R2.R3.R4.R5.R6.R7.R8');
+      expect(finalData!.rootLogger).toBe(logger);
+    });
+
+    test('should handle mixed separator configurations', () => {
+      const logger = createTestLogger();
+
+      // Start with slash separators
+      const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/', messageSeparator: ' -> ' });
+      const v1Logger = appendPrefix(apiLogger, 'v1');
+
+      // Reset with dot separators
+      const serviceLogger = resetPrefix(v1Logger, 'Service', { prefixSeparator: '.', messageSeparator: ': ' });
+      const userLogger = appendPrefix(serviceLogger, 'User');
+
+      v1Logger.info('API call');
+      userLogger.info('User operation');
+
+      expect(logger).toHaveLoggedWith('info', 'API/v1 -> API call');
+      expect(logger).toHaveLoggedWith('info', 'Service.User: User operation');
+    });
+
+    test('should maintain type safety across all operations', () => {
+      const assertType = <T extends string>(value: PrefixedLogger<T>, expectedType: T): void => {
+        expect(value).toBeDefined();
+        expect(expectedType).toBe(expectedType);
+      };
+
+      const logger: Logger = createTestLogger();
+
+      const app = withPrefix(logger, 'APP');
+      assertType(app, 'APP');
+
+      const service = appendPrefix(app, 'Service');
+      assertType(service, 'APP.Service');
+
+      const user = appendPrefix(service, 'User');
+      assertType(user, 'APP.Service.User');
+
+      const api = resetPrefix(user, 'API');
+      assertType(api, 'API');
+
+      const v1 = appendPrefix(api, 'v1');
+      assertType(v1, 'API.v1');
+
+      // Test with custom separators
+      const custom = withPrefix(logger, 'Custom', { prefixSeparator: '/' });
+      assertType(custom, 'Custom');
+
+      const nested = appendPrefix(custom, 'Nested');
+      assertType(nested, 'Custom/Nested');
     });
   });
 });
