@@ -1,5 +1,6 @@
 import type { Logger } from '../../logger/definition.ts';
 import { OFF_LOGGER } from '../../logger/off-logger.ts';
+import { withPrefix } from '../../logger/prefixed-logger.ts';
 import type { InvocationKey } from '../definition.ts';
 import type { AsyncStackStorage, InvocationStack } from './definition.ts';
 
@@ -26,18 +27,18 @@ import type { AsyncStackStorage, InvocationStack } from './definition.ts';
  * @returns A synchronous, in-memory invocation stack.
  */
 export const createBasicInvocationStack = (options?: { readonly logger: Logger }): InvocationStack => {
-  const logger = options?.logger ?? OFF_LOGGER;
+  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'stack.basic', { fallbackPrefix: 'emitnlog.tracker' });
   const stack: InvocationKey[] = [];
 
-  logger.i`emitnlog.tracker.stack.basic: creating stack`;
+  logger.i`creating stack`;
   return {
     close: () => {
-      logger.i`emitnlog.tracker.stack.basic: closing`;
+      logger.i`closing`;
       stack.length = 0;
     },
 
     push: (key: InvocationKey) => {
-      logger.t`emitnlog.tracker.stack.basic: pushing key '${key.id}'`;
+      logger.t`pushing key '${key.id}'`;
       stack.push(key);
     },
 
@@ -45,7 +46,7 @@ export const createBasicInvocationStack = (options?: { readonly logger: Logger }
 
     pop: () => {
       const key = stack.pop();
-      logger.t`emitnlog.tracker.stack.basic: ${key ? `popped key '${key.id}'` : 'no key to pop'}`;
+      logger.t`${key ? `popped key '${key.id}'` : 'no key to pop'}`;
       return key;
     },
   };
@@ -73,16 +74,16 @@ export const createThreadSafeInvocationStack = (
   storage: AsyncStackStorage,
   options?: { readonly logger: Logger },
 ): InvocationStack => {
-  const logger = options?.logger ?? OFF_LOGGER;
+  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'stack.thread-safe', { fallbackPrefix: 'emitnlog.tracker' });
 
   return {
     close: () => {
-      logger.i`emitnlog.tracker.stack.thread-safe: closing`;
+      logger.i`closing`;
       storage.disable();
     },
 
     push: (key: InvocationKey) => {
-      logger.t`emitnlog.tracker.stack.thread-safe: pushing key '${key.id}'`;
+      logger.t`pushing key '${key.id}'`;
       const current = storage.getStore() ?? [];
       storage.enterWith([...current, key]);
     },
@@ -95,11 +96,11 @@ export const createThreadSafeInvocationStack = (
     pop: () => {
       const current = storage.getStore();
       if (!current?.length) {
-        logger.t`emitnlog.tracker.stack.thread-safe: no key to pop`;
+        logger.t`no key to pop`;
         return undefined;
       }
 
-      logger.t`emitnlog.tracker.stack.thread-safe: popping key '${current.at(-1)?.id}'`;
+      logger.t`popping key '${current.at(-1)?.id}'`;
       const updated = current.slice(0, -1);
       storage.enterWith(updated);
       return current.at(-1);

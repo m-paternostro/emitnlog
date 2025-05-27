@@ -2,7 +2,7 @@ import type { Writable } from 'type-fest';
 
 import type { Logger } from '../logger/definition.ts';
 import { OFF_LOGGER } from '../logger/off-logger.ts';
-import { withPrefix } from '../logger/prefixed-logger.ts';
+import { appendPrefix, withPrefix } from '../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../notifier/implementation.ts';
 import { generateRandomString } from '../utils/common/generate-random-string.ts';
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
@@ -76,8 +76,8 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
   const completedNotifier = createEventNotifier<PhasedInvocation<'completed', TOperation>>();
   const erroredNotifier = createEventNotifier<PhasedInvocation<'errored', TOperation>>();
 
-  const stack = options?.stack ?? stackFactory({ logger });
-  const trackerLogger = withPrefix(logger, `emitnlog.tracker.${trackerId}`);
+  const trackerLogger = withPrefix(logger, `tracker.${trackerId}`, { fallbackPrefix: 'emitnlog' });
+  const stack = options?.stack ?? stackFactory({ logger: trackerLogger });
 
   let closed = false;
   let counter = -1;
@@ -106,7 +106,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
     },
 
     track: (operation, fn, opt) => {
-      const trackedLogger = withPrefix(trackerLogger, `.${operation}`);
+      const trackedLogger = appendPrefix(trackerLogger, operation);
 
       if (closed) {
         trackedLogger.d`the tracker is closed`;
@@ -123,7 +123,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
       const trackedFn = (...args: Parameters<typeof fn>) => {
         const argsLength = (args as unknown[]).length;
         const index = ++counter;
-        const invocationLogger = withPrefix(trackedLogger, `.${index}`);
+        const invocationLogger = appendPrefix(trackedLogger, String(index));
 
         const parentKey = stack.peek();
 
