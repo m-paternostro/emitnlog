@@ -1,5 +1,6 @@
 import type { Logger } from '../../logger/definition.ts';
 import { OFF_LOGGER } from '../../logger/off-logger.ts';
+import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createDeferredValue } from './deferred-value.ts';
 import { delay } from './delay.ts';
 
@@ -137,7 +138,7 @@ export const startPolling = <T, const V = undefined>(
   let active = true;
   let lastResult: T | V | undefined;
 
-  const logger = options?.logger ?? OFF_LOGGER;
+  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'poll', { fallbackPrefix: 'emitnlog' });
 
   const polledOperation = (): void => {
     if (resolving || !active) {
@@ -148,13 +149,13 @@ export const startPolling = <T, const V = undefined>(
 
     // Check if we've reached the maximum number of retries
     if (options?.retryLimit !== undefined && invocationIndex >= options.retryLimit) {
-      logger.d`emitnlog.poll: reached maximum retries (${options.retryLimit})`;
+      logger.d`reached maximum retries (${options.retryLimit})`;
       void close();
       return;
     }
 
     try {
-      logger.d`emitnlog.poll: invoking the operation for the ${invocationIndex + 1} time`;
+      logger.d`invoking the operation for the ${invocationIndex + 1} time`;
       const result = operation();
 
       if (result instanceof Promise) {
@@ -168,7 +169,7 @@ export const startPolling = <T, const V = undefined>(
             }
           })
           .catch((error: unknown) => {
-            logger.args(error).e`emitnlog.poll: the operation rejected with an error: ${error}`;
+            logger.args(error).e`the operation rejected with an error: ${error}`;
           })
           .finally(() => {
             resolving = false;
@@ -184,7 +185,7 @@ export const startPolling = <T, const V = undefined>(
         return;
       }
     } catch (error) {
-      logger.args(error).e`emitnlog.poll: the operation threw an error: ${error}`;
+      logger.args(error).e`the operation threw an error: ${error}`;
     }
   };
 
@@ -192,7 +193,7 @@ export const startPolling = <T, const V = undefined>(
     if (active) {
       active = false;
 
-      logger.d`emitnlog.poll: closing the poll after ${invocationIndex + 1} invocations`;
+      logger.d`closing the poll after ${invocationIndex + 1} invocations`;
       clearInterval(intervalId);
       deferred.resolve(lastResult);
     }
@@ -218,7 +219,7 @@ export const startPolling = <T, const V = undefined>(
           lastResult = options.timeoutValue;
         }
 
-        logger.d`emitnlog.poll: timeout for the operation reached after ${options.timeout}ms`;
+        logger.d`timeout for the operation reached after ${options.timeout}ms`;
         void close();
       }
     });
