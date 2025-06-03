@@ -62,10 +62,10 @@ export type Invocation<TOperation extends string = string> = {
   /**
    * The stage of the invocation.
    */
-  readonly stage: Stage;
+  readonly stage: InvocationStage;
 };
 
-type Stage = StartedStage | CompletedStage | ErroredStage;
+export type InvocationStage = StartedStage | CompletedStage | ErroredStage;
 
 export type StartedStage = {
   /**
@@ -136,7 +136,7 @@ export type Tag = { readonly [name: string]: string | number | boolean };
 /**
  * The stages of an invocation.
  */
-type StageType = Stage['type'];
+type StageType = InvocationStage['type'];
 
 /**
  * A narrowed version of `Invocation`, specific to a stage of the invocation.
@@ -144,7 +144,7 @@ type StageType = Stage['type'];
 export type InvocationAtStage<
   TStageType extends StageType,
   TOperation extends string = string,
-> = Invocation<TOperation> & { readonly stage: Stage & { readonly type: TStageType } };
+> = Invocation<TOperation> & { readonly stage: InvocationStage & { readonly type: TStageType } };
 
 /**
  * A tracker that observes operations and emits an invocation description.
