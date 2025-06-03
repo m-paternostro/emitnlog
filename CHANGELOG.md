@@ -1,5 +1,15 @@
 # emitnlog
 
+## 0.5.0
+
+### Minor Changes
+
+- b9eb592: Add `mapOnEvent` to make it easier to expose internal notifiers
+
+### Patch Changes
+
+- 28e902b: Add operation template to `trackMethods`
+
 ## 0.4.1
 
 ### Patch Changes
