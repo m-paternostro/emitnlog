@@ -6,3 +6,15 @@ find the full documentation for it [in our repository](https://github.com/change
 
 We have a quick list of common questions to get you started engaging with this project in
 [our documentation](https://github.com/changesets/changesets/blob/main/docs/common-questions.md)
+
+## Overview
+
+1. When making changes that affect the public API or behavior, create a changeset.
+
+   ```bash
+   npm run changeset
+   ```
+
+1. Merging PRs with changesets prompts the CI to open a **Version Packages PR**.
+
+1. Merging the Version Packages PR finalizes versioning and changelogs, including updating the version in `package.json`
