@@ -6,16 +6,24 @@ import { appendPrefix, withPrefix } from '../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../notifier/implementation.ts';
 import { generateRandomString } from '../utils/common/generate-random-string.ts';
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { Invocation, InvocationKey, InvocationTracker, PhasedInvocation, Tag } from './definition.ts';
+import type {
+  CompletedStage,
+  ErroredStage,
+  Invocation,
+  InvocationAtStage,
+  InvocationKey,
+  InvocationTracker,
+  Tag,
+} from './definition.ts';
 import type { InvocationStack } from './stack/definition.ts';
 import { createBasicInvocationStack, createThreadSafeInvocationStack } from './stack/implementation.ts';
 
 /**
  * Creates an invocation tracker that monitors and notifies about operation invocations.
  *
- * Each tracker assigns a unique tracker ID and supports multiple listeners for lifecycle events:
+ * Each tracker assigns a unique tracker ID and supports multiple listeners for invocations:
  *
- * - `onInvoked`: all events, all phases
+ * - `onInvoked`: all invocations regardless of the stage
  * - `onStarted`: before invocation
  * - `onCompleted`: after successful invocation (sync or async)
  * - `onErrored`: after an error is thrown or a promise is rejected
@@ -72,9 +80,9 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
   const logger = options?.logger ?? OFF_LOGGER;
 
   const invokedNotifier = createEventNotifier<Invocation<TOperation>>();
-  const startedNotifier = createEventNotifier<PhasedInvocation<'started', TOperation>>();
-  const completedNotifier = createEventNotifier<PhasedInvocation<'completed', TOperation>>();
-  const erroredNotifier = createEventNotifier<PhasedInvocation<'errored', TOperation>>();
+  const startedNotifier = createEventNotifier<InvocationAtStage<'started', TOperation>>();
+  const completedNotifier = createEventNotifier<InvocationAtStage<'completed', TOperation>>();
+  const erroredNotifier = createEventNotifier<InvocationAtStage<'errored', TOperation>>();
 
   const trackerLogger = withPrefix(logger, `tracker.${trackerId}`, { fallbackPrefix: 'emitnlog' });
   const stack = options?.stack ?? stackFactory({ logger: trackerLogger });
@@ -137,7 +145,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         stack.push(key);
 
         const notifyStarted = () => {
-          const invocation: Writable<PhasedInvocation<'started', TOperation>> = { key, phase: 'started' };
+          const invocation: Writable<InvocationAtStage<'started', TOperation>> = { key, stage: { type: 'started' } };
 
           if (parentKey) {
             invocation.parentKey = parentKey;
@@ -156,13 +164,13 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         };
 
         const notifyCompleted = (duration: number, promiseLike: boolean, result: unknown) => {
-          const invocation: Writable<PhasedInvocation<'completed', TOperation>> = {
-            key,
-            phase: 'completed',
-            duration,
-            args,
-            result,
-          };
+          const stage: Writable<CompletedStage> = { type: 'completed', duration, result };
+
+          if (promiseLike) {
+            stage.promiseLike = true;
+          }
+
+          const invocation: Writable<InvocationAtStage<'completed', TOperation>> = { key, stage };
 
           if (parentKey) {
             invocation.parentKey = parentKey;
@@ -174,10 +182,6 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
 
           if (tags?.length) {
             invocation.tags = tags;
-          }
-
-          if (promiseLike) {
-            invocation.promiseLike = true;
           }
 
           invokedNotifier.notify(invocation);
@@ -185,13 +189,13 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         };
 
         const notifyErrored = (duration: number, promiseLike: boolean, error: unknown) => {
-          const invocation: Writable<PhasedInvocation<'errored', TOperation>> = {
-            key,
-            phase: 'errored',
-            duration,
-            args,
-            error,
-          };
+          const stage: Writable<ErroredStage> = { type: 'errored', duration, error };
+
+          if (promiseLike) {
+            stage.promiseLike = true;
+          }
+
+          const invocation: Writable<InvocationAtStage<'errored', TOperation>> = { key, stage };
 
           if (parentKey) {
             invocation.parentKey = parentKey;
@@ -203,10 +207,6 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
 
           if (tags?.length) {
             invocation.tags = tags;
-          }
-
-          if (promiseLike) {
-            invocation.promiseLike = true;
           }
 
           invokedNotifier.notify(invocation);

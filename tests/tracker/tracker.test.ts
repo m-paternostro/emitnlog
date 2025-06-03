@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import type { Invocation, InvocationTracker, PhasedInvocation, Tag } from '../../src/tracker/index.ts';
-import { createInvocationTracker } from '../../src/tracker/index.ts';
+import type { Invocation, InvocationAtStage, InvocationTracker, Tag } from '../../src/tracker/index.ts';
+import { createInvocationTracker, isAtStage } from '../../src/tracker/index.ts';
 import { createTestLogger, flushFakeTimePromises } from '../jester.setup.ts';
 
 describe('emitnlog.tracker', () => {
@@ -85,39 +85,39 @@ describe('emitnlog.tracker', () => {
     });
   });
 
-  describe('events and notifications', () => {
-    test('should notify listeners about started events', () => {
-      const events: PhasedInvocation<'started'>[] = [];
-      tracker.onStarted((invocation) => events.push(invocation));
+  describe('invocations and notifications', () => {
+    test('should notify listeners about started invocations', () => {
+      const invocations: InvocationAtStage<'started'>[] = [];
+      tracker.onStarted((invocation) => invocations.push(invocation));
 
       const fn = tracker.track('test', (a: number) => a * 2);
       fn(5);
 
-      expect(events).toHaveLength(1);
-      expect(events[0].phase).toBe('started');
-      expect(events[0].key.operation).toBe('test');
-      expect(events[0].args).toEqual([5]);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0].stage.type).toBe('started');
+      expect(invocations[0].key.operation).toBe('test');
+      expect(invocations[0].args).toEqual([5]);
     });
 
-    test('should notify listeners about completed events', () => {
-      const events: PhasedInvocation<'completed'>[] = [];
-      tracker.onCompleted((invocation) => events.push(invocation));
+    test('should notify listeners about completed invocations', () => {
+      const invocations: InvocationAtStage<'completed'>[] = [];
+      tracker.onCompleted((invocation) => invocations.push(invocation));
 
       const fn = tracker.track('test', (a: number) => a * 2);
       const result = fn(5);
 
       expect(result).toBe(10);
-      expect(events).toHaveLength(1);
-      expect(events[0].phase).toBe('completed');
-      expect(events[0].key.operation).toBe('test');
-      expect(events[0].duration).toBeDefined();
-      expect(events[0].args).toEqual([5]);
-      expect(events[0].result).toBe(10);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0].stage.type).toBe('completed');
+      expect(invocations[0].key.operation).toBe('test');
+      expect(invocations[0].stage.duration).toBeDefined();
+      expect(invocations[0].args).toEqual([5]);
+      expect(invocations[0].stage.result).toBe(10);
     });
 
-    test('should notify listeners about errored events', () => {
-      const events: PhasedInvocation<'errored'>[] = [];
-      tracker.onErrored((invocation) => events.push(invocation));
+    test('should notify listeners about errored invocations', () => {
+      const invocations: InvocationAtStage<'errored'>[] = [];
+      tracker.onErrored((invocation) => invocations.push(invocation));
 
       const error = new Error('Test error');
       const fn = tracker.track('test', () => {
@@ -126,16 +126,16 @@ describe('emitnlog.tracker', () => {
 
       expect(() => fn()).toThrow(error);
 
-      expect(events).toHaveLength(1);
-      expect(events[0].phase).toBe('errored');
-      expect(events[0].key.operation).toBe('test');
-      expect(events[0].duration).toBeDefined();
-      expect(events[0].error).toBe(error);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0].stage.type).toBe('errored');
+      expect(invocations[0].key.operation).toBe('test');
+      expect(invocations[0].stage.duration).toBeDefined();
+      expect(invocations[0].stage.error).toBe(error);
     });
 
-    test('should notify about all events with onInvoked', () => {
-      const events: Invocation[] = [];
-      tracker.onInvoked((invocation) => events.push(invocation));
+    test('should notify about all invocations with onInvoked', () => {
+      const invocations: Invocation[] = [];
+      tracker.onInvoked((invocation) => invocations.push(invocation));
 
       const successFn = tracker.track('success', (a: number) => a * 2);
       const errorFn = tracker.track('error', () => {
@@ -149,15 +149,15 @@ describe('emitnlog.tracker', () => {
         // Ignore the error
       }
 
-      expect(events).toHaveLength(4); // 2 started, 1 completed, 1 errored
-      expect(events.filter((e) => e.phase === 'started')).toHaveLength(2);
-      expect(events.filter((e) => e.phase === 'completed')).toHaveLength(1);
-      expect(events.filter((e) => e.phase === 'errored')).toHaveLength(1);
+      expect(invocations).toHaveLength(4); // 2 started, 1 completed, 1 errored
+      expect(invocations.filter((e) => e.stage.type === 'started')).toHaveLength(2);
+      expect(invocations.filter((e) => e.stage.type === 'completed')).toHaveLength(1);
+      expect(invocations.filter((e) => e.stage.type === 'errored')).toHaveLength(1);
     });
 
     test('should handle async function completion notifications', async () => {
-      const events: PhasedInvocation<'completed'>[] = [];
-      tracker.onCompleted((invocation) => events.push(invocation));
+      const invocations: InvocationAtStage<'completed'>[] = [];
+      tracker.onCompleted((invocation) => invocations.push(invocation));
 
       const fn = tracker.track('asyncTest', async (a: number) => {
         await jest.advanceTimersByTimeAsync(100);
@@ -165,20 +165,20 @@ describe('emitnlog.tracker', () => {
       });
 
       const promise = fn(5);
-      expect(events).toHaveLength(0); // Not completed yet
+      expect(invocations).toHaveLength(0); // Not completed yet
 
       await promise;
 
-      expect(events).toHaveLength(1);
-      expect(events[0].phase).toBe('completed');
-      expect(events[0].key.operation).toBe('asyncTest');
-      expect(events[0].promiseLike).toBe(true);
-      expect(events[0].result).toBe(10);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0].stage.type).toBe('completed');
+      expect(invocations[0].key.operation).toBe('asyncTest');
+      expect(invocations[0].stage.promiseLike).toBe(true);
+      expect(invocations[0].stage.result).toBe(10);
     });
 
     test('should handle async function error notifications', async () => {
-      const events: PhasedInvocation<'errored'>[] = [];
-      tracker.onErrored((invocation) => events.push(invocation));
+      const invocations: InvocationAtStage<'errored'>[] = [];
+      tracker.onErrored((invocation) => invocations.push(invocation));
 
       const error = new Error('Async error');
       const fn = tracker.track('asyncTest', async () => {
@@ -187,98 +187,98 @@ describe('emitnlog.tracker', () => {
       });
 
       const promise = fn();
-      expect(events).toHaveLength(0); // Not errored yet
+      expect(invocations).toHaveLength(0); // Not errored yet
 
       await expect(promise).rejects.toThrow(error);
 
-      expect(events).toHaveLength(1);
-      expect(events[0].phase).toBe('errored');
-      expect(events[0].key.operation).toBe('asyncTest');
-      expect(events[0].promiseLike).toBe(true);
-      expect(events[0].error).toBe(error);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0].stage.type).toBe('errored');
+      expect(invocations[0].key.operation).toBe('asyncTest');
+      expect(invocations[0].stage.promiseLike).toBe(true);
+      expect(invocations[0].stage.error).toBe(error);
     });
 
     test('should not notify after tracker is closed', () => {
-      const events: PhasedInvocation<'started' | 'completed'>[] = [];
+      const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
       tracker.onInvoked((invocation) => {
-        if (invocation.phase === 'started' || invocation.phase === 'completed') {
-          events.push(invocation);
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
+          invocations.push(invocation);
         }
       });
 
       const fn = tracker.track('test', (a: number) => a * 2);
       fn(5);
 
-      expect(events).toHaveLength(2); // 1 started, 1 completed
+      expect(invocations).toHaveLength(2); // 1 started, 1 completed
 
       tracker.close();
-      events.length = 0;
+      invocations.length = 0;
 
       fn(10); // This should not trigger notifications
 
-      expect(events).toHaveLength(0);
+      expect(invocations).toHaveLength(0);
     });
   });
 
   describe('tagging system', () => {
     test('should apply tracker-level tags to all invocations', () => {
-      const events: PhasedInvocation<'started' | 'completed'>[] = [];
+      const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
       const trackerTags: Tag[] = [{ service: 'auth' }];
 
       const taggedTracker = createInvocationTracker({ tags: trackerTags });
       taggedTracker.onInvoked((invocation) => {
-        if (invocation.phase === 'started' || invocation.phase === 'completed') {
-          events.push(invocation);
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
+          invocations.push(invocation);
         }
       });
 
       const fn = taggedTracker.track('test', (a: number) => a * 2);
       fn(5);
 
-      expect(events).toHaveLength(2); // 1 started, 1 completed
-      expect(events[0].tags).toEqual(trackerTags);
-      expect(events[1].tags).toEqual(trackerTags);
+      expect(invocations).toHaveLength(2); // 1 started, 1 completed
+      expect(invocations[0].tags).toEqual(trackerTags);
+      expect(invocations[1].tags).toEqual(trackerTags);
 
       taggedTracker.close();
     });
 
     test('should apply operation-level tags', () => {
-      const events: PhasedInvocation<'started' | 'completed'>[] = [];
+      const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
       const operationTags: Tag[] = [{ feature: 'signup' }];
 
       tracker.onInvoked((invocation) => {
-        if (invocation.phase === 'started' || invocation.phase === 'completed') {
-          events.push(invocation);
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
+          invocations.push(invocation);
         }
       });
 
       const fn = tracker.track('test', (a: number) => a * 2, { tags: operationTags });
       fn(5);
 
-      expect(events).toHaveLength(2); // 1 started, 1 completed
-      expect(events[0].tags).toEqual(operationTags);
-      expect(events[1].tags).toEqual(operationTags);
+      expect(invocations).toHaveLength(2); // 1 started, 1 completed
+      expect(invocations[0].tags).toEqual(operationTags);
+      expect(invocations[1].tags).toEqual(operationTags);
     });
 
     test('should merge tracker-level and operation-level tags', () => {
-      const events: PhasedInvocation<'started' | 'completed'>[] = [];
+      const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
       const trackerTags: Tag[] = [{ service: 'auth' }];
       const operationTags: Tag[] = [{ feature: 'signup' }];
       const expectedTags = [...trackerTags, ...operationTags];
 
       const taggedTracker = createInvocationTracker({ tags: trackerTags });
       taggedTracker.onInvoked((invocation) => {
-        if (invocation.phase === 'started' || invocation.phase === 'completed') {
-          events.push(invocation);
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
+          invocations.push(invocation);
         }
       });
 
       const fn = taggedTracker.track('test', (a: number) => a * 2, { tags: operationTags });
       fn(5);
 
-      expect(events).toHaveLength(2); // 1 started, 1 completed
-      expect(events[0].tags).toEqual(expectedTags);
-      expect(events[1].tags).toEqual(expectedTags);
+      expect(invocations).toHaveLength(2); // 1 started, 1 completed
+      expect(invocations[0].tags).toEqual(expectedTags);
+      expect(invocations[1].tags).toEqual(expectedTags);
 
       taggedTracker.close();
     });
@@ -301,7 +301,7 @@ describe('emitnlog.tracker', () => {
   });
 
   describe('logging behavior', () => {
-    test('should log tracker events with the provided logger', () => {
+    test('should log tracker invocations with the provided logger', () => {
       const fn = tracker.track('test', (a: number) => a * 2);
       fn(5);
 
@@ -312,8 +312,8 @@ describe('emitnlog.tracker', () => {
 
   describe('promise handling', () => {
     test('should correctly identify and handle promise-like return values', async () => {
-      const events: PhasedInvocation<'completed'>[] = [];
-      tracker.onCompleted((invocation) => events.push(invocation));
+      const invocations: InvocationAtStage<'completed'>[] = [];
+      tracker.onCompleted((invocation) => invocations.push(invocation));
 
       // A thenable that's not a real Promise
       const thenable = {
@@ -330,9 +330,9 @@ describe('emitnlog.tracker', () => {
       jest.advanceTimersByTime(150);
       await flushFakeTimePromises();
 
-      expect(events).toHaveLength(1);
-      expect(events[0].phase).toBe('completed');
-      expect(events[0].promiseLike).toBe(true);
+      expect(invocations).toHaveLength(1);
+      expect(invocations[0].stage.type).toBe('completed');
+      expect(invocations[0].stage.promiseLike).toBe(true);
     });
   });
 });

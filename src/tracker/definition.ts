@@ -30,13 +30,10 @@ export type InvocationKey<TOperation extends string = string> = {
 };
 
 /**
- * Describes a lifecycle event for a tracked invocation.
+ * Describes a tracked invocation.
  *
  * This object is passed to all tracker listeners (`onInvoked`, `onStarted`, etc.). It captures the identity (`key`),
- * optional `parentKey`, arguments, tags, and information about the phase of the invocation.
- *
- * The object is immutable. Each phase (`started`, `completed`, `errored`) includes only the fields relevant to that
- * phase.
+ * optional `parentKey`, arguments, tags, and information about the stage of the invocation.
  */
 export type Invocation<TOperation extends string = string> = {
   /**
@@ -61,60 +58,69 @@ export type Invocation<TOperation extends string = string> = {
    * If present, the tags provided when creating the tracker or per invocation.
    */
   readonly tags?: readonly Tag[];
-} & (
-  | {
-      /**
-       * The phase of the invocation.
-       */
-      readonly phase: 'started';
-    }
-  | {
-      /**
-       * The phase of the invocation.
-       */
-      readonly phase: 'completed';
 
-      /**
-       * The duration of the invocation in milliseconds.
-       */
-      readonly duration: number;
+  /**
+   * The stage of the invocation.
+   */
+  readonly stage: Stage;
+};
 
-      /**
-       * If true, the tracked operation returned a thenable, typically a promise.
-       */
-      readonly promiseLike?: boolean;
+type Stage = StartedStage | CompletedStage | ErroredStage;
 
-      /**
-       * The result of the invocation.
-       */
-      readonly result?: unknown;
-    }
-  | {
-      /**
-       * The phase of the invocation.
-       */
-      readonly phase: 'errored';
+export type StartedStage = {
+  /**
+   * The type of the stage of the invocation.
+   */
+  readonly type: 'started';
+};
 
-      /**
-       * The duration of the invocation in milliseconds.
-       */
-      readonly duration: number;
+export type CompletedStage = {
+  /**
+   * The type of the stage of the invocation.
+   */
+  readonly type: 'completed';
 
-      /**
-       * If true, the tracked operation returned a thenable, typically a promise.
-       */
-      readonly promiseLike?: boolean;
+  /**
+   * The duration of the invocation in milliseconds.
+   */
+  readonly duration: number;
 
-      /**
-       * The result of the invocation.
-       */
-      readonly error: unknown;
-    }
-);
+  /**
+   * If true, the tracked operation returned a thenable, typically a promise.
+   */
+  readonly promiseLike?: boolean;
+
+  /**
+   * The result of the invocation.
+   */
+  readonly result?: unknown;
+};
+
+export type ErroredStage = {
+  /**
+   * The type of the stage of the invocation.
+   */
+  readonly type: 'errored';
+
+  /**
+   * The duration of the invocation in milliseconds.
+   */
+  readonly duration: number;
+
+  /**
+   * If true, the tracked operation returned a thenable, typically a promise.
+   */
+  readonly promiseLike?: boolean;
+
+  /**
+   * The result of the invocation.
+   */
+  readonly error: unknown;
+};
 
 /**
  * A flexible key-value tag that adds contextual metadata to a tracked invocation, being useful for filtering, routing,
- * correlation, and enriching logs or events.
+ * correlation, and enriching logs or invocations.
  *
  * Tags may be provided when creating the tracker or per invocation. Tags from both levels are concatenated during
  * invocation. Duplicate keys are preserved (i.e., not deduplicated), allowing multiple tags with the same name.
@@ -128,22 +134,23 @@ export type Invocation<TOperation extends string = string> = {
 export type Tag = { readonly [name: string]: string | number | boolean };
 
 /**
- * The phases of an invocation.
+ * The stages of an invocation.
  */
-type Phase = Invocation['phase'];
+type StageType = Stage['type'];
 
 /**
- * A narrowed version of `Invocation`, specific to a phase of the invocation.
+ * A narrowed version of `Invocation`, specific to a stage of the invocation.
  */
-export type PhasedInvocation<TPhase extends Phase, TOperation extends string = string> = Invocation<TOperation> & {
-  readonly phase: TPhase;
-};
+export type InvocationAtStage<
+  TStageType extends StageType,
+  TOperation extends string = string,
+> = Invocation<TOperation> & { readonly stage: Stage & { readonly type: TStageType } };
 
 /**
- * A tracker that observes operation invocations and emits lifecycle events.
+ * A tracker that observes operations and emits an invocation description.
  *
  * This object is created via `createInvocationTracker()`. Once created, you can use `track(...)` to wrap operations for
- * tracking and register listeners for various invocation phases.
+ * tracking and register listeners for various invocation stages.
  */
 export type InvocationTracker<TOperation extends string = string> = {
   /**
@@ -185,24 +192,24 @@ export type InvocationTracker<TOperation extends string = string> = {
   ) => F;
 
   /**
-   * Registers a listener for all invocation events (any phase).
+   * Registers a listener for all invocations on any stage.
    *
-   * These listeners are notified before the ones that are specified to each phase of the invocation.
+   * These listeners are notified before the ones that are specified to each stage of the invocation.
    */
   readonly onInvoked: OnEvent<Invocation<TOperation>>;
 
   /**
-   * Registers a listener for `started` events only.
+   * Registers a listener for `started` invocations only.
    */
-  readonly onStarted: OnEvent<PhasedInvocation<'started', TOperation>>;
+  readonly onStarted: OnEvent<InvocationAtStage<'started', TOperation>>;
 
   /**
-   * Registers a listener for `completed` events only.
+   * Registers a listener for `completed` invocations only.
    */
-  readonly onCompleted: OnEvent<PhasedInvocation<'completed', TOperation>>;
+  readonly onCompleted: OnEvent<InvocationAtStage<'completed', TOperation>>;
 
   /**
-   * Registers a listener for `errored` events only.
+   * Registers a listener for `errored` invocations only.
    */
-  readonly onErrored: OnEvent<PhasedInvocation<'errored', TOperation>>;
+  readonly onErrored: OnEvent<InvocationAtStage<'errored', TOperation>>;
 };
