@@ -59,15 +59,15 @@ import type { InvocationTracker } from './definition.ts';
  * @param options - The options to use to track the methods.
  * @returns A set of method names that were successfully wrapped.
  */
-export const trackMethods = (
-  tracker: InvocationTracker,
+export const trackMethods = <TOperation extends string = string>(
+  tracker: InvocationTracker<TOperation>,
   target: unknown,
   options?: {
     /**
      * The methods to track. If not provided, all enumerable method names (including inherited ones, except from
      * Object.prototype) are tracked.
      */
-    readonly methods?: readonly string[];
+    readonly methods?: readonly TOperation[];
 
     /**
      * Whether to include the constructor in the tracked methods.
@@ -86,17 +86,19 @@ export const trackMethods = (
     return new Set();
   }
 
-  const selected = options?.methods?.length
-    ? new Set(options.methods.filter((method) => isMethod(target, method)))
-    : collectAllMethods(target, options?.includeConstructor);
+  const selected = (
+    options?.methods?.length
+      ? new Set(options.methods.filter((method) => isMethod(target, method)))
+      : collectAllMethods(target, options?.includeConstructor)
+  ) as ReadonlySet<TOperation>;
 
   if (!selected.size) {
     return selected;
   }
 
   for (const method of selected) {
-    const fn = (target as Record<string, () => unknown>)[method];
-    (target as Record<string, () => unknown>)[method] = tracker.track(method, fn.bind(target));
+    const fn = (target as Record<TOperation, () => unknown>)[method];
+    (target as Record<TOperation, () => unknown>)[method] = tracker.track(method, fn.bind(target));
   }
 
   return selected;
