@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import type { InvocationTracker } from '../../src/tracker/definition.ts';
+import type { Invocation, InvocationTracker } from '../../src/tracker/index.ts';
 import { createInvocationTracker, trackMethods } from '../../src/tracker/index.ts';
 import { createTestLogger } from '../jester.setup.ts';
 
@@ -280,6 +280,43 @@ describe('trackMethods', () => {
 
       const result = await promise;
       expect(result).toBe('data');
+    });
+  });
+
+  describe('typed operation tracker', () => {
+    test('should work with a typed operation tracker', () => {
+      type Operation = 'add' | 'subtract' | 'multiply';
+
+      const calculator = {
+        add: (a: number, b: number) => a + b,
+        subtract: (a: number, b: number) => a - b,
+        multiply: (a: number, b: number) => a * b,
+      };
+
+      const operationTracker = createInvocationTracker<Operation>();
+
+      const operationInvocations: Invocation<Operation>[] = [];
+      operationTracker.onInvoked((invocation) => {
+        operationInvocations.push(invocation);
+      });
+
+      const trackedMethods = trackMethods(operationTracker, calculator, { methods: ['add', 'subtract'] });
+
+      expect(trackedMethods).toEqual(new Set(['add', 'subtract']));
+
+      expect(calculator.add(1, 2)).toBe(3);
+      expect(calculator.subtract(3, 2)).toBe(1);
+      expect(calculator.multiply(2, 3)).toBe(6);
+
+      expect(operationInvocations).toHaveLength(4);
+      expect(operationInvocations[0].key.operation).toBe('add');
+      expect(operationInvocations[0].phase).toBe('started');
+      expect(operationInvocations[1].key.operation).toBe('add');
+      expect(operationInvocations[1].phase).toBe('completed');
+      expect(operationInvocations[2].key.operation).toBe('subtract');
+      expect(operationInvocations[2].phase).toBe('started');
+      expect(operationInvocations[3].key.operation).toBe('subtract');
+      expect(operationInvocations[3].phase).toBe('completed');
     });
   });
 });
