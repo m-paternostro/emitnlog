@@ -133,9 +133,6 @@ export type ErroredStage = {
  */
 export type Tag = { readonly [name: string]: string | number | boolean };
 
-/**
- * The stages of an invocation.
- */
 type StageType = InvocationStage['type'];
 
 /**
