@@ -60,7 +60,11 @@ export type Invocation<TOperation extends string = string> = {
   readonly tags?: readonly Tag[];
 
   /**
-   * The stage of the invocation.
+   * The stage of the invocation, which can be
+   *
+   * - `started`: at the very beginning of the invocation
+   * - `completed`: after a successful invocation (sync or async)
+   * - `errored`: after a value is thrown or rejected
    */
   readonly stage: InvocationStage;
 };
