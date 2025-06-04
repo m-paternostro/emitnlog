@@ -1,10 +1,29 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
+import type { EventNotifier, OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
 import { delay } from '../../src/utils/index.ts';
 
 describe('emitnlog.notifier', () => {
-  let notifier: ReturnType<typeof createEventNotifier<string>>;
+  test('should be able to create a notifier with no type parameters', () => {
+    const notifier = createEventNotifier();
+
+    const onEvent: OnEvent = notifier.onEvent;
+
+    let counter = 0;
+    onEvent((event) => {
+      expect(event).toBeUndefined();
+      counter++;
+    });
+
+    notifier.notify();
+    expect(counter).toBe(1);
+
+    notifier.notify();
+    expect(counter).toBe(2);
+  });
+
+  let notifier: EventNotifier<string>;
 
   beforeEach(() => {
     notifier = createEventNotifier<string>();

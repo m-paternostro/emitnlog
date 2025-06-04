@@ -12,7 +12,7 @@
  *   - Status tracking via `active` property
  *   - Error handling via optional error callback
  */
-export type EventNotifier<T, E = Error> = {
+export type EventNotifier<T = void, E = Error> = {
   /**
    * Registers a listener function to be called when events are notified. Listeners are notified in the order they were
    * registered.
@@ -122,4 +122,4 @@ export type EventNotifier<T, E = Error> = {
  *
  * @template T The type of events this subscription will handle
  */
-export type OnEvent<T> = (listener: (event: T) => unknown) => { readonly close: () => void };
+export type OnEvent<T = void> = (listener: (event: T) => unknown) => { readonly close: () => void };
