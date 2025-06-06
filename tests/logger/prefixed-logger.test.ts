@@ -770,6 +770,176 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
   });
 
+  describe('empty prefix handling', () => {
+    test('should not append separator when empty prefix is added to existing prefixed logger', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+
+      // Adding empty prefix should not append separator
+      const emptyPrefixLogger = withPrefix(dbLogger, '');
+
+      emptyPrefixLogger.info('Test message');
+      expect(logger).toHaveLoggedWith('info', 'DB: Test message');
+
+      // Verify inspection data
+      const data = inspectPrefixedLogger(emptyPrefixLogger);
+      expect(data!.prefix).toBe('DB');
+      expect(data!.separator).toBe('.');
+    });
+
+    test('should not append separator when empty prefix is used with fallback prefix', () => {
+      const logger = createTestLogger();
+
+      // Empty prefix with fallback should not append separator
+      const fallbackLogger = withPrefix(logger, '', { fallbackPrefix: 'FALLBACK' });
+
+      fallbackLogger.info('Test message');
+      expect(logger).toHaveLoggedWith('info', 'FALLBACK: Test message');
+
+      // Verify inspection data
+      const data = inspectPrefixedLogger(fallbackLogger);
+      expect(data!.prefix).toBe('FALLBACK');
+    });
+
+    test('should handle empty prefix with custom separators', () => {
+      const logger = createTestLogger();
+      const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/', messageSeparator: ' >> ' });
+
+      // Adding empty prefix should not append custom separator
+      const emptyPrefixLogger = withPrefix(apiLogger, '');
+
+      emptyPrefixLogger.info('Test message');
+      expect(logger).toHaveLoggedWith('info', 'API >> Test message');
+
+      // Verify inspection data
+      const data = inspectPrefixedLogger(emptyPrefixLogger);
+      expect(data!.prefix).toBe('API');
+      expect(data!.separator).toBe('/');
+      expect(data!.messageSeparator).toBe(' >> ');
+    });
+
+    test('should handle empty prefix in nested chains without breaking structure', () => {
+      const logger = createTestLogger();
+      const serviceLogger = withPrefix(logger, 'Service');
+      const emptyLogger = withPrefix(serviceLogger, '');
+      const userLogger = withPrefix(emptyLogger, 'User');
+
+      // Chain should maintain structure: Service -> Service -> Service.User
+      userLogger.info('User operation');
+      expect(logger).toHaveLoggedWith('info', 'Service.User: User operation');
+
+      // Verify each logger in the chain
+      const emptyData = inspectPrefixedLogger(emptyLogger);
+      expect(emptyData!.prefix).toBe('Service');
+
+      const userData = inspectPrefixedLogger(userLogger);
+      expect(userData!.prefix).toBe('Service.User');
+    });
+
+    test('should handle multiple consecutive empty prefixes', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+      const empty1 = withPrefix(dbLogger, '');
+      const empty2 = withPrefix(empty1, '');
+      const empty3 = withPrefix(empty2, '');
+      const userLogger = withPrefix(empty3, 'User');
+
+      // Multiple empty prefixes should not change the prefix chain
+      userLogger.info('User operation');
+      expect(logger).toHaveLoggedWith('info', 'DB.User: User operation');
+
+      // All empty prefix loggers should have the same prefix as the original
+      const empty1Data = inspectPrefixedLogger(empty1);
+      const empty2Data = inspectPrefixedLogger(empty2);
+      const empty3Data = inspectPrefixedLogger(empty3);
+
+      expect(empty1Data!.prefix).toBe('DB');
+      expect(empty2Data!.prefix).toBe('DB');
+      expect(empty3Data!.prefix).toBe('DB');
+    });
+
+    test('should handle appendPrefix with empty string', () => {
+      const logger = createTestLogger();
+      const dbLogger = withPrefix(logger, 'DB');
+
+      // appendPrefix with empty string should not change prefix
+      const emptyAppendLogger = appendPrefix(dbLogger, '');
+
+      emptyAppendLogger.info('Test message');
+      expect(logger).toHaveLoggedWith('info', 'DB: Test message');
+
+      // Verify inspection data
+      const data = inspectPrefixedLogger(emptyAppendLogger);
+      expect(data!.prefix).toBe('DB');
+    });
+
+    test('should handle resetPrefix with empty string', () => {
+      const logger = createTestLogger();
+      const complexLogger = withPrefix(logger, 'Complex');
+      const nestedLogger = appendPrefix(complexLogger, 'Nested');
+
+      // resetPrefix with empty string should create logger with empty prefix
+      const resetEmptyLogger = resetPrefix(nestedLogger, '');
+
+      resetEmptyLogger.info('Test message');
+      expect(logger).toHaveLoggedWith('info', ': Test message');
+
+      // Verify inspection data
+      const data = inspectPrefixedLogger(resetEmptyLogger);
+      expect(data!.prefix).toBe('');
+      expect(data!.rootLogger).toBe(logger);
+    });
+
+    test('should handle empty prefix with fallback prefix and custom separators', () => {
+      const logger = createTestLogger();
+
+      // Empty prefix with fallback and custom separators
+      const fallbackLogger = withPrefix(logger, '', {
+        fallbackPrefix: 'APP',
+        prefixSeparator: '/',
+        messageSeparator: ' | ',
+      });
+
+      fallbackLogger.info('Test message');
+      expect(logger).toHaveLoggedWith('info', 'APP | Test message');
+
+      // Adding non-empty prefix should use custom separator
+      const serviceLogger = appendPrefix(fallbackLogger, 'Service');
+      serviceLogger.info('Service message');
+      expect(logger).toHaveLoggedWith('info', 'APP/Service | Service message');
+    });
+
+    test('should maintain type safety with empty prefixes', () => {
+      const assertType = <T extends string>(value: PrefixedLogger<T>, expectedType: T): void => {
+        expect(value).toBeDefined();
+        expect(expectedType).toBe(expectedType);
+      };
+
+      const logger: Logger = createTestLogger();
+
+      // Empty prefix on fresh logger
+      const emptyLogger = withPrefix(logger, '');
+      assertType(emptyLogger, '');
+
+      // Empty prefix on existing prefixed logger
+      const dbLogger = withPrefix(logger, 'DB');
+      const emptyOnPrefixed = withPrefix(dbLogger, '');
+      assertType(emptyOnPrefixed, 'DB');
+
+      // Empty prefix with fallback
+      const fallbackLogger = withPrefix(logger, '', { fallbackPrefix: 'FALLBACK' });
+      assertType(fallbackLogger, 'FALLBACK');
+
+      // Empty appendPrefix
+      const emptyAppend = appendPrefix(dbLogger, '');
+      assertType(emptyAppend, 'DB');
+
+      // Empty resetPrefix
+      const emptyReset = resetPrefix(dbLogger, '');
+      assertType(emptyReset, '');
+    });
+  });
+
   describe('integration tests', () => {
     test('should work with complex prefix hierarchies', () => {
       const logger = createTestLogger();

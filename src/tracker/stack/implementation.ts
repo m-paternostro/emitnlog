@@ -30,10 +30,10 @@ export const createBasicInvocationStack = (options?: { readonly logger: Logger }
   const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'stack.basic', { fallbackPrefix: 'emitnlog.tracker' });
   const stack: InvocationKey[] = [];
 
-  logger.i`creating stack`;
+  logger.d`creating stack`;
   return {
     close: () => {
-      logger.i`closing`;
+      logger.d`closing`;
       stack.length = 0;
     },
 
@@ -75,10 +75,10 @@ export const createThreadSafeInvocationStack = (
   options?: { readonly logger: Logger },
 ): InvocationStack => {
   const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'stack.thread-safe', { fallbackPrefix: 'emitnlog.tracker' });
-
+  logger.d`creating stack`;
   return {
     close: () => {
-      logger.i`closing`;
+      logger.d`closing`;
       storage.disable();
     },
 

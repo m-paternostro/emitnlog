@@ -5,22 +5,22 @@
  * @example
  *
  * ```ts
- * // Generate a random string with default length (32)
+ * // Generate a random string with default length (8)
  * const id = generateRandomString();
  *
  * // Generate a random string with custom length
  * const longerId = generateRandomString(64);
  * ```
  *
- * @param length - Defaults to 32. Must be a number between 32 and 128.
+ * @param length - Defaults to 8. Must be a number between 8 and 128.
  * @returns A random string of the specified length.
- * @throws An error if length is not in the range between 32 and 128 (inclusive).
+ * @throws An error if length is not in the range between 8 and 128 (inclusive).
  * @note NOT SUITABLE FOR CRYPTOGRAPHIC OR SECURITY-CRITICAL PURPOSES.
  * For security-sensitive applications, use a cryptographically secure random generator instead.
  */
-export const generateRandomString = (length = 32) => {
-  if (length < 32 || length > 128) {
-    throw new Error('IllegalArgument: length must be a number between 32 and 128');
+export const generateRandomString = (length = 8) => {
+  if (length < 8 || length > 128) {
+    throw new Error('IllegalArgument: length must be a number between 8 and 128');
   }
 
   const timestamp = Date.now();

@@ -65,7 +65,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
   const completedNotifier = createEventNotifier<InvocationAtStage<'completed', TOperation>>();
   const erroredNotifier = createEventNotifier<InvocationAtStage<'errored', TOperation>>();
 
-  const trackerLogger = withPrefix(logger, `tracker.${trackerId}`, { fallbackPrefix: 'emitnlog' });
+  const trackerLogger = withPrefix(logger, '', { fallbackPrefix: `emitnlog.tracker.${trackerId}` });
   const stack = options?.stack ?? stackFactory({ logger: trackerLogger });
 
   let closed = false;
@@ -76,7 +76,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
 
     close: () => {
       if (!closed) {
-        trackerLogger.i`closing`;
+        trackerLogger.d`closing tracker`;
         closed = true;
 
         invokedNotifier.close();
@@ -95,7 +95,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
     },
 
     track: (operation, fn, opt) => {
-      const trackedLogger = appendPrefix(trackerLogger, operation);
+      const trackedLogger = appendPrefix(trackerLogger, `operation.${operation}`);
 
       if (closed) {
         trackedLogger.d`the tracker is closed`;
