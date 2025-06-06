@@ -247,7 +247,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
   return tracker;
 };
 
-const trackedSymbol = Symbol('tracked');
+const trackedSymbol = Symbol.for('@emitnlog/tracker/tracked');
 
 const toTrackedTrackerId = (value: unknown): string | undefined =>
   isNotNullable(value) &&
