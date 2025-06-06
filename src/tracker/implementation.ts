@@ -13,6 +13,7 @@ import type {
   InvocationAtStage,
   InvocationKey,
   InvocationTracker,
+  InvocationTrackerOptions,
   Tag,
 } from './definition.ts';
 import type { InvocationStack } from './stack/definition.ts';
@@ -53,29 +54,9 @@ import { createBasicInvocationStack, createThreadSafeInvocationStack } from './s
  *
  * @param options Optional configuration for the tracker. @returns A new `InvocationTracker` instance.
  */
-export const createInvocationTracker = <TOperation extends string = string>(options?: {
-  /**
-   * A stack implementation to manage parent-child relationships. If not specified, the default is thread-safe in node
-   * environments and "simple" in others.
-   *
-   * The stack is closed when the tracker is closed.
-   *
-   * If multiple trackers share the same stack instance, invocations may form cross-tracker parent-child relationships.
-   * This enables advanced use cases (e.g., linking invocations across components), but should only be done with a
-   * thread-safe stack to avoid incorrect nesting.
-   */
-  readonly stack?: InvocationStack;
-
-  /**
-   * Optional tags that will be added to every invocation tracked by this tracker.
-   */
-  readonly tags?: readonly Tag[];
-
-  /**
-   * An optional logger used to emit tracker-level log messages.
-   */
-  readonly logger?: Logger;
-}): InvocationTracker<TOperation> => {
+export const createInvocationTracker = <TOperation extends string = string>(
+  options?: InvocationTrackerOptions,
+): InvocationTracker<TOperation> => {
   const trackerId = generateRandomString();
   const logger = options?.logger ?? OFF_LOGGER;
 

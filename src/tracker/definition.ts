@@ -1,4 +1,6 @@
+import type { Logger } from '../logger/definition.ts';
 import type { OnEvent } from '../notifier/definition.ts';
+import type { InvocationStack } from './stack/definition.ts';
 
 /**
  * Describes the unique identity of a tracked invocation.
@@ -213,4 +215,28 @@ export type InvocationTracker<TOperation extends string = string> = {
    * Registers a listener for `errored` invocations only.
    */
   readonly onErrored: OnEvent<InvocationAtStage<'errored', TOperation>>;
+};
+
+export type InvocationTrackerOptions = {
+  /**
+   * A stack implementation to manage parent-child relationships. If not specified, the default is thread-safe in node
+   * environments and "simple" in others.
+   *
+   * The stack is closed when the tracker is closed.
+   *
+   * If multiple trackers share the same stack instance, invocations may form cross-tracker parent-child relationships.
+   * This enables advanced use cases (e.g., linking invocations across components), but should only be done with a
+   * thread-safe stack to avoid incorrect nesting.
+   */
+  readonly stack?: InvocationStack;
+
+  /**
+   * Optional tags that will be added to every invocation tracked by this tracker.
+   */
+  readonly tags?: readonly Tag[];
+
+  /**
+   * An optional logger used to emit tracker-level log messages.
+   */
+  readonly logger?: Logger;
 };
