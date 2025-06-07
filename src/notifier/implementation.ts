@@ -67,7 +67,7 @@ import type { EventNotifier } from './definition.ts';
  * @template E Optional error type (defaults to Error).
  * @returns An EventNotifier that supports listener registration, notification, and error handling.
  */
-export const createEventNotifier = <T, E = Error>(): EventNotifier<T, E> => {
+export const createEventNotifier = <T = void, E = Error>(): EventNotifier<T, E> => {
   const listeners = new Set<(event: T) => unknown>();
   let errorHandler: ((error: E) => void) | undefined;
   let deferredEvent: DeferredValue<T> | undefined;
