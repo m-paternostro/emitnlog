@@ -217,7 +217,12 @@ export default ts.config([
       ],
     },
   },
-  { name: 'node', files: ['src/*/node/**/*.ts'], rules: { 'no-restricted-imports': 'off' } },
+  {
+    name: 'node',
+    files: ['src/*/node/**/*.ts'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-restricted-imports': 'off' },
+  },
   {
     name: 'tests',
     files: ['tests/**/*'],
