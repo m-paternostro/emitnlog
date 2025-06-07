@@ -12,6 +12,16 @@ describe('ESM Flat imports', () => {
     expect(typeof emitnlog.createEventNotifier).toBe('function');
   });
 
+  test('Tracker exports are available', () => {
+    expect(emitnlog.createInvocationTracker).toBeDefined();
+    expect(typeof emitnlog.createInvocationTracker).toBe('function');
+  });
+
+  test('Utils exports are available', () => {
+    expect(emitnlog.createDeferredValue).toBeDefined();
+    expect(typeof emitnlog.createDeferredValue).toBe('function');
+  });
+
   test('Can create and use a logger', () => {
     const logger = new emitnlog.ConsoleLogger();
     expect(logger).toBeDefined();

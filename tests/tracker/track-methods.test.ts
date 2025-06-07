@@ -310,13 +310,13 @@ describe('trackMethods', () => {
 
       expect(operationInvocations).toHaveLength(4);
       expect(operationInvocations[0].key.operation).toBe('add');
-      expect(operationInvocations[0].phase).toBe('started');
+      expect(operationInvocations[0].stage.type).toBe('started');
       expect(operationInvocations[1].key.operation).toBe('add');
-      expect(operationInvocations[1].phase).toBe('completed');
+      expect(operationInvocations[1].stage.type).toBe('completed');
       expect(operationInvocations[2].key.operation).toBe('subtract');
-      expect(operationInvocations[2].phase).toBe('started');
+      expect(operationInvocations[2].stage.type).toBe('started');
       expect(operationInvocations[3].key.operation).toBe('subtract');
-      expect(operationInvocations[3].phase).toBe('completed');
+      expect(operationInvocations[3].stage.type).toBe('completed');
     });
   });
 });

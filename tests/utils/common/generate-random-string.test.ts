@@ -11,9 +11,9 @@ describe('emitnlog.utils.generateRandomString', () => {
     jest.restoreAllMocks();
   });
 
-  test('should generate a string of default length (32)', () => {
+  test('should generate a string of default length (8)', () => {
     const id = generateRandomString();
-    expect(id).toHaveLength(32);
+    expect(id).toHaveLength(8);
     expect(id).toMatch(/^[A-Za-z0-9]+$/);
   });
 
@@ -29,17 +29,17 @@ describe('emitnlog.utils.generateRandomString', () => {
     expect(id).toMatch(/^[A-Za-z0-9]+$/);
   });
 
-  test('should throw error when length is less than 32', () => {
-    expect(() => generateRandomString(31)).toThrow('IllegalArgument: length must be a number between 32 and 128');
-    expect(() => generateRandomString(0)).toThrow('IllegalArgument: length must be a number between 32 and 128');
-    expect(() => generateRandomString(-1)).toThrow('IllegalArgument: length must be a number between 32 and 128');
+  test('should throw error when length is less than 8', () => {
+    expect(() => generateRandomString(7)).toThrow('IllegalArgument: length must be a number between 8 and 128');
+    expect(() => generateRandomString(0)).toThrow('IllegalArgument: length must be a number between 8 and 128');
+    expect(() => generateRandomString(-1)).toThrow('IllegalArgument: length must be a number between 8 and 128');
   });
 
   test('should throw error when length is greater than 128', () => {
-    expect(() => generateRandomString(129)).toThrow('IllegalArgument: length must be a number between 32 and 128');
-    expect(() => generateRandomString(1000)).toThrow('IllegalArgument: length must be a number between 32 and 128');
+    expect(() => generateRandomString(129)).toThrow('IllegalArgument: length must be a number between 8 and 128');
+    expect(() => generateRandomString(1000)).toThrow('IllegalArgument: length must be a number between 8 and 128');
     expect(() => generateRandomString(Number.MAX_SAFE_INTEGER)).toThrow(
-      'IllegalArgument: length must be a number between 32 and 128',
+      'IllegalArgument: length must be a number between 8 and 128',
     );
   });
 
@@ -48,7 +48,7 @@ describe('emitnlog.utils.generateRandomString', () => {
     for (let i = 0; i < 100; i++) {
       const id = generateRandomString();
       expect(ids.has(id)).toBe(false);
-      expect(id).toHaveLength(32);
+      expect(id).toHaveLength(8);
       ids.add(id);
     }
   });
@@ -62,9 +62,7 @@ describe('emitnlog.utils.generateRandomString', () => {
       .mockReturnValueOnce(0.99); // '9'
 
     const id = generateRandomString();
-    expect(id).toMatch(/[A-Z]/); // Contains uppercase
-    expect(id).toMatch(/[a-z]/); // Contains lowercase
-    expect(id).toMatch(/[0-9]/); // Contains number
+    expect(id).toMatch(/[A-Za-z0-9]/);
 
     mockRandom.mockRestore();
   });

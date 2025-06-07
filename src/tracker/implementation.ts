@@ -6,16 +6,25 @@ import { appendPrefix, withPrefix } from '../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../notifier/implementation.ts';
 import { generateRandomString } from '../utils/common/generate-random-string.ts';
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { Invocation, InvocationKey, InvocationTracker, PhasedInvocation, Tag } from './definition.ts';
+import type {
+  CompletedStage,
+  ErroredStage,
+  Invocation,
+  InvocationAtStage,
+  InvocationKey,
+  InvocationTracker,
+  InvocationTrackerOptions,
+  Tag,
+} from './definition.ts';
 import type { InvocationStack } from './stack/definition.ts';
 import { createBasicInvocationStack, createThreadSafeInvocationStack } from './stack/implementation.ts';
 
 /**
  * Creates an invocation tracker that monitors and notifies about operation invocations.
  *
- * Each tracker assigns a unique tracker ID and supports multiple listeners for lifecycle events:
+ * Each tracker assigns a unique tracker ID and supports multiple listeners for invocations:
  *
- * - `onInvoked`: all events, all phases
+ * - `onInvoked`: all invocations regardless of the stage
  * - `onStarted`: before invocation
  * - `onCompleted`: after successful invocation (sync or async)
  * - `onErrored`: after an error is thrown or a promise is rejected
@@ -45,38 +54,18 @@ import { createBasicInvocationStack, createThreadSafeInvocationStack } from './s
  *
  * @param options Optional configuration for the tracker. @returns A new `InvocationTracker` instance.
  */
-export const createInvocationTracker = <TOperation extends string = string>(options?: {
-  /**
-   * A stack implementation to manage parent-child relationships. If not specified, the default is thread-safe in node
-   * environments and "simple" in others.
-   *
-   * The stack is closed when the tracker is closed.
-   *
-   * If multiple trackers share the same stack instance, invocations may form cross-tracker parent-child relationships.
-   * This enables advanced use cases (e.g., linking invocations across components), but should only be done with a
-   * thread-safe stack to avoid incorrect nesting.
-   */
-  readonly stack?: InvocationStack;
-
-  /**
-   * Optional tags that will be added to every invocation tracked by this tracker.
-   */
-  readonly tags?: readonly Tag[];
-
-  /**
-   * An optional logger used to emit tracker-level log messages.
-   */
-  readonly logger?: Logger;
-}): InvocationTracker<TOperation> => {
+export const createInvocationTracker = <TOperation extends string = string>(
+  options?: InvocationTrackerOptions,
+): InvocationTracker<TOperation> => {
   const trackerId = generateRandomString();
   const logger = options?.logger ?? OFF_LOGGER;
 
   const invokedNotifier = createEventNotifier<Invocation<TOperation>>();
-  const startedNotifier = createEventNotifier<PhasedInvocation<'started', TOperation>>();
-  const completedNotifier = createEventNotifier<PhasedInvocation<'completed', TOperation>>();
-  const erroredNotifier = createEventNotifier<PhasedInvocation<'errored', TOperation>>();
+  const startedNotifier = createEventNotifier<InvocationAtStage<'started', TOperation>>();
+  const completedNotifier = createEventNotifier<InvocationAtStage<'completed', TOperation>>();
+  const erroredNotifier = createEventNotifier<InvocationAtStage<'errored', TOperation>>();
 
-  const trackerLogger = withPrefix(logger, `tracker.${trackerId}`, { fallbackPrefix: 'emitnlog' });
+  const trackerLogger = withPrefix(logger, '', { fallbackPrefix: `emitnlog.tracker.${trackerId}` });
   const stack = options?.stack ?? stackFactory({ logger: trackerLogger });
 
   let closed = false;
@@ -87,7 +76,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
 
     close: () => {
       if (!closed) {
-        trackerLogger.i`closing`;
+        trackerLogger.d`closing tracker`;
         closed = true;
 
         invokedNotifier.close();
@@ -106,7 +95,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
     },
 
     track: (operation, fn, opt) => {
-      const trackedLogger = appendPrefix(trackerLogger, operation);
+      const trackedLogger = appendPrefix(trackerLogger, `operation.${operation}`);
 
       if (closed) {
         trackedLogger.d`the tracker is closed`;
@@ -137,7 +126,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         stack.push(key);
 
         const notifyStarted = () => {
-          const invocation: Writable<PhasedInvocation<'started', TOperation>> = { key, phase: 'started' };
+          const invocation: Writable<InvocationAtStage<'started', TOperation>> = { key, stage: { type: 'started' } };
 
           if (parentKey) {
             invocation.parentKey = parentKey;
@@ -156,13 +145,13 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         };
 
         const notifyCompleted = (duration: number, promiseLike: boolean, result: unknown) => {
-          const invocation: Writable<PhasedInvocation<'completed', TOperation>> = {
-            key,
-            phase: 'completed',
-            duration,
-            args,
-            result,
-          };
+          const stage: Writable<CompletedStage> = { type: 'completed', duration, result };
+
+          if (promiseLike) {
+            stage.promiseLike = true;
+          }
+
+          const invocation: Writable<InvocationAtStage<'completed', TOperation>> = { key, stage };
 
           if (parentKey) {
             invocation.parentKey = parentKey;
@@ -174,10 +163,6 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
 
           if (tags?.length) {
             invocation.tags = tags;
-          }
-
-          if (promiseLike) {
-            invocation.promiseLike = true;
           }
 
           invokedNotifier.notify(invocation);
@@ -185,13 +170,13 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
         };
 
         const notifyErrored = (duration: number, promiseLike: boolean, error: unknown) => {
-          const invocation: Writable<PhasedInvocation<'errored', TOperation>> = {
-            key,
-            phase: 'errored',
-            duration,
-            args,
-            error,
-          };
+          const stage: Writable<ErroredStage> = { type: 'errored', duration, error };
+
+          if (promiseLike) {
+            stage.promiseLike = true;
+          }
+
+          const invocation: Writable<InvocationAtStage<'errored', TOperation>> = { key, stage };
 
           if (parentKey) {
             invocation.parentKey = parentKey;
@@ -203,10 +188,6 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
 
           if (tags?.length) {
             invocation.tags = tags;
-          }
-
-          if (promiseLike) {
-            invocation.promiseLike = true;
           }
 
           invokedNotifier.notify(invocation);
@@ -266,7 +247,7 @@ export const createInvocationTracker = <TOperation extends string = string>(opti
   return tracker;
 };
 
-const trackedSymbol = Symbol('tracked');
+const trackedSymbol = Symbol.for('@emitnlog/tracker/tracked');
 
 const toTrackedTrackerId = (value: unknown): string | undefined =>
   isNotNullable(value) &&

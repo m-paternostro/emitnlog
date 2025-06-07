@@ -3,9 +3,9 @@ import type { Logger, LogLevel, LogMessage } from './definition.ts';
 import { shouldEmitEntry } from './level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
-const prefixSymbol: unique symbol = Symbol('prefix');
-const separatorSymbol: unique symbol = Symbol('separator');
-const dataSymbol: unique symbol = Symbol('data');
+const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
+const separatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/separator');
+const dataSymbol: unique symbol = Symbol.for('@emitnlog/logger/data');
 
 /**
  * A specialized logger that prepends a fixed prefix to all log messages.
@@ -184,12 +184,12 @@ export const withPrefix = <
     logger = data.rootLogger as TLogger;
     prefixSeparator = data.separator as TSeparator;
     messageSeparator = data.messageSeparator;
-    prefix = `${data.prefix}${prefixSeparator}${prefix}` as TPrefix;
+    prefix = (prefix ? `${data.prefix}${prefixSeparator}${prefix}` : data.prefix) as TPrefix;
   } else {
     prefixSeparator = (options?.prefixSeparator ?? '.') as TSeparator;
     messageSeparator = options?.messageSeparator ?? ': ';
     if (options?.fallbackPrefix) {
-      prefix = `${options.fallbackPrefix}${prefixSeparator}${prefix}` as TPrefix;
+      prefix = (prefix ? `${options.fallbackPrefix}${prefixSeparator}${prefix}` : options.fallbackPrefix) as TPrefix;
     }
   }
 
@@ -549,5 +549,7 @@ type WithPrefixResult<
   TLogger extends PrefixedLogger<infer TPrevPrefix, infer TPrevSeparator>
     ? PrefixedLogger<`${TPrevPrefix}${TPrevSeparator}${TNewPrefix}`, TPrevSeparator>
     : TFallbackPrefix extends string
-      ? PrefixedLogger<`${TFallbackPrefix}${TSeparator}${TNewPrefix}`, TSeparator>
+      ? TNewPrefix extends ''
+        ? PrefixedLogger<`${TFallbackPrefix}`, TSeparator>
+        : PrefixedLogger<`${TFallbackPrefix}${TSeparator}${TNewPrefix}`, TSeparator>
       : PrefixedLogger<TNewPrefix, TSeparator>;
