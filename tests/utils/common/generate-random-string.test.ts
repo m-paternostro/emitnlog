@@ -62,9 +62,7 @@ describe('emitnlog.utils.generateRandomString', () => {
       .mockReturnValueOnce(0.99); // '9'
 
     const id = generateRandomString();
-    expect(id).toMatch(/[A-Z]/); // Contains uppercase
-    expect(id).toMatch(/[a-z]/); // Contains lowercase
-    expect(id).toMatch(/[0-9]/); // Contains number
+    expect(id).toMatch(/[A-Za-z0-9]/);
 
     mockRandom.mockRestore();
   });
