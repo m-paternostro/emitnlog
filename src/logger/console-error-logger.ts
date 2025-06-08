@@ -1,6 +1,7 @@
 import { BaseLogger } from './base-logger.ts';
 import type { LogLevel } from './definition.ts';
-import { emitColorfulLine, emitLine } from './formatter.ts';
+import type { EmitterFormat } from './emitter.ts';
+import { emitLine } from './emitter.ts';
 
 /**
  * A logger that emits log messages to standard error (console.error). By default the lines are emitted with colors.
@@ -29,21 +30,21 @@ import { emitColorfulLine, emitLine } from './formatter.ts';
  * ```
  */
 export class ConsoleErrorLogger extends BaseLogger {
-  private readonly skipColor?: boolean;
+  private readonly format: EmitterFormat;
 
   /**
    * Creates a new ConsoleLogger instance.
    *
    * @param level - The log level to use (default: 'info')
-   * @param skipColor - Whether to skip color coding (default: false)
+   * @param format - The format of the emitted lines (default: 'colorful')
    */
-  public constructor(level?: LogLevel, skipColor?: boolean) {
+  public constructor(level?: LogLevel, format: EmitterFormat = 'colorful') {
     super(level);
-    this.skipColor = skipColor;
+    this.format = format;
   }
 
   protected override emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-    const line = this.skipColor ? emitLine(level, message) : emitColorfulLine(level, message);
+    const line = emitLine(level, message, undefined, this.format);
     // eslint-disable-next-line no-undef, no-console
     console.error(line, ...args);
   }

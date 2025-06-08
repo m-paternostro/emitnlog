@@ -59,4 +59,63 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
 
     expect(consoleErrorSpy.mock.calls[0][0]).toContain('This should be logged');
   });
+
+  test('should work with JSON format', () => {
+    const logger = new ConsoleErrorLogger('info', 'json');
+
+    logger.info('JSON test message');
+
+    // Verify console.error was called
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    // Check that the first argument is valid JSON
+    const jsonOutput = consoleErrorSpy.mock.calls[0][0] as string;
+    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+
+    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    expect(parsed.message).toBe('JSON test message');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+  });
+
+  test('should work with unformatted JSON format', () => {
+    const logger = new ConsoleErrorLogger('info', 'unformatted-json');
+
+    logger.info('Unformatted JSON test message');
+
+    // Verify console.error was called
+    expect(consoleErrorSpy).toHaveBeenCalled();
+
+    // Check that the first argument is valid JSON and compact
+    const jsonOutput = consoleErrorSpy.mock.calls[0][0] as string;
+    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+    expect(jsonOutput).not.toContain('\n'); // Should be compact
+
+    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    expect(parsed.message).toBe('Unformatted JSON test message');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+  });
+
+  test('should pass additional arguments correctly with JSON format', () => {
+    const logger = new ConsoleErrorLogger('info', 'json');
+    const context = { userId: '123', action: 'login' };
+    const error = new Error('Test error');
+
+    logger.error('User action failed', context, error);
+
+    // Verify console.error was called with multiple arguments
+    expect(consoleErrorSpy).toHaveBeenCalled();
+    expect(consoleErrorSpy.mock.calls[0].length).toBeGreaterThan(1);
+
+    // First argument should be JSON formatted line
+    const jsonOutput = consoleErrorSpy.mock.calls[0][0] as string;
+    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    expect(parsed.message).toBe('User action failed');
+    expect(parsed.level).toBe('error');
+
+    // Additional arguments should be passed as separate parameters to console.error
+    expect(consoleErrorSpy.mock.calls[0][1]).toEqual(context);
+    expect(consoleErrorSpy.mock.calls[0][2]).toBe(error);
+  });
 });

@@ -59,4 +59,84 @@ describe('emitnlog.logger.ConsoleLogger', () => {
 
     expect(consoleLogSpy.mock.calls[0][0]).toContain('This should be logged');
   });
+
+  test('should work with JSON format', () => {
+    const logger = new ConsoleLogger('info', 'json');
+
+    logger.info('JSON test message');
+
+    // Verify console.log was called
+    expect(consoleLogSpy).toHaveBeenCalled();
+
+    // Check that the first argument is valid JSON
+    const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
+    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+
+    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    expect(parsed.message).toBe('JSON test message');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+  });
+
+  test('should work with unformatted JSON format', () => {
+    const logger = new ConsoleLogger('info', 'unformatted-json');
+
+    logger.info('Unformatted JSON test message');
+
+    // Verify console.log was called
+    expect(consoleLogSpy).toHaveBeenCalled();
+
+    // Check that the first argument is valid JSON and compact
+    const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
+    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+    expect(jsonOutput).not.toContain('\n'); // Should be compact
+
+    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    expect(parsed.message).toBe('Unformatted JSON test message');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+  });
+
+  test('should pass additional arguments correctly with JSON format', () => {
+    const logger = new ConsoleLogger('info', 'json');
+    const context = { userId: '123', action: 'login' };
+    const additionalInfo = 'extra data';
+
+    logger.info('User action', context, additionalInfo);
+
+    // Verify console.log was called with multiple arguments
+    expect(consoleLogSpy).toHaveBeenCalled();
+    expect(consoleLogSpy.mock.calls[0].length).toBeGreaterThan(1);
+
+    // First argument should be JSON formatted line
+    const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
+    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    expect(parsed.message).toBe('User action');
+    expect(parsed.level).toBe('info');
+
+    // Additional arguments should be passed as separate parameters to console.log
+    expect(consoleLogSpy.mock.calls[0][1]).toEqual(context);
+    expect(consoleLogSpy.mock.calls[0][2]).toBe(additionalInfo);
+  });
+
+  test('should pass additional arguments correctly with plain format', () => {
+    const logger = new ConsoleLogger('info', 'plain');
+    const context = { userId: '123', action: 'login' };
+    const additionalInfo = 'extra data';
+
+    logger.info('User action', context, additionalInfo);
+
+    // Verify console.log was called with multiple arguments
+    expect(consoleLogSpy).toHaveBeenCalled();
+    expect(consoleLogSpy.mock.calls[0].length).toBeGreaterThan(1);
+
+    // First argument should be plain formatted line
+    const plainOutput = consoleLogSpy.mock.calls[0][0] as string;
+    expect(plainOutput).toContain('User action');
+    expect(plainOutput).toContain('[info     ]');
+
+    // Additional arguments should be passed as separate parameters to console.log
+    expect(consoleLogSpy.mock.calls[0][1]).toEqual(context);
+    expect(consoleLogSpy.mock.calls[0][2]).toBe(additionalInfo);
+  });
 });
