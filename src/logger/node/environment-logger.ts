@@ -1,6 +1,7 @@
-import type { Logger } from './definition.ts';
-import type { EnvironmentLoggerOptions } from './environment-common.ts';
-import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
+import type { Logger } from '../definition.ts';
+import type { EnvironmentLoggerOptions } from '../environment-common.ts';
+import { createLoggerFromEnv, decodeEnv, toEnv } from '../environment-common.ts';
+import { FileLogger } from './file-logger.ts';
 
 /**
  * Returns the logger to use based on the environment variables.
@@ -75,7 +76,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
  * @example
  *
  * ```typescript
- * import { fromEnv } from 'emitnlog/logger/environment';
+ * import { fromEnv } from 'emitnlog/logger/node/environment';
  *
  * // Using console logger with info level and colorful format
  * process.env.EMITNLOG_LOGGER = 'console';
@@ -91,5 +92,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
 export const fromEnv = (options?: EnvironmentLoggerOptions): Logger => {
   const env = toEnv();
   const decodedEnv = decodeEnv(env, options);
-  return createLoggerFromEnv(decodedEnv, options);
+  return decodedEnv?.envFile
+    ? new FileLogger(decodedEnv.envFile, decodedEnv.envLevel, decodedEnv.envFormat)
+    : createLoggerFromEnv(decodedEnv, options);
 };

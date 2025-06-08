@@ -3,6 +3,19 @@ const emitnlog = require('emitnlog');
 describe('CJS Flat imports', () => {
   test('Logger exports are available', () => {
     expect(typeof emitnlog.ConsoleLogger).toBe('function');
+    expect(typeof emitnlog.fromEnv).toBe('function');
+
+    process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
+    {
+      const logger = emitnlog.fromEnv();
+      expect(logger).toBe(emitnlog.OFF_LOGGER);
+    }
+    process.env.EMITNLOG_LOGGER = 'console';
+    {
+      const logger = emitnlog.fromEnv();
+      expect(logger).toBeDefined();
+      expect(logger.constructor.name).toBe('ConsoleLogger');
+    }
   });
 
   test('Notifier exports are available', () => {
@@ -17,11 +30,5 @@ describe('CJS Flat imports', () => {
   test('Utils exports are available', () => {
     expect(typeof emitnlog.createDeferredValue).toBe('function');
     expect(typeof emitnlog.delay).toBe('function');
-  });
-
-  test('Can create and use a logger', () => {
-    const logger = new emitnlog.ConsoleLogger();
-    expect(logger).toBeDefined();
-    expect(typeof logger.log).toBe('function');
   });
 });

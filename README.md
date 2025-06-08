@@ -1,9 +1,8 @@
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/m-paternostro/emitnlog/blob/main/LICENSE)
-[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/m-paternostro/emitnlog)](https://github.com/m-paternostro/emitnlog/releases)
 [![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?logo=npm&logoColor=white)](https://www.npmjs.com/package/emitnlog)
-[![Version](https://img.shields.io/github/package-json/v/m-paternostro/emitnlog)](https://github.com/m-paternostro/emitnlog/blob/main/package.json)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/m-paternostro/emitnlog)](https://github.com/m-paternostro/emitnlog/releases)
 [![CI](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml/badge.svg)](https://github.com/m-paternostro/emitnlog/actions/workflows/ci.yaml)
 [![Coverage](https://m-paternostro.github.io/emitnlog/coverage/coverage-badge.svg)](https://m-paternostro.github.io/emitnlog/coverage/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/m-paternostro/emitnlog/blob/main/LICENSE)
 
 # Emit n' Log
 
@@ -193,7 +192,7 @@ Configure logging behavior through environment variables for easy deployment-tim
 > **Note:** Supported on Node.js or on runtimes where `process.env` exposes the environment variables.
 
 ```ts
-import { fromEnv } from 'emitnlog/logger';
+import { fromEnv } from 'emitnlog/logger/environment';
 
 // Creates logger based on environment variables
 const logger = fromEnv();
@@ -209,7 +208,7 @@ Configure your logger with these environment variables:
 # Logger type (required)
 EMITNLOG_LOGGER=console                # Use ConsoleLogger
 EMITNLOG_LOGGER=console-error          # Use ConsoleErrorLogger
-EMITNLOG_LOGGER=file:/var/log/app.log  # Use FileLogger with specified path
+EMITNLOG_LOGGER=file:/var/log/app.log  # Use FileLogger with specified path (Node.js only)
 
 # Log level (optional)
 EMITNLOG_LEVEL=debug                   # Set minimum log level
@@ -223,7 +222,8 @@ EMITNLOG_FORMAT=colorful               # Use colored output
 Provide defaults and fallback behavior when environment variables aren't set:
 
 ```ts
-import { fromEnv, ConsoleLogger } from 'emitnlog/logger';
+import { ConsoleLogger } from 'emitnlog/logger';
+import { fromEnv } from 'emitnlog/logger/environment';
 
 // With fallback options
 const logger = fromEnv({
@@ -245,6 +245,22 @@ const logger = fromEnv({
   },
 });
 ```
+
+### Choosing the Right `fromEnv` Import
+
+There are three available `fromEnv` variants, depending on your runtime or preferences:
+
+```ts
+import { fromEnv } from 'emitnlog/logger/environment'; // dynamic resolution (recommended)
+import { fromEnv } from 'emitnlog/logger'; // neutral-only (browser-safe)
+import { fromEnv } from 'emitnlog/logger/node'; // Node-only (file support)
+```
+
+- The first form (`/logger/environment`) uses conditional exports to automatically select the correct logger at runtime: it supports file logging in Node.js, and gracefully disables it in browser-safe builds. This is the recommended option for most users.
+
+- The second form (`/logger`) is always neutral and safe to use in any environment — but does not support file loggers.
+
+- The third form (`/logger/node`) gives you full control of Node-only features like FileLogger, and should only be used when you’re explicitly targeting Node.
 
 #### Example
 
@@ -269,7 +285,7 @@ EMITNLOG_FORMAT=plain
 
 ```ts
 // app.ts - Works in all environments
-import { fromEnv } from 'emitnlog/logger';
+import { fromEnv } from 'emitnlog/logger/environment';
 
 const logger = fromEnv({
   level: 'info', // Reasonable default

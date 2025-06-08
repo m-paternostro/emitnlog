@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import environmentLogger from '../../src/logger/environment-logger.ts';
 import type { LogLevel } from '../../src/logger/index.ts';
-import { ConsoleErrorLogger, ConsoleLogger, fromEnv, OFF_LOGGER } from '../../src/logger/index.ts';
-import { FileLogger } from '../../src/logger/node/index.ts';
+import { ConsoleErrorLogger, ConsoleLogger, OFF_LOGGER } from '../../src/logger/index.ts';
+import { fromEnv } from '../../src/logger/node/environment-logger.ts';
+import { FileLogger } from '../../src/logger/node/file-logger.ts';
 import { createTestLogger } from '../jester.setup.ts';
 
 // eslint-disable-next-line no-console
@@ -18,7 +18,7 @@ const mockConsoleLog = jest.fn();
 const mockConsoleError = jest.fn();
 
 // Mock the FileLogger since we don't want to create actual files in tests
-jest.mock('../../src/logger/node/index.ts', () => ({
+jest.mock('../../src/logger/node/file-logger.ts', () => ({
   FileLogger: jest.fn().mockImplementation(() => createTestLogger()),
 }));
 
@@ -126,7 +126,9 @@ describe('emitnlog.logger.environment-logger', () => {
       test('should create FileLogger with empty path', () => {
         process.env.EMITNLOG_LOGGER = 'file:';
         fromEnv();
-        expect(FileLogger).toHaveBeenCalledWith('', undefined, undefined);
+        expect(mockConsoleWarn).toHaveBeenCalledWith(
+          `The value of the environment variable 'EMITNLOG_LOGGER' must provide a file path: 'file:'.\nConsult the emitnlog documentation for the list of valid loggers.`,
+        );
       });
 
       test('should warn and return fallback for invalid EMITNLOG_LOGGER value', () => {
@@ -406,25 +408,6 @@ describe('emitnlog.logger.environment-logger', () => {
         expect(logger).toBe(fallbackLogger);
         expect(fallbackLoggerSpy).toHaveBeenCalledWith('alert', 'unformatted-json');
       });
-    });
-  });
-
-  describe('test utility', () => {
-    test('should expose internal fromEnv function for testing', () => {
-      const testSymbol = Symbol.for('@emitnlog.test');
-      expect(environmentLogger[testSymbol]).toBeDefined();
-      expect(environmentLogger[testSymbol].fromEnv).toBeDefined();
-      expect(typeof environmentLogger[testSymbol].fromEnv).toBe('function');
-    });
-
-    test('should be able to call internal fromEnv function', () => {
-      const { fromEnv: testFromEnv } = environmentLogger[Symbol.for('@emitnlog.test')];
-      expect(testFromEnv()).toBe(OFF_LOGGER);
-    });
-
-    test('should work with custom environment object', () => {
-      const { fromEnv: testFromEnv } = environmentLogger[Symbol.for('@emitnlog.test')];
-      expect(testFromEnv()).toBeDefined();
     });
   });
 
