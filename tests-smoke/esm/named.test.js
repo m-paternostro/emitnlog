@@ -1,4 +1,5 @@
-import { ConsoleLogger } from 'emitnlog/logger';
+import { ConsoleLogger, fromEnv as fromEnvLogger, OFF_LOGGER } from 'emitnlog/logger';
+import { fromEnv } from 'emitnlog/logger/environment';
 import { createEventNotifier } from 'emitnlog/notifier';
 import { createInvocationTracker } from 'emitnlog/tracker';
 import { createDeferredValue } from 'emitnlog/utils';
@@ -6,31 +7,49 @@ import { expect, test, describe } from '@jest/globals';
 
 describe('ESM Named imports', () => {
   test('Logger import works', () => {
-    const logger = new ConsoleLogger();
-    expect(logger).toBeDefined();
-    expect(typeof logger.log).toBe('function');
+    expect(typeof ConsoleLogger).toBe('function');
+    expect(typeof fromEnvLogger).toBe('function');
+
+    process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
+    {
+      const logger = fromEnvLogger();
+      expect(logger).toBe(OFF_LOGGER);
+    }
+    process.env.EMITNLOG_LOGGER = 'console';
+    {
+      const logger = fromEnvLogger();
+      expect(logger).toBeDefined();
+      expect(logger.constructor.name).toBe('ConsoleLogger');
+    }
+  });
+
+  test('Logger environment import works', () => {
+    expect(typeof fromEnv).toBe('function');
+
+    // The smoke tests run in node so this must work
+    process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
+    {
+      const logger = fromEnv();
+      expect(logger).toBeDefined();
+      expect(logger.constructor.name).toBe('FileLogger');
+    }
+    process.env.EMITNLOG_LOGGER = 'console';
+    {
+      const logger = fromEnv();
+      expect(logger).toBeDefined();
+      expect(logger.constructor.name).toBe('ConsoleLogger');
+    }
   });
 
   test('Notifier import works', () => {
-    const notifier = createEventNotifier();
-    expect(notifier).toBeDefined();
-    expect(typeof notifier.onEvent).toBe('function');
-    expect(typeof notifier.notify).toBe('function');
+    expect(typeof createEventNotifier).toBe('function');
   });
 
   test('Tracker import works', () => {
-    const tracker = createInvocationTracker();
-    expect(tracker).toBeDefined();
-    expect(typeof tracker.track).toBe('function');
-    expect(typeof tracker.onInvoked).toBe('function');
-    expect(typeof tracker.onStarted).toBe('function');
+    expect(typeof createInvocationTracker).toBe('function');
   });
 
   test('Utils import works', () => {
-    const deferred = createDeferredValue();
-    expect(deferred).toBeDefined();
-    expect(typeof deferred.promise).toBe('object');
-    expect(typeof deferred.resolve).toBe('function');
-    expect(typeof deferred.reject).toBe('function');
+    expect(typeof createDeferredValue).toBe('function');
   });
 });

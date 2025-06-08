@@ -47,6 +47,16 @@
         "default": "./dist/node/logger/node/index.cjs"
       }
     },
+    "./logger/environment": {
+      "import": {
+        "node": "./dist/node/logger/environment.js",
+        "default": "./dist/neutral/logger/environment.js"
+      },
+      "require": {
+        "node": "./dist/node/logger/environment.cjs",
+        "default": "./dist/neutral/logger/environment.cjs"
+      }
+    },
     "./notifier": {
       "import": {
         "types": "./dist/neutral/notifier/index.d.ts",
