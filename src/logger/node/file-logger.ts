@@ -82,7 +82,7 @@ export type FileLoggerOptions = {
  * const configuredLogger = new FileLogger({
  *   filePath: '/var/log/myapp.log',
  *   level: 'warning',
- *   keepAnsiColors: true, // Preserve color codes
+ *   format: 'colorful', // Preserve color codes
  *   omitArgs: true, // Don't include additional arguments
  *   errorHandler: (err) => myCustomErrorReporter(err),
  *   retryLimit: 3, // Retry file operations up to 3 times
@@ -134,7 +134,7 @@ export class FileLogger extends BaseLogger {
   public readonly filePath: string;
 
   /**
-   * Whether to keep ANSI color codes in log messages
+   * The log format
    */
   private readonly format: EmitterFormat;
 
@@ -188,29 +188,32 @@ export class FileLogger extends BaseLogger {
    *
    * @param filePathOrOptions Either a string path to the log file, or a configuration object
    * @param level The minimum severity level for log entries (default: 'info')
+   * @param format - The format of the emitted lines (default: 'plain')
    */
   public constructor(
     filePathOrOptions: string | ({ readonly filePath: string } & FileLoggerOptions),
     level?: LogLevel,
+    format?: EmitterFormat,
   ) {
     const isString = typeof filePathOrOptions === 'string';
 
+    const logLevel = level ?? (isString ? undefined : filePathOrOptions.level);
+    const logFormat = format ?? (isString ? undefined : filePathOrOptions.format) ?? 'plain';
+
     const filePath = isString ? filePathOrOptions : filePathOrOptions.filePath;
-    const format = isString ? 'plain' : (filePathOrOptions.format ?? 'plain');
     const omitArgs = isString ? false : (filePathOrOptions.omitArgs ?? false);
     const flushDelayMs = isString ? 20 : (filePathOrOptions.flushDelayMs ?? 20);
     const retryLimit = isString ? 0 : (filePathOrOptions.retryLimit ?? 0);
     const retryDelayMs = isString ? 500 : (filePathOrOptions.retryDelayMs ?? 500);
     const errorHandler = isString ? undefined : filePathOrOptions.errorHandler;
 
-    const logLevel = level ?? (isString ? undefined : filePathOrOptions.level);
     super(logLevel);
 
     if (!filePath) {
       throw new Error('File path is required');
     }
 
-    this.format = format;
+    this.format = logFormat;
     this.omitArgs = omitArgs;
     this.flushDelayMs = flushDelayMs;
     this.retryLimit = retryLimit;

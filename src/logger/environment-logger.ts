@@ -140,7 +140,7 @@ const doFromEnv = (env: Record<string, string | undefined> | undefined, options?
 
       if (isFileEnvLogger(envLogger)) {
         const filePath = envLogger.slice(5);
-        return new FileLogger({ filePath, level, format });
+        return new FileLogger(filePath, level, format);
       }
 
       // eslint-disable-next-line no-undef, no-console
