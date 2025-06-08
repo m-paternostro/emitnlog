@@ -45,6 +45,8 @@ A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rf
 
 ### Log Levels
 
+Defines the minimum level of the log entries that are emitted.
+
 ```
 trace     - Extremely detailed debugging information
 debug     - Diagnostic messages
@@ -55,6 +57,17 @@ error     - Error conditions
 critical  - System component failure
 alert     - Action must be taken now
 emergency - System is unusable
+```
+
+### Log Formats
+
+Defines the format used to emit a log entry.
+
+```
+plain            - One plain text line per entry, no styling.
+colorful         - ANSI-colored line, ideal for dev terminals.
+json             - One structured JSON line per entry.
+unformatted-json - Compact JSON line, raw and delimiter-safe.
 ```
 
 ### Template Logging

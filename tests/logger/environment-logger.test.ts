@@ -114,19 +114,19 @@ describe('emitnlog.logger.environment-logger', () => {
       test('should create FileLogger when EMITNLOG_LOGGER starts with "file:"', () => {
         process.env.EMITNLOG_LOGGER = 'file:/path/to/log.txt';
         fromEnv();
-        expect(FileLogger).toHaveBeenCalledWith({ filePath: '/path/to/log.txt', level: undefined, format: undefined });
+        expect(FileLogger).toHaveBeenCalledWith('/path/to/log.txt', undefined, undefined);
       });
 
       test('should create FileLogger with relative path', () => {
         process.env.EMITNLOG_LOGGER = 'file:logs/app.log';
         fromEnv();
-        expect(FileLogger).toHaveBeenCalledWith({ filePath: 'logs/app.log', level: undefined, format: undefined });
+        expect(FileLogger).toHaveBeenCalledWith('logs/app.log', undefined, undefined);
       });
 
       test('should create FileLogger with empty path', () => {
         process.env.EMITNLOG_LOGGER = 'file:';
         fromEnv();
-        expect(FileLogger).toHaveBeenCalledWith({ filePath: '', level: undefined, format: undefined });
+        expect(FileLogger).toHaveBeenCalledWith('', undefined, undefined);
       });
 
       test('should warn and return fallback for invalid EMITNLOG_LOGGER value', () => {
@@ -285,7 +285,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
         fromEnv();
 
-        expect(FileLogger).toHaveBeenCalledWith({ filePath: 'test.log', level: 'warning', format: 'json' });
+        expect(FileLogger).toHaveBeenCalledWith('test.log', 'warning', 'json');
       });
 
       test('should handle mix of valid and invalid environment variables', () => {
@@ -378,7 +378,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
           fromEnv();
 
-          expect(FileLogger).toHaveBeenCalledWith({ filePath: expectedPath, level: undefined, format: undefined });
+          expect(FileLogger).toHaveBeenCalledWith(expectedPath, undefined, undefined);
 
           // Clean up for next iteration
           jest.clearAllMocks();
@@ -472,7 +472,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       const logger = fromEnv();
 
-      expect(FileLogger).toHaveBeenCalledWith({ filePath: 'test.log', level: 'debug', format: 'json' });
+      expect(FileLogger).toHaveBeenCalledWith('test.log', 'debug', 'json');
 
       expect(() => {
         logger.debug('Debug message');
@@ -518,7 +518,7 @@ describe('emitnlog.logger.environment-logger', () => {
         fallbackLogger: () => fallbackLogger, // Should not be used
       });
 
-      expect(FileLogger).toHaveBeenCalledWith({ filePath: 'logs/application.log', level: 'info', format: 'json' });
+      expect(FileLogger).toHaveBeenCalledWith('logs/application.log', 'info', 'json');
 
       expect(logger).not.toBe(fallbackLogger);
       expect(logger).not.toBe(OFF_LOGGER);

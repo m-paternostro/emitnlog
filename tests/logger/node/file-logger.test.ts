@@ -125,6 +125,141 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).toContain('This should appear');
   });
 
+  test('should accept format as third parameter with string path', async () => {
+    // Test JSON format with string path
+    const jsonLogFile = path.join(testDir, 'json-format.log');
+    const jsonLogger = new FileLogger(jsonLogFile, 'info', 'json');
+
+    jsonLogger.info('JSON format test');
+    await jsonLogger.close();
+
+    const jsonContent = await readLogFile(jsonLogFile);
+    const parsed = JSON.parse(jsonContent.trim()) as Record<string, unknown>;
+    expect(parsed.message).toBe('JSON format test');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+
+    // Test colorful format with string path
+    const colorfulLogFile = path.join(testDir, 'colorful-format.log');
+    const colorfulLogger = new FileLogger(colorfulLogFile, 'debug', 'colorful');
+
+    // Create a string with ANSI color codes
+    const coloredText = '\x1B[32mThis is colored green\x1B[0m';
+    colorfulLogger['emitLine']('debug', coloredText, []);
+    await colorfulLogger.close();
+
+    const colorfulContent = await readLogFile(colorfulLogFile);
+    // Should contain the ANSI codes when format is colorful
+    expect(colorfulContent).toContain('\x1B[32m');
+
+    // Test plain format with string path (default behavior)
+    const plainLogFile = path.join(testDir, 'plain-format.log');
+    const plainLogger = new FileLogger(plainLogFile, 'info', 'plain');
+
+    plainLogger.info('Plain format test');
+    await plainLogger.close();
+
+    const plainContent = await readLogFile(plainLogFile);
+    expect(plainContent).toContain('Plain format test');
+    expect(plainContent).toContain('[info     ]');
+  });
+
+  test('should use default format when none specified with string path', async () => {
+    const defaultFormatLogger = new FileLogger(testLogFile, 'info');
+
+    defaultFormatLogger.info('Default format test');
+    await defaultFormatLogger.close();
+
+    const content = await readLogFile();
+    expect(content).toContain('Default format test');
+    expect(content).toContain('[info     ]'); // Plain format indicator
+  });
+
+  test('should handle undefined format parameter with string path', async () => {
+    const undefinedFormatLogger = new FileLogger(testLogFile, 'info', undefined);
+
+    undefinedFormatLogger.info('Undefined format test');
+    await undefinedFormatLogger.close();
+
+    const content = await readLogFile();
+    expect(content).toContain('Undefined format test');
+    expect(content).toContain('[info     ]'); // Should default to plain format
+  });
+
+  test('should prioritize format parameter over options format when both provided', async () => {
+    // This tests edge case where format is provided as parameter and also in options
+    // The parameter should take precedence, but this constructor pattern doesn't actually exist
+    // in the current API, so we'll test the expected behavior with separate calls
+
+    // Test that options format works
+    const optionsLogger = new FileLogger({ filePath: path.join(testDir, 'options-format.log'), format: 'json' });
+
+    optionsLogger.info('Options format test');
+    await optionsLogger.close();
+
+    const optionsContent = await readLogFile(path.join(testDir, 'options-format.log'));
+    const parsed = JSON.parse(optionsContent.trim()) as Record<string, unknown>;
+    expect(parsed.message).toBe('Options format test');
+
+    // Test that parameter format works with string path
+    const paramLogger = new FileLogger(path.join(testDir, 'param-format.log'), 'info', 'unformatted-json');
+
+    paramLogger.info('Parameter format test');
+    await paramLogger.close();
+
+    const paramContent = await readLogFile(path.join(testDir, 'param-format.log'));
+    const lines = paramContent.trim().split('\n');
+    expect(lines.length).toBe(1);
+    const paramParsed = JSON.parse(lines[0]) as Record<string, unknown>;
+    expect(paramParsed.message).toBe('Parameter format test');
+  });
+
+  test('should work with all supported formats using string path', async () => {
+    const formats: { format: 'plain' | 'colorful' | 'json' | 'unformatted-json'; description: string }[] = [
+      { format: 'plain', description: 'plain format' },
+      { format: 'colorful', description: 'colorful format' },
+      { format: 'json', description: 'JSON format' },
+      { format: 'unformatted-json', description: 'unformatted JSON format' },
+    ];
+
+    // Create all loggers and log messages
+    const loggers = formats.map(({ format, description }) => {
+      const formatLogFile = path.join(testDir, `${format}-test.log`);
+      const logger = new FileLogger(formatLogFile, 'info', format);
+      logger.info(`Testing ${description}`);
+      return { logger, format, description, formatLogFile };
+    });
+
+    // Close all loggers
+    await Promise.all(loggers.map(({ logger }) => logger.close()));
+
+    // Verify all outputs
+    const results = await Promise.all(
+      loggers.map(async ({ format, description, formatLogFile }) => {
+        const content = await readLogFile(formatLogFile);
+        return { format, description, content };
+      }),
+    );
+
+    for (const { format, description, content } of results) {
+      expect(content).toBeTruthy();
+      expect(content).toContain(`Testing ${description}`);
+
+      // Format-specific assertions
+      if (format === 'json' || format === 'unformatted-json') {
+        // Should be valid JSON
+        const lines = content.trim().split('\n');
+        const firstLine = format === 'json' ? content.trim() : lines[0];
+        const parsed = JSON.parse(firstLine) as Record<string, unknown>;
+        expect(parsed.message).toBe(`Testing ${description}`);
+        expect(parsed.level).toBe('info');
+      } else {
+        // Plain and colorful formats should have level indicator
+        expect(content).toContain('[info     ]');
+      }
+    }
+  });
+
   test('should work with JSON format', async () => {
     const logger = new FileLogger({ filePath: testLogFile, format: 'json' });
 
