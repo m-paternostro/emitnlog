@@ -111,7 +111,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should accept options object in constructor', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, level: 'warning', keepAnsiColors: true });
+    const logger = new FileLogger({ filePath: testLogFile, level: 'warning', format: 'colorful' });
 
     // Check that level setting is respected
     logger.info('This should be filtered out');
@@ -125,8 +125,88 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).toContain('This should appear');
   });
 
-  test('should keep ANSI color codes when keepAnsiColors is true', async () => {
-    const logger = new FileLogger({ filePath: testLogFile + '.colors', keepAnsiColors: true });
+  test('should work with JSON format', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, format: 'json' });
+
+    logger.info('JSON test message');
+    await logger.close();
+
+    const content = await readLogFile();
+
+    // Should contain valid JSON (pretty-printed, so parse the whole content)
+    const parsed = JSON.parse(content.trim()) as Record<string, unknown>;
+    expect(parsed.message).toBe('JSON test message');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+
+    // Should be formatted (pretty-printed)
+    expect(content).toContain('\n  ');
+  });
+
+  test('should work with unformatted JSON format', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, format: 'unformatted-json' });
+
+    logger.info('Unformatted JSON test message');
+    await logger.close();
+
+    const content = await readLogFile();
+
+    // Should contain valid JSON
+    const lines = content.trim().split('\n');
+    expect(lines.length).toBe(1);
+
+    const parsed = JSON.parse(lines[0]) as Record<string, unknown>;
+    expect(parsed.message).toBe('Unformatted JSON test message');
+    expect(parsed.level).toBe('info');
+    expect(parsed.timestamp).toBeDefined();
+
+    // Should be compact (no pretty-printing)
+    expect(lines[0]).not.toMatch(/\n\s+/);
+  });
+
+  test('should include args in JSON format', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, format: 'json' });
+
+    const context = { userId: '123', action: 'login' };
+    const additionalData = 'extra info';
+
+    logger.info('User logged in', context, additionalData);
+    await logger.close();
+
+    const content = await readLogFile();
+
+    const parsed = JSON.parse(content.trim()) as Record<string, unknown>;
+    expect(parsed.message).toBe('User logged in');
+    expect(parsed.level).toBe('info');
+    expect(parsed.args).toEqual([context, additionalData]);
+  });
+
+  test('should handle args separately for non-JSON formats', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, format: 'plain' });
+
+    const context = { userId: '123', action: 'login' };
+    const additionalData = 'extra info';
+
+    logger.info('User logged in', context, additionalData);
+    await logger.close();
+
+    const content = await readLogFile();
+
+    // Should contain the message
+    expect(content).toContain('User logged in');
+    expect(content).toContain('[info     ]');
+
+    // Should contain args section
+    expect(content).toContain('args:');
+    expect(content).toContain('[0]');
+    expect(content).toContain('[1]');
+    expect(content).toContain('userId');
+    expect(content).toContain('123');
+    expect(content).toContain('extra info');
+  });
+
+  test('should keep ANSI color codes when format is colorful', async () => {
+    const logger = new FileLogger({ filePath: testLogFile + '.colors', format: 'colorful' });
 
     // Create a string with ANSI color codes (simulate what FormattedLogger might produce)
     const coloredText = '\x1B[32mThis is colored green\x1B[0m';

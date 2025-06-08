@@ -9,7 +9,8 @@ import { errorify } from '../../utils/converter/errorify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
 import { BaseLogger } from '../base-logger.ts';
 import type { LogLevel } from '../definition.ts';
-import { emitColorfulLine, emitLine } from '../formatter.ts';
+import type { EmitterFormat } from '../emitter.ts';
+import { emitLine, formatSupportsArgs } from '../emitter.ts';
 
 /**
  * Configuration options for the FileLogger
@@ -21,14 +22,12 @@ export type FileLoggerOptions = {
   readonly level?: LogLevel;
 
   /**
-   * Whether to keep ANSI color codes in log output (default: false) When false (default), ANSI color codes are stripped
-   * from log output
+   * The format of the emitted lines (default: 'plain')
    */
-  readonly keepAnsiColors?: boolean;
+  readonly format?: EmitterFormat;
 
   /**
-   * Whether to omit additional args in log output (default: false) When false (default), additional arguments passed to
-   * log methods will be serialized and included in the log
+   * Whether to omit additional args in log output (default: false).
    */
   readonly omitArgs?: boolean;
 
@@ -137,7 +136,7 @@ export class FileLogger extends BaseLogger {
   /**
    * Whether to keep ANSI color codes in log messages
    */
-  private readonly keepAnsiColors: boolean;
+  private readonly format: EmitterFormat;
 
   /**
    * Whether to omit additional args in log output
@@ -197,7 +196,7 @@ export class FileLogger extends BaseLogger {
     const isString = typeof filePathOrOptions === 'string';
 
     const filePath = isString ? filePathOrOptions : filePathOrOptions.filePath;
-    const keepAnsiColors = isString ? false : (filePathOrOptions.keepAnsiColors ?? false);
+    const format = isString ? 'plain' : (filePathOrOptions.format ?? 'plain');
     const omitArgs = isString ? false : (filePathOrOptions.omitArgs ?? false);
     const flushDelayMs = isString ? 20 : (filePathOrOptions.flushDelayMs ?? 20);
     const retryLimit = isString ? 0 : (filePathOrOptions.retryLimit ?? 0);
@@ -211,7 +210,7 @@ export class FileLogger extends BaseLogger {
       throw new Error('File path is required');
     }
 
-    this.keepAnsiColors = keepAnsiColors;
+    this.format = format;
     this.omitArgs = omitArgs;
     this.flushDelayMs = flushDelayMs;
     this.retryLimit = retryLimit;
@@ -240,13 +239,17 @@ export class FileLogger extends BaseLogger {
       return;
     }
 
-    const content = this.keepAnsiColors
-      ? emitColorfulLine(level, message)
-      : emitLine(level, message.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, ''));
+    if (this.omitArgs) {
+      args = [];
+    }
 
+    if (this.format !== 'colorful') {
+      message = message.replace(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g, '');
+    }
+    const content = emitLine(level, message, args, this.format);
     this.buffer.push(content);
 
-    if (!this.omitArgs && args.length) {
+    if (!formatSupportsArgs(this.format) && args.length) {
       this.buffer.push('args:');
       for (let i = 0; i < args.length; i++) {
         const arg = args[i];
