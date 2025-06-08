@@ -37,6 +37,55 @@ import { FileLogger } from './file-logger.ts';
  *
  * If a environment variable is not set, the associated value in `options` is used.
  *
+ * @example
+ *
+ * ```typescript
+ * import { fromEnv } from 'emitnlog/logger/environment';
+ *
+ * // Basic usage - uses environment variables if set, otherwise returns OFF_LOGGER
+ * const logger = fromEnv();
+ * ```
+ *
+ * @example
+ *
+ * ```typescript
+ * import { fromEnv } from 'emitnlog/logger/environment';
+ *
+ * // With fallback options when environment variables are not set
+ * const logger = fromEnv({
+ *   // Used if EMITNLOG_LEVEL is not set
+ *   level: 'debug',
+ *
+ *   // Used if EMITNLOG_FORMAT is not set
+ *   format: 'plain',
+ * });
+ * ```
+ *
+ * @example
+ *
+ * ```typescript
+ * import { fromEnv } from 'emitnlog/logger/environment';
+ *
+ * // With a custom fallback logger
+ * const logger = fromEnv({
+ *   // Used if EMITNLOG_LOGGER is not set
+ *   fallbackLogger: (level, format) => new CustomLogger(level, format),
+ * });
+ * ```
+ *
+ * @example
+ *
+ * ```typescript
+ * import { fromEnv } from 'emitnlog/logger/node/environment';
+ *
+ * // Using console logger with info level and colorful format
+ * process.env.EMITNLOG_LOGGER = 'console';
+ * process.env.EMITNLOG_LEVEL = 'info';
+ * process.env.EMITNLOG_FORMAT = 'colorful';
+ * const logger = fromEnv();
+ * logger.info('Hello, world!'); // Will output with colors to console
+ * ```
+ *
  * @param options The options to use.
  * @returns The logger to use.
  */
