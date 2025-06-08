@@ -2,6 +2,32 @@ import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
 import type { LogLevel } from './definition.ts';
 
 /**
+ * Checks if a string is a valid LogLevel.
+ *
+ * @param value The string to check
+ * @returns True if the string is a valid LogLevel, false otherwise
+ */
+export const isLogLevel = (value: unknown): value is LogLevel => {
+  const level = value as LogLevel;
+  switch (level) {
+    case 'trace':
+    case 'debug':
+    case 'info':
+    case 'notice':
+    case 'warning':
+    case 'error':
+    case 'critical':
+    case 'alert':
+    case 'emergency':
+      return true;
+
+    default:
+      exhaustiveCheck(level);
+      return false;
+  }
+};
+
+/**
  * Converts a LogLevel to its corresponding numeric weight value for comparison operations.
  *
  * This function maps each log level to a numeric value according to its severity, with lower numbers representing

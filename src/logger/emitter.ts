@@ -13,6 +13,27 @@ import type { LogLevel } from './definition.ts';
 export type EmitterFormat = 'plain' | 'colorful' | 'json' | 'unformatted-json';
 
 /**
+ * Checks if a string is a valid EmitterFormat.
+ *
+ * @param value The string to check
+ * @returns True if the string is a valid EmitterFormat, false otherwise
+ */
+export const isEmitterFormat = (value: unknown): value is EmitterFormat => {
+  const format = value as EmitterFormat;
+  switch (format) {
+    case 'plain':
+    case 'colorful':
+    case 'json':
+    case 'unformatted-json':
+      return true;
+
+    default:
+      exhaustiveCheck(format);
+      return false;
+  }
+};
+
+/**
  * Whether the specified format supports additional arguments.
  *
  * @param format - The format to check

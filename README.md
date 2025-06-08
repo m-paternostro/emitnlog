@@ -88,12 +88,13 @@ Template logging uses lazy evaluation - values are only computed when the log le
 ```ts
 import { ConsoleLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger();
+// Loggers initialized to the `warning` level
+const logger = new ConsoleLogger('warning');
 
-// This expensive calculation isn't executed because debug < info
+// This expensive calculation isn't executed because debug < warning
 logger.d`Complex calculation: ${() => performExpensiveOperation()}`;
 
-// This will be executed because error > info
+// This will be executed because error > warning
 logger.e`Application error: ${() => generateErrorReport()}`;
 ```
 
@@ -102,9 +103,9 @@ logger.e`Application error: ${() => generateErrorReport()}`;
 For those who prefer the traditional approach:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { ConsoleErrorLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger('debug');
+const logger = new ConsoleErrorLogger('debug');
 
 // Simple static message
 logger.info('Server started on port 3000');
@@ -121,9 +122,175 @@ logger.error('Something went wrong', error);
 logger.debug(() => `Expensive operation result: ${computeExpensiveValue()}`);
 ```
 
+### File Logging (Node.js only)
+
+For persistent logging in Node.js environments:
+
+```ts
+import { FileLogger } from 'emitnlog/logger/node';
+
+// Simple file logger (writes to OS temp directory if path is relative)
+const logger = new FileLogger('app.log', 'debug');
+logger.i`Application started at ${new Date()}`;
+
+// Advanced configuration
+const configuredLogger = new FileLogger({
+  filePath: '/var/log/my-app.log', // Absolute path
+  level: 'warning', // Only warning and above
+  keepAnsiColors: true, // Preserve colors in log file
+  omitArgs: false, // Include additional arguments
+  errorHandler: (err) => console.error('Logging error:', err),
+});
+configuredLogger.e`Database connection error: ${new Error('Connection timeout')}`;
+```
+
+### Available Loggers
+
+All loggers implement the same interface, making them interchangeable:
+
+- `ConsoleLogger`: Logs to console (stdout) with color formatting enabled by default
+- `ConsoleErrorLogger`: Logs to stderr with color formatting enabled by default
+- `FileLogger`: Logs to a file with optional configuration (Node.js only)
+- `OFF_LOGGER`: Discards all logs (useful for testing or quickly silencing the code)
+
+### Tee Logger
+
+Log to multiple destinations simultaneously:
+
+```ts
+import { tee, ConsoleLogger } from 'emitnlog/logger';
+import { FileLogger } from 'emitnlog/logger/node';
+
+// Create individual loggers
+const consoleLogger = new ConsoleLogger('info');
+const fileLogger = new FileLogger('/var/log/app.log');
+
+// Combine them with tee
+const logger = tee(consoleLogger, fileLogger);
+
+// Log messages go to both console and file
+logger.i`Server started successfully`;
+logger.args({ requestId: '12345' }).e`Database query failed: ${new Error('Timeout')}`;
+```
+
+### Environment-Driven Configuration
+
+Configure logging behavior through environment variables for easy deployment-time adjustments without code changes:
+
+> **Note:** Supported on Node.js or on runtimes where `process.env` exposes the environment variables.
+
+```ts
+import { fromEnv } from 'emitnlog/logger';
+
+// Creates logger based on environment variables
+const logger = fromEnv();
+
+logger.i`Application started`;
+```
+
+#### Environment Variables
+
+Configure your logger with these environment variables:
+
+```bash
+# Logger type (required)
+EMITNLOG_LOGGER=console                # Use ConsoleLogger
+EMITNLOG_LOGGER=console-error          # Use ConsoleErrorLogger
+EMITNLOG_LOGGER=file:/var/log/app.log  # Use FileLogger with specified path
+
+# Log level (optional)
+EMITNLOG_LEVEL=debug                   # Set minimum log level
+
+# Output format (optional)
+EMITNLOG_FORMAT=colorful               # Use colored output
+```
+
+#### Fallback Configuration
+
+Provide defaults and fallback behavior when environment variables aren't set:
+
+```ts
+import { fromEnv, ConsoleLogger } from 'emitnlog/logger';
+
+// With fallback options
+const logger = fromEnv({
+  level: 'info', // Default level if EMITNLOG_LEVEL not set
+  format: 'unformatted-json', // Default format if EMITNLOG_FORMAT not set
+  fallbackLogger: () => new ConsoleLogger(),
+});
+
+// For development vs production
+const logger = fromEnv({
+  level: 'debug',
+  fallbackLogger: (level, format) => {
+    // In development, default to console logging
+    if (process.env.NODE_ENV === 'development') {
+      return new ConsoleLogger(level, format);
+    }
+    // In production, require explicit configuration
+    return undefined; // Returns OFF_LOGGER
+  },
+});
+```
+
+#### Example
+
+A typical application setup that adapts to different environments:
+
+```bash
+# Development (.env.development)
+EMITNLOG_LOGGER=console
+EMITNLOG_LEVEL=debug
+EMITNLOG_FORMAT=colorful
+
+# Production (.env.production)
+EMITNLOG_LOGGER=file:/var/log/app.log
+EMITNLOG_LEVEL=warning
+EMITNLOG_FORMAT=json
+
+# Testing (.env.test)
+EMITNLOG_LOGGER=console-error
+EMITNLOG_LEVEL=error
+EMITNLOG_FORMAT=plain
+```
+
+```ts
+// app.ts - Works in all environments
+import { fromEnv } from 'emitnlog/logger';
+
+const logger = fromEnv({
+  level: 'info', // Reasonable default
+  format: 'colorful', // Good for development
+});
+
+logger.i`Server starting on port ${process.env.PORT || 3000}`;
+logger.w`Database connection retrying...`;
+logger.e`Failed to connect to external service: ${error}`;
+```
+
+### Creating Custom Loggers
+
+You can create your own logger by extending `BaseLogger`:
+
+```ts
+import type { LogLevel } from 'emitnlog/logger';
+import { BaseLogger, emitLine, emitColorfulLine } from 'emitnlog/logger';
+
+class MyCustomLogger extends BaseLogger {
+  protected override emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
+    // Format the log entry using the formatter utilities
+    const line = emitColorfulLine(level, message);
+
+    // Do something with the formatted line and args
+    // e.g., send to a remote logging service
+    myLoggingService.send({ line, args });
+  }
+}
+```
+
 ### Prefixed Logger
 
-Categorize and organize your logs by adding fixed prefixes:
+Categorize and organize your logs by adding fixed prefixes to any logger:
 
 ```ts
 import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
@@ -184,77 +351,6 @@ tokenLogger.i`Token validated`; // Logs: "Auth/Token >> Token validated"
 - `withPrefix(logger, prefix)` - Creates a new prefixed logger or extends an existing prefix chain
 - `appendPrefix(prefixedLogger, suffix)` - Utility to append a prefix to an existing prefixed logger
 - `resetPrefix(logger, newPrefix)` - Utility to replace any existing prefix with a completely new one
-
-### File Logging (Node.js only)
-
-For persistent logging in Node.js environments:
-
-```ts
-import { FileLogger } from 'emitnlog/logger/node';
-
-// Simple file logger (writes to OS temp directory if path is relative)
-const logger = new FileLogger('app.log', 'debug');
-logger.i`Application started at ${new Date()}`;
-
-// Advanced configuration
-const configuredLogger = new FileLogger({
-  filePath: '/var/log/my-app.log', // Absolute path
-  level: 'warning', // Only warning and above
-  keepAnsiColors: true, // Preserve colors in log file
-  omitArgs: false, // Include additional arguments
-  errorHandler: (err) => console.error('Logging error:', err),
-});
-configuredLogger.e`Database connection error: ${new Error('Connection timeout')}`;
-```
-
-### Tee Logger
-
-Log to multiple destinations simultaneously:
-
-```ts
-import { tee, ConsoleLogger } from 'emitnlog/logger';
-import { FileLogger } from 'emitnlog/logger/node';
-
-// Create individual loggers
-const consoleLogger = new ConsoleLogger('info');
-const fileLogger = new FileLogger('/var/log/app.log');
-
-// Combine them with tee
-const logger = tee(consoleLogger, fileLogger);
-
-// Log messages go to both console and file
-logger.i`Server started successfully`;
-logger.args({ requestId: '12345' }).e`Database query failed: ${new Error('Timeout')}`;
-```
-
-### Available Loggers
-
-All loggers implement the same interface, making them interchangeable:
-
-- `ConsoleLogger`: Logs to console (stdout) with color formatting enabled by default
-- `ConsoleErrorLogger`: Logs to stderr with color formatting enabled by default
-- `OFF_LOGGER`: Discards all logs (useful for testing or quickly silencing the code)
-- `FileLogger`: Logs to a file with optional configuration (Node.js only)
-
-### Creating Custom Loggers
-
-You can create your own logger by extending `BaseLogger`:
-
-```ts
-import type { LogLevel } from 'emitnlog/logger';
-import { BaseLogger, emitLine, emitColorfulLine } from 'emitnlog/logger';
-
-class MyCustomLogger extends BaseLogger {
-  protected override emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-    // Format the log entry using the formatter utilities
-    const line = emitColorfulLine(level, message);
-
-    // Do something with the formatted line and args
-    // e.g., send to a remote logging service
-    myLoggingService.send({ line, args });
-  }
-}
-```
 
 ## Event Notifier
 

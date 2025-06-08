@@ -3,6 +3,7 @@ export * from './console-error-logger.ts';
 export * from './console-logger.ts';
 export * from './definition.ts';
 export * from './emitter.ts';
+export * from './environment-logger.ts';
 export * from './level-utils.ts';
 export * from './off-logger.ts';
 export * from './prefixed-logger.ts';

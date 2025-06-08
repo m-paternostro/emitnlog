@@ -75,8 +75,16 @@ export default ts.config([
       // Allow non-null assertions (obj!)
       '@typescript-eslint/no-non-null-assertion': 'off',
 
-      // Disallow importing from test directories
-      '@typescript-eslint/no-restricted-imports': ['error', { patterns: ['**/tests/**'] }],
+      // Disallow importing from src root and test directories
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['**/tests/**'], message: 'Do not import from tests' },
+            { group: ['src/**'], message: 'Do not import from src root' },
+          ],
+        },
+      ],
 
       // Disallow variable declarations from shadowing variables in the outer scope
       '@typescript-eslint/no-shadow': 'error',
