@@ -7,10 +7,14 @@ import type { OnEvent } from './definition.ts';
  * full EventNotifier. It allows you to create an API that exposes events created by other, possible private,
  * notifiers.
  *
+ * The mapper function can return a special value `SKIP_MAPPED_EVENT` to skip the event from being passed to the
+ * listener.
+ *
  * @example
  *
  * ```ts
  * import type { OnEvent } from 'emitnlog/notifier';
+ * import { mapOnEvent, SKIP_MAPPED_EVENT } from 'emitnlog/notifier';
  *
  * import type { StorageEvent } from 'my_cool_storage';
  * import { storage } from 'my_cool_storage';
@@ -21,13 +25,19 @@ import type { OnEvent } from './definition.ts';
  *   const userSubscription = storage.createUser(id);
  *   return {
  *     id,
- *     onChange: mapOnEvent(userSubscription.onChange, (storageEvent) => ({ userId: id, ...storageEvent })),
+ *     onChange: mapOnEvent(userSubscription.onChange, (storageEvent) => {
+ *       if (storageEvent.action === 'created') {
+ *         return { userId: id, ...storageEvent };
+ *       }
+ *       return SKIP_MAPPED_EVENT;
+ *     }),
  *   };
  * };
  *
  * const user1 = createUser('id123');
  * user1.onChange((userEvent) => {
  *   // Handle user event with userId and storage details
+ *   // This will only receive 'created' events, other actions are skipped
  * });
  * ```
  *
@@ -38,8 +48,16 @@ import type { OnEvent } from './definition.ts';
  * @returns A new OnEvent function that passes transformed events of type R to listeners
  */
 export const mapOnEvent =
-  <R, T>(onEvent: OnEvent<T>, mapper: (event: T) => R): OnEvent<R> =>
+  <R, T>(onEvent: OnEvent<T>, mapper: (event: T) => R | typeof SKIP_MAPPED_EVENT): OnEvent<R> =>
   (listener) =>
     onEvent((event) => {
-      listener(mapper(event));
+      const mapped = mapper(event);
+      if (mapped !== SKIP_MAPPED_EVENT) {
+        listener(mapped);
+      }
     });
+
+/**
+ * A special value that can be returned from the mapper function to skip the event from being passed to the listener.
+ */
+export const SKIP_MAPPED_EVENT = Symbol.for('@emitnlog/notifier/skip-mapped-event');

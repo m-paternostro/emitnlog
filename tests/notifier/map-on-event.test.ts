@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
 import type { EventNotifier, OnEvent } from '../../src/notifier/index.ts';
-import { createEventNotifier, mapOnEvent } from '../../src/notifier/index.ts';
+import { createEventNotifier, mapOnEvent, SKIP_MAPPED_EVENT } from '../../src/notifier/index.ts';
 
 describe('emitnlog.notifier.mapOnEvent', () => {
   let sourceNotifier: EventNotifier<string>;
@@ -173,5 +173,177 @@ describe('emitnlog.notifier.mapOnEvent', () => {
 
     expect(originalEvents).toEqual(['hello']);
     expect(mappedEvents).toEqual([5]);
+  });
+
+  describe('SKIP_MAPPED_EVENT', () => {
+    test('should skip events when mapper returns SKIP_MAPPED_EVENT', () => {
+      const filteredOnEvent = mapOnEvent(sourceOnEvent, (str) => {
+        if (str.length < 5) {
+          return SKIP_MAPPED_EVENT;
+        }
+        return str.toUpperCase();
+      });
+
+      const results: string[] = [];
+      filteredOnEvent((event) => results.push(event));
+
+      sourceNotifier.notify('hi'); // length 2 - should be skipped
+      sourceNotifier.notify('hello'); // length 5 - should be included
+      sourceNotifier.notify('no'); // length 2 - should be skipped
+      sourceNotifier.notify('world'); // length 5 - should be included
+
+      expect(results).toEqual(['HELLO', 'WORLD']);
+    });
+
+    test('should skip all events when mapper always returns SKIP_MAPPED_EVENT', () => {
+      const neverEmitOnEvent = mapOnEvent(sourceOnEvent, (): string | typeof SKIP_MAPPED_EVENT => SKIP_MAPPED_EVENT);
+
+      const results: string[] = [];
+      neverEmitOnEvent((event) => results.push(event));
+
+      sourceNotifier.notify('hello');
+      sourceNotifier.notify('world');
+      sourceNotifier.notify('test');
+
+      expect(results).toEqual([]);
+    });
+
+    test('should work with multiple listeners when some events are skipped', () => {
+      const evenLengthOnEvent = mapOnEvent(sourceOnEvent, (str) => {
+        if (str.length % 2 === 0) {
+          return str.length;
+        }
+        return SKIP_MAPPED_EVENT;
+      });
+
+      const results1: number[] = [];
+      const results2: number[] = [];
+
+      evenLengthOnEvent((length) => results1.push(length));
+      evenLengthOnEvent((length) => results2.push(length));
+
+      sourceNotifier.notify('hello'); // length 5 - odd, should be skipped
+      sourceNotifier.notify('test'); // length 4 - even, should be included
+      sourceNotifier.notify('hi'); // length 2 - even, should be included
+      sourceNotifier.notify('a'); // length 1 - odd, should be skipped
+
+      expect(results1).toEqual([4, 2]);
+      expect(results2).toEqual([4, 2]);
+    });
+
+    test('should work with chained transformations where intermediate steps skip events', () => {
+      // First transformation: only pass strings longer than 3 characters
+      const longStringsOnEvent = mapOnEvent(sourceOnEvent, (str) => {
+        if (str.length > 3) {
+          return str;
+        }
+        return SKIP_MAPPED_EVENT;
+      });
+
+      // Second transformation: convert to uppercase and skip words containing 'skip'
+      const finalOnEvent = mapOnEvent(longStringsOnEvent, (str) => {
+        if (str.includes('skip')) {
+          return SKIP_MAPPED_EVENT;
+        }
+        return str.toUpperCase();
+      });
+
+      const results: string[] = [];
+      finalOnEvent((event) => results.push(event));
+
+      sourceNotifier.notify('hi'); // length 2 - skipped in first transform
+      sourceNotifier.notify('hello'); // length 5 - passes both transforms
+      sourceNotifier.notify('skip-me'); // length 7 - passes first, skipped in second
+      sourceNotifier.notify('world'); // length 5 - passes both transforms
+      sourceNotifier.notify('no'); // length 2 - skipped in first transform
+
+      expect(results).toEqual(['HELLO', 'WORLD']);
+    });
+
+    test('should handle complex object transformations with conditional skipping', () => {
+      type SourceEvent = { id: number; type: 'user' | 'admin' | 'guest'; name: string };
+      type FilteredEvent = { id: number; name: string; isPrivileged: boolean };
+
+      const objectNotifier = createEventNotifier<SourceEvent>();
+      const privilegedOnEvent = mapOnEvent(objectNotifier.onEvent, (event) => {
+        // Only pass through user and admin events, skip guest events
+        if (event.type === 'guest') {
+          return SKIP_MAPPED_EVENT;
+        }
+        return { id: event.id, name: event.name, isPrivileged: event.type === 'admin' };
+      });
+
+      const results: FilteredEvent[] = [];
+      privilegedOnEvent((event) => results.push(event));
+
+      objectNotifier.notify({ id: 1, type: 'user', name: 'John' });
+      objectNotifier.notify({ id: 2, type: 'guest', name: 'Anonymous' }); // should be skipped
+      objectNotifier.notify({ id: 3, type: 'admin', name: 'Admin' });
+      objectNotifier.notify({ id: 4, type: 'guest', name: 'Visitor' }); // should be skipped
+
+      expect(results).toEqual([
+        { id: 1, name: 'John', isPrivileged: false },
+        { id: 3, name: 'Admin', isPrivileged: true },
+      ]);
+    });
+
+    test('should maintain subscription lifecycle when events are skipped', () => {
+      const filterOnEvent = mapOnEvent(sourceOnEvent, (str) => {
+        if (str.startsWith('skip')) {
+          return SKIP_MAPPED_EVENT;
+        }
+        return str.length;
+      });
+
+      const results: number[] = [];
+      const subscription = filterOnEvent((length) => results.push(length));
+
+      sourceNotifier.notify('hello'); // should be included
+      sourceNotifier.notify('skip-me'); // should be skipped
+      sourceNotifier.notify('world'); // should be included
+
+      subscription.close();
+
+      sourceNotifier.notify('after-close'); // should not be received
+
+      expect(results).toEqual([5, 5]);
+    });
+
+    test('should validate the documentation example scenario', () => {
+      type StorageEvent = { readonly action: 'created' | 'updated' | 'deleted'; readonly timestamp: number };
+      type UserEvent = { readonly userId: string } & StorageEvent;
+
+      const storageNotifier = createEventNotifier<StorageEvent>();
+      const mockStorage = { createUser: (_id: string) => ({ onChange: storageNotifier.onEvent }) };
+
+      const createUser = (id: string): { readonly id: string; readonly onChange: OnEvent<UserEvent> } => {
+        const userSubscription = mockStorage.createUser(id);
+        return {
+          id,
+          onChange: mapOnEvent(userSubscription.onChange, (storageEvent) => {
+            if (storageEvent.action === 'created') {
+              return { userId: id, ...storageEvent };
+            }
+            return SKIP_MAPPED_EVENT;
+          }),
+        };
+      };
+
+      const user1 = createUser('id123');
+      const userEvents: UserEvent[] = [];
+      user1.onChange((userEvent) => {
+        userEvents.push(userEvent);
+      });
+
+      // Emit various storage events
+      storageNotifier.notify({ action: 'created', timestamp: 1000 }); // should be included
+      storageNotifier.notify({ action: 'updated', timestamp: 2000 }); // should be skipped
+      storageNotifier.notify({ action: 'deleted', timestamp: 3000 }); // should be skipped
+      storageNotifier.notify({ action: 'created', timestamp: 4000 }); // should be included
+
+      expect(userEvents).toHaveLength(2);
+      expect(userEvents[0]).toEqual({ userId: 'id123', action: 'created', timestamp: 1000 });
+      expect(userEvents[1]).toEqual({ userId: 'id123', action: 'created', timestamp: 4000 });
+    });
   });
 });
