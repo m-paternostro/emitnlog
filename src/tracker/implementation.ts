@@ -15,6 +15,7 @@ import type {
   InvocationTracker,
   InvocationTrackerOptions,
   Tag,
+  Tags,
 } from './definition.ts';
 import type { InvocationStack } from './stack/definition.ts';
 import { createBasicInvocationStack, createThreadSafeInvocationStack } from './stack/implementation.ts';
@@ -29,17 +30,36 @@ import { createBasicInvocationStack, createThreadSafeInvocationStack } from './s
  * - `onCompleted`: after successful invocation (sync or async)
  * - `onErrored`: after an error is thrown or a promise is rejected
  *
+ * Tags can be used to provide contextual metadata for invocations and can be specified in two places:
+ *
+ * - Globally, when creating the tracker: `createInvocationTracker({ tags })`
+ * - Per-invocation, when calling `track`: `tracker.track('op', fn, { tags })`
+ *
+ * Tags can be defined either as:
+ *
+ * - An array: `[{ name: 'foo', value: 'bar' }]`
+ * - A record: `{ foo: 'bar' }`
+ *
+ * During invocation, the two sources of tags are merged. If the same tag name appears in both sources, their values are
+ * de-duplicated. The merged result is sorted by name and value and stored as an array.
+ *
+ * Although the original tag sources (arrays, records, or tag objects) can be mutated during execution, the merged tags
+ * are captured and fixed at invocation start. This ensures consistency across the `started`, `completed`, and `errored`
+ * stages of a single invocation.
+ *
  * @example
  *
  * ```ts
- * const tracker = createInvocationTracker({ tags: [{ service: 'auth' }] });
+ * const tracker = createInvocationTracker({ tags: { service: 'auth' } });
  *
  * tracker.onCompleted((invocation) => {
  *   console.log(`${invocation.key.operation} completed in ${invocation.duration}ms`);
+ *
+ *   // [{ name: 'feature', value: 'signup' }, { name: 'service', value: 'auth' }]
+ *   console.log(invocation.tags);
  * });
  *
- * const wrapped = tracker.track('saveUser', saveUserFn, { tags: [{ feature: 'signup' }] });
- *
+ * const wrapped = tracker.track('saveUser', saveUserFn, { tags: [{ name: 'feature', value: 'signup' }] });
  * await wrapped({ name: 'Jane' });
  * ```
  *
@@ -107,8 +127,6 @@ export const createInvocationTracker = <TOperation extends string = string>(
         return fn;
       }
 
-      const tags = mergeTags(options?.tags, opt?.tags);
-
       const trackedFn = (...args: Parameters<typeof fn>) => {
         const argsLength = (args as unknown[]).length;
         const index = ++counter;
@@ -125,6 +143,8 @@ export const createInvocationTracker = <TOperation extends string = string>(
 
         stack.push(key);
 
+        const mergedTags = mergeTags(options?.tags, opt?.tags);
+
         const notifyStarted = () => {
           const invocation: Writable<InvocationAtStage<'started', TOperation>> = { key, stage: { type: 'started' } };
 
@@ -136,8 +156,8 @@ export const createInvocationTracker = <TOperation extends string = string>(
             invocation.args = args;
           }
 
-          if (tags?.length) {
-            invocation.tags = tags;
+          if (mergedTags?.length) {
+            invocation.tags = mergedTags;
           }
 
           invokedNotifier.notify(invocation);
@@ -161,8 +181,8 @@ export const createInvocationTracker = <TOperation extends string = string>(
             invocation.args = args;
           }
 
-          if (tags?.length) {
-            invocation.tags = tags;
+          if (mergedTags?.length) {
+            invocation.tags = mergedTags;
           }
 
           invokedNotifier.notify(invocation);
@@ -186,8 +206,8 @@ export const createInvocationTracker = <TOperation extends string = string>(
             invocation.args = args;
           }
 
-          if (tags?.length) {
-            invocation.tags = tags;
+          if (mergedTags?.length) {
+            invocation.tags = mergedTags;
           }
 
           invokedNotifier.notify(invocation);
@@ -260,19 +280,38 @@ const toTrackedTrackerId = (value: unknown): string | undefined =>
 const isPromiseLike = <T>(value: unknown): value is PromiseLike<T> =>
   isNotNullable(value) && typeof value === 'object' && 'then' in value && typeof value.then === 'function';
 
-const mergeTags = (
-  tags1: readonly Tag[] | undefined,
-  tags2: readonly Tag[] | undefined,
-): readonly Tag[] | undefined => {
-  if (tags1?.length) {
-    return tags2?.length ? [...tags1, ...tags2] : tags1;
+const mergeTags = (tags1: Tags | undefined, tags2: Tags | undefined): readonly Tag[] | undefined => {
+  if (tags1 && typeof tags1 === 'object' && !Array.isArray(tags1)) {
+    tags1 = Object.keys(tags1).map((name) => ({ name, value: (tags1 as Record<string, Tag['value']>)[name] }));
   }
 
-  if (tags2?.length) {
-    return tags2;
+  if (tags2 && typeof tags2 === 'object' && !Array.isArray(tags2)) {
+    tags2 = Object.keys(tags2).map((name) => ({ name, value: (tags2 as Record<string, Tag['value']>)[name] }));
   }
 
-  return undefined;
+  if (!tags1?.length && !tags2?.length) {
+    return undefined;
+  }
+
+  const mergedTags: Tag[] = [];
+  const map = new Map<string, Set<Tag['value']>>();
+
+  const addTag = (tag: Tag): void => {
+    let values = map.get(tag.name);
+    if (!values) {
+      values = new Set();
+      map.set(tag.name, values);
+    }
+
+    if (!values.has(tag.value)) {
+      values.add(tag.value);
+      mergedTags.push(tag);
+    }
+  };
+
+  tags1?.forEach(addTag);
+  tags2?.forEach(addTag);
+  return mergedTags.sort((a, b) => a.name.localeCompare(b.name) || String(a.value).localeCompare(String(b.value)));
 };
 
 let stackFactory: (options: { readonly logger: Logger }) => InvocationStack = createBasicInvocationStack;

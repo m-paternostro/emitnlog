@@ -323,7 +323,7 @@ describe('trackMethods', () => {
   describe('tagging system', () => {
     test('should apply tags to tracked method invocations', () => {
       const trackedInvocations: Invocation[] = [];
-      const methodTags = [{ service: 'calculator', feature: 'math' }];
+      const methodTags = { service: 'calculator', feature: 'math' };
 
       tracker.onInvoked((invocation) => {
         trackedInvocations.push(invocation);
@@ -336,15 +336,25 @@ describe('trackMethods', () => {
       calculator.add(5, 3);
 
       expect(trackedInvocations).toHaveLength(2); // 1 started, 1 completed
-      expect(trackedInvocations[0].tags).toEqual(methodTags);
-      expect(trackedInvocations[1].tags).toEqual(methodTags);
+      expect(trackedInvocations[0].tags).toEqual([
+        { name: 'feature', value: 'math' },
+        { name: 'service', value: 'calculator' },
+      ]);
+      expect(trackedInvocations[1].tags).toBe(trackedInvocations[0].tags);
     });
 
     test('should merge tracker-level and method-level tags', () => {
       const trackedInvocations: Invocation[] = [];
-      const trackerTags = [{ environment: 'test' }];
-      const methodTags = [{ service: 'calculator', operation: 'arithmetic' }];
-      const expectedTags = [...trackerTags, ...methodTags];
+      const trackerTags = { environment: 'test' };
+      const methodTags = [
+        { name: 'service', value: 'calculator' },
+        { name: 'operation', value: 'arithmetic' },
+      ];
+      const expectedTags = [
+        { name: 'environment', value: 'test' },
+        { name: 'operation', value: 'arithmetic' },
+        { name: 'service', value: 'calculator' },
+      ];
 
       const taggedTracker = createInvocationTracker({ tags: trackerTags });
       taggedTracker.onInvoked((invocation) => {
@@ -359,14 +369,17 @@ describe('trackMethods', () => {
 
       expect(trackedInvocations).toHaveLength(2); // 1 started, 1 completed
       expect(trackedInvocations[0].tags).toEqual(expectedTags);
-      expect(trackedInvocations[1].tags).toEqual(expectedTags);
+      expect(trackedInvocations[1].tags).toBe(trackedInvocations[0].tags);
 
       taggedTracker.close();
     });
 
     test('should apply tags to all tracked methods when tracking multiple methods', () => {
       const trackedInvocations: Invocation[] = [];
-      const methodTags = [{ module: 'utility', version: '1.0' }];
+      const methodTags = [
+        { name: 'module', value: 'utility' },
+        { name: 'version', value: '1.0' },
+      ];
 
       tracker.onInvoked((invocation) => {
         trackedInvocations.push(invocation);
@@ -389,7 +402,7 @@ describe('trackMethods', () => {
 
     test('should apply tags when tracking all methods without specifying method names', () => {
       const trackedInvocations: Invocation[] = [];
-      const methodTags = [{ component: 'service', layer: 'business' }];
+      const methodTags = { component: 'service', layer: 'business' };
 
       tracker.onInvoked((invocation) => {
         trackedInvocations.push(invocation);
@@ -409,13 +422,16 @@ describe('trackMethods', () => {
 
       // Check that all invocations have the tags
       trackedInvocations.forEach((invocation) => {
-        expect(invocation.tags).toEqual(methodTags);
+        expect(invocation.tags).toEqual([
+          { name: 'component', value: 'service' },
+          { name: 'layer', value: 'business' },
+        ]);
       });
     });
 
     test('should apply tags to class instance methods', () => {
       const trackedInvocations: Invocation[] = [];
-      const methodTags = [{ class: 'Counter', pattern: 'state' }];
+      const methodTags = { class: 'Counter', pattern: 'state' };
 
       tracker.onInvoked((invocation) => {
         trackedInvocations.push(invocation);
@@ -441,8 +457,11 @@ describe('trackMethods', () => {
       counter.increment();
 
       expect(trackedInvocations).toHaveLength(2); // 1 started, 1 completed
-      expect(trackedInvocations[0].tags).toEqual(methodTags);
-      expect(trackedInvocations[1].tags).toEqual(methodTags);
+      expect(trackedInvocations[0].tags).toEqual([
+        { name: 'class', value: 'Counter' },
+        { name: 'pattern', value: 'state' },
+      ]);
+      expect(trackedInvocations[1].tags).toBe(trackedInvocations[0].tags);
     });
   });
 });

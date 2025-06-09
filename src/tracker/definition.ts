@@ -57,7 +57,10 @@ export type Invocation<TOperation extends string = string> = {
   readonly args?: readonly unknown[];
 
   /**
-   * If present, the tags provided when creating the tracker or per invocation.
+   * If present, contains tags provided when creating the tracker or per invocation.
+   *
+   * The tags are sorted and the array does not contain duplicated tags (it may have tags with the same name but not
+   * with the same name and value).
    */
   readonly tags?: readonly Tag[];
 
@@ -125,19 +128,21 @@ export type ErroredStage = {
 };
 
 /**
- * A flexible key-value tag that adds contextual metadata to a tracked invocation, being useful for filtering, routing,
+ * A key-value tag that adds contextual metadata to a tracked invocation, being useful for filtering, routing,
  * correlation, and enriching logs or invocations.
- *
- * Tags may be provided when creating the tracker or per invocation. Tags from both levels are concatenated during
- * invocation. Duplicate keys are preserved (i.e., not deduplicated), allowing multiple tags with the same name.
  *
  * @example
  *
  * ```ts
- * { "service": "user", "region": "us-east-1", "feature": "login" }
+ * { "name": "service", "value": "auth" }
  * ```
  */
-export type Tag = { readonly [name: string]: string | number | boolean };
+export type Tag = { readonly name: string; readonly value: string | number | boolean };
+
+/**
+ * A collection of tags, either as an array of tag objects or a record with the tag names and respective values.
+ */
+export type Tags = readonly Tag[] | { readonly [name: string]: Tag['value'] };
 
 type StageType = InvocationStage['type'];
 
@@ -190,7 +195,7 @@ export type InvocationTracker<TOperation extends string = string> = {
        *
        * These tags are merged with any tags set when the invocation tracker was created.
        */
-      readonly tags?: readonly Tag[];
+      readonly tags?: Tags;
     },
   ) => F;
 
@@ -233,7 +238,7 @@ export type InvocationTrackerOptions = {
   /**
    * Optional tags that will be added to every invocation tracked by this tracker.
    */
-  readonly tags?: readonly Tag[];
+  readonly tags?: Tags;
 
   /**
    * An optional logger used to emit tracker-level log messages.

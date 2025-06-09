@@ -1,5 +1,5 @@
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { InvocationTracker, Tag } from './definition.ts';
+import type { InvocationTracker, Tags } from './definition.ts';
 
 /**
  * Wraps and tracks methods of the given object using the provided tracker.
@@ -82,11 +82,11 @@ export const trackMethods = <TOperation extends string = string>(
     readonly trackBuiltIn?: boolean;
 
     /**
-     * The tags to add to the invocation object.
+     * An array with name-value pairs or a record with the tag names and respective values.
      *
-     * These tags are merged with any tags set when the invocation tracker was created.
+     * These tags are merged with any tags passed to tracker itself.
      */
-    readonly tags?: readonly Tag[];
+    readonly tags?: Tags;
   },
 ): ReadonlySet<string> => {
   if (!isNotNullable(target) || (!options?.trackBuiltIn && isBuiltIn(target))) {

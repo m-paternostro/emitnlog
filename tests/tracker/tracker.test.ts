@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import type { Invocation, InvocationAtStage, InvocationTracker, Tag } from '../../src/tracker/index.ts';
+import type { Invocation, InvocationAtStage, InvocationTracker, Tag, Tags } from '../../src/tracker/index.ts';
 import { createInvocationTracker, isAtStage } from '../../src/tracker/index.ts';
 import { createTestLogger, flushFakeTimePromises } from '../jester.setup.ts';
 
@@ -221,9 +221,9 @@ describe('emitnlog.tracker', () => {
   });
 
   describe('tagging system', () => {
-    test('should apply tracker-level tags to all invocations', () => {
+    test('should apply tracker-level tag record to all invocations', () => {
       const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
-      const trackerTags: Tag[] = [{ service: 'auth' }];
+      const trackerTags = { service: 'auth' };
 
       const taggedTracker = createInvocationTracker({ tags: trackerTags });
       taggedTracker.onInvoked((invocation) => {
@@ -236,15 +236,43 @@ describe('emitnlog.tracker', () => {
       fn(5);
 
       expect(invocations).toHaveLength(2); // 1 started, 1 completed
-      expect(invocations[0].tags).toEqual(trackerTags);
-      expect(invocations[1].tags).toEqual(trackerTags);
+      expect(invocations[0].tags).toEqual([{ name: 'service', value: 'auth' }]);
+      expect(invocations[1].tags).toBe(invocations[0].tags);
 
       taggedTracker.close();
     });
 
-    test('should apply operation-level tags', () => {
+    test('should apply tracker-level tag array to all invocations', () => {
       const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
-      const operationTags: Tag[] = [{ feature: 'signup' }];
+      const trackerTags: Tag[] = [
+        { name: 'service', value: 'auth' },
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth' },
+      ];
+
+      const taggedTracker = createInvocationTracker({ tags: trackerTags });
+      taggedTracker.onInvoked((invocation) => {
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
+          invocations.push(invocation);
+        }
+      });
+
+      const fn = taggedTracker.track('test', (a: number) => a * 2);
+      fn(5);
+
+      expect(invocations).toHaveLength(2); // 1 started, 1 completed
+      expect(invocations[0].tags).toEqual([
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth' },
+      ]);
+      expect(invocations[1].tags).toBe(invocations[0].tags);
+
+      taggedTracker.close();
+    });
+
+    test('should apply operation-level tag record', () => {
+      const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
+      const operationTags = { feature: 'signup' };
 
       tracker.onInvoked((invocation) => {
         if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
@@ -256,15 +284,17 @@ describe('emitnlog.tracker', () => {
       fn(5);
 
       expect(invocations).toHaveLength(2); // 1 started, 1 completed
-      expect(invocations[0].tags).toEqual(operationTags);
-      expect(invocations[1].tags).toEqual(operationTags);
+      expect(invocations[0].tags).toEqual([{ name: 'feature', value: 'signup' }]);
+      expect(invocations[1].tags).toBe(invocations[0].tags);
     });
 
     test('should merge tracker-level and operation-level tags', () => {
       const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
-      const trackerTags: Tag[] = [{ service: 'auth' }];
-      const operationTags: Tag[] = [{ feature: 'signup' }];
-      const expectedTags = [...trackerTags, ...operationTags];
+      const trackerTags: Tags = { service: 'auth', feature: 'signup' };
+      const operationTags: Tags = [
+        { name: 'feature', value: 'signup' },
+        { name: 'feature', value: 'login' },
+      ];
 
       const taggedTracker = createInvocationTracker({ tags: trackerTags });
       taggedTracker.onInvoked((invocation) => {
@@ -277,8 +307,77 @@ describe('emitnlog.tracker', () => {
       fn(5);
 
       expect(invocations).toHaveLength(2); // 1 started, 1 completed
-      expect(invocations[0].tags).toEqual(expectedTags);
-      expect(invocations[1].tags).toEqual(expectedTags);
+      expect(invocations[0].tags).toEqual([
+        { name: 'feature', value: 'login' },
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth' },
+      ]);
+      expect(invocations[1].tags).toBe(invocations[0].tags);
+
+      taggedTracker.close();
+    });
+
+    test('should support changing the tags content', async () => {
+      const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
+      const trackerTags: Record<string, string> = { service: 'auth1' };
+
+      const taggedTracker = createInvocationTracker({ tags: trackerTags });
+      taggedTracker.onInvoked((invocation) => {
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'completed')) {
+          invocations.push(invocation);
+        }
+      });
+
+      const invocationTags: { name: string; value: string }[] = [{ name: 'feature', value: 'signup' }];
+      const fn = taggedTracker.track('test', async (a: number) => a * 2, { tags: invocationTags });
+
+      await fn(0);
+      const p1 = fn(1);
+
+      trackerTags.service = 'auth2';
+      trackerTags.env = 'production';
+
+      await p1;
+      await fn(2);
+
+      invocationTags.push({ name: 'env', value: 'test' });
+
+      await fn(3);
+
+      expect(invocations).toHaveLength(8);
+
+      expect(invocations[0].args).toEqual([0]);
+      expect(invocations[0].tags).toEqual([
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth1' },
+      ]);
+      expect(invocations[1].args).toEqual([0]);
+      expect(invocations[1].tags).toBe(invocations[0].tags);
+
+      expect(invocations[2].args).toEqual([1]);
+      expect(invocations[2].tags).toEqual([
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth1' },
+      ]);
+      expect(invocations[3].args).toEqual([1]);
+      expect(invocations[3].tags).toBe(invocations[2].tags);
+
+      expect(invocations[4].args).toEqual([2]);
+      expect(invocations[4].tags).toEqual([
+        { name: 'env', value: 'production' },
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth2' },
+      ]);
+      expect(invocations[5].args).toEqual([2]);
+      expect(invocations[5].tags).toBe(invocations[4].tags);
+
+      expect(invocations[6].args).toEqual([3]);
+      expect(invocations[6].tags).toEqual([
+        { name: 'env', value: 'production' },
+        { name: 'env', value: 'test' },
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth2' },
+      ]);
 
       taggedTracker.close();
     });
