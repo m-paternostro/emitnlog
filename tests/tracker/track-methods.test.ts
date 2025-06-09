@@ -319,4 +319,130 @@ describe('trackMethods', () => {
       expect(operationInvocations[3].stage.type).toBe('completed');
     });
   });
+
+  describe('tagging system', () => {
+    test('should apply tags to tracked method invocations', () => {
+      const trackedInvocations: Invocation[] = [];
+      const methodTags = [{ service: 'calculator', feature: 'math' }];
+
+      tracker.onInvoked((invocation) => {
+        trackedInvocations.push(invocation);
+      });
+
+      const calculator = { add: (a: number, b: number) => a + b, subtract: (a: number, b: number) => a - b };
+
+      trackMethods(tracker, calculator, { methods: ['add'], tags: methodTags });
+
+      calculator.add(5, 3);
+
+      expect(trackedInvocations).toHaveLength(2); // 1 started, 1 completed
+      expect(trackedInvocations[0].tags).toEqual(methodTags);
+      expect(trackedInvocations[1].tags).toEqual(methodTags);
+    });
+
+    test('should merge tracker-level and method-level tags', () => {
+      const trackedInvocations: Invocation[] = [];
+      const trackerTags = [{ environment: 'test' }];
+      const methodTags = [{ service: 'calculator', operation: 'arithmetic' }];
+      const expectedTags = [...trackerTags, ...methodTags];
+
+      const taggedTracker = createInvocationTracker({ tags: trackerTags });
+      taggedTracker.onInvoked((invocation) => {
+        trackedInvocations.push(invocation);
+      });
+
+      const calculator = { multiply: (a: number, b: number) => a * b };
+
+      trackMethods(taggedTracker, calculator, { methods: ['multiply'], tags: methodTags });
+
+      calculator.multiply(4, 5);
+
+      expect(trackedInvocations).toHaveLength(2); // 1 started, 1 completed
+      expect(trackedInvocations[0].tags).toEqual(expectedTags);
+      expect(trackedInvocations[1].tags).toEqual(expectedTags);
+
+      taggedTracker.close();
+    });
+
+    test('should apply tags to all tracked methods when tracking multiple methods', () => {
+      const trackedInvocations: Invocation[] = [];
+      const methodTags = [{ module: 'utility', version: '1.0' }];
+
+      tracker.onInvoked((invocation) => {
+        trackedInvocations.push(invocation);
+      });
+
+      const utilities = { double: (x: number) => x * 2, triple: (x: number) => x * 3, quadruple: (x: number) => x * 4 };
+
+      trackMethods(tracker, utilities, { methods: ['double', 'triple'], tags: methodTags });
+
+      utilities.double(2);
+      utilities.triple(3);
+
+      expect(trackedInvocations).toHaveLength(4); // 2 started, 2 completed
+
+      // Check that all invocations have the tags
+      trackedInvocations.forEach((invocation) => {
+        expect(invocation.tags).toEqual(methodTags);
+      });
+    });
+
+    test('should apply tags when tracking all methods without specifying method names', () => {
+      const trackedInvocations: Invocation[] = [];
+      const methodTags = [{ component: 'service', layer: 'business' }];
+
+      tracker.onInvoked((invocation) => {
+        trackedInvocations.push(invocation);
+      });
+
+      const service = {
+        process: (data: string) => `processed: ${data}`,
+        validate: (input: string) => input.length > 0,
+      };
+
+      trackMethods(tracker, service, { tags: methodTags });
+
+      service.process('test');
+      service.validate('input');
+
+      expect(trackedInvocations).toHaveLength(4); // 2 started, 2 completed
+
+      // Check that all invocations have the tags
+      trackedInvocations.forEach((invocation) => {
+        expect(invocation.tags).toEqual(methodTags);
+      });
+    });
+
+    test('should apply tags to class instance methods', () => {
+      const trackedInvocations: Invocation[] = [];
+      const methodTags = [{ class: 'Counter', pattern: 'state' }];
+
+      tracker.onInvoked((invocation) => {
+        trackedInvocations.push(invocation);
+      });
+
+      class Counter {
+        private count = 0;
+
+        public increment(): number {
+          this.count += 1;
+          return this.count;
+        }
+
+        public decrement(): number {
+          this.count -= 1;
+          return this.count;
+        }
+      }
+
+      const counter = new Counter();
+      trackMethods(tracker, counter, { methods: ['increment'], tags: methodTags });
+
+      counter.increment();
+
+      expect(trackedInvocations).toHaveLength(2); // 1 started, 1 completed
+      expect(trackedInvocations[0].tags).toEqual(methodTags);
+      expect(trackedInvocations[1].tags).toEqual(methodTags);
+    });
+  });
 });

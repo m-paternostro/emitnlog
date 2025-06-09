@@ -186,7 +186,7 @@ export type InvocationTracker<TOperation extends string = string> = {
     fn: F,
     options?: {
       /**
-       * The tags to add to the invocation.
+       * The tags to add to the invocation object.
        *
        * These tags are merged with any tags set when the invocation tracker was created.
        */
