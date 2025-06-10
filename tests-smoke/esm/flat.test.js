@@ -25,6 +25,10 @@ describe('ESM Flat imports', () => {
 
   test('Tracker exports are available', () => {
     expect(typeof emitnlog.createInvocationTracker).toBe('function');
+    expect(typeof emitnlog.isAtStage).toBe('function');
+    expect(typeof emitnlog.trackMethods).toBe('function');
+
+    expect(typeof emitnlog.trackPromises).toBe('function');
   });
 
   test('Utils exports are available', () => {

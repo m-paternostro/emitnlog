@@ -1,11 +1,11 @@
 import type { Writable } from 'type-fest';
 
-import type { Logger } from '../logger/definition.ts';
-import { OFF_LOGGER } from '../logger/off-logger.ts';
-import { appendPrefix, withPrefix } from '../logger/prefixed-logger.ts';
-import { createEventNotifier } from '../notifier/implementation.ts';
-import { generateRandomString } from '../utils/common/generate-random-string.ts';
-import { isNotNullable } from '../utils/common/is-not-nullable.ts';
+import type { Logger } from '../../logger/definition.ts';
+import { OFF_LOGGER } from '../../logger/off-logger.ts';
+import { appendPrefix, withPrefix } from '../../logger/prefixed-logger.ts';
+import { createEventNotifier } from '../../notifier/implementation.ts';
+import { generateRandomString } from '../../utils/common/generate-random-string.ts';
+import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type {
   CompletedStage,
   ErroredStage,
@@ -85,7 +85,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
   const completedNotifier = createEventNotifier<InvocationAtStage<'completed', TOperation>>();
   const erroredNotifier = createEventNotifier<InvocationAtStage<'errored', TOperation>>();
 
-  const trackerLogger = withPrefix(logger, '', { fallbackPrefix: `emitnlog.tracker.${trackerId}` });
+  const trackerLogger = withPrefix(logger, '', { fallbackPrefix: `emitnlog.invocation-tracker.${trackerId}` });
   const stack = options?.stack ?? stackFactory({ logger: trackerLogger });
 
   let closed = false;

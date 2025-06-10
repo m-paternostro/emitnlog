@@ -1,7 +1,7 @@
 const { ConsoleLogger, fromEnv: fromEnvLogger, OFF_LOGGER } = require('emitnlog/logger');
 const { fromEnv } = require('emitnlog/logger/environment');
 const { createEventNotifier } = require('emitnlog/notifier');
-const { createInvocationTracker } = require('emitnlog/tracker');
+const { createInvocationTracker, trackPromises, trackMethods } = require('emitnlog/tracker');
 const { createDeferredValue } = require('emitnlog/utils');
 
 describe('CJS Named imports', () => {
@@ -46,6 +46,8 @@ describe('CJS Named imports', () => {
 
   test('Tracker import works', () => {
     expect(typeof createInvocationTracker).toBe('function');
+    expect(typeof trackMethods).toBe('function');
+    expect(typeof trackPromises).toBe('function');
   });
 
   test('Utils import works', () => {

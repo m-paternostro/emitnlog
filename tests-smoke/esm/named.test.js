@@ -1,7 +1,7 @@
 import { ConsoleLogger, fromEnv as fromEnvLogger, OFF_LOGGER } from 'emitnlog/logger';
 import { fromEnv } from 'emitnlog/logger/environment';
 import { createEventNotifier } from 'emitnlog/notifier';
-import { createInvocationTracker } from 'emitnlog/tracker';
+import { createInvocationTracker, trackPromises, trackMethods } from 'emitnlog/tracker';
 import { createDeferredValue } from 'emitnlog/utils';
 import { expect, test, describe } from '@jest/globals';
 
@@ -47,6 +47,8 @@ describe('ESM Named imports', () => {
 
   test('Tracker import works', () => {
     expect(typeof createInvocationTracker).toBe('function');
+    expect(typeof trackMethods).toBe('function');
+    expect(typeof trackPromises).toBe('function');
   });
 
   test('Utils import works', () => {

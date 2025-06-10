@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import type { Invocation, InvocationTracker } from '../../src/tracker/index.ts';
-import { createInvocationTracker, trackMethods } from '../../src/tracker/index.ts';
-import { createTestLogger } from '../jester.setup.ts';
+import type { Invocation, InvocationTracker } from '../../../src/tracker/index.ts';
+import { createInvocationTracker, trackMethods } from '../../../src/tracker/index.ts';
+import { createTestLogger } from '../../jester.setup.ts';
 
 describe('trackMethods', () => {
   let tracker: InvocationTracker;

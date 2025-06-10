@@ -430,10 +430,6 @@ subscription.close();
 
 Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners.
 
-### Debounced Notifications
-
-The notifier can be created with a debounced delay for scenarios in which the events are notified too quickly.
-
 ```ts
 import { createEventNotifier } from 'emitnlog/notifier';
 
@@ -461,6 +457,10 @@ async function incorrectUsage() {
   // event1 and event2 will be identical
 }
 ```
+
+### Debounced Notifications
+
+The notifier can be created with a debounced delay for scenarios in which the events are notified too quickly.
 
 ## Logger + Notifier Combined
 
@@ -623,6 +623,74 @@ Consult the code documentation to see how you can:
 - Pass tags per operation to enrich events
 - Inject a custom stack to control parent-child relationship tracking (useful for advanced tracing or test isolation)
 - Track method names automatically (excluding constructor and built-ins by default)
+
+## Promise Tracker
+
+A utility for monitoring and coordinating multiple unrelated promises — perfect for scenarios like server shutdown coordination, background task monitoring, or waiting for various async operations to complete.
+
+### Basic Usage
+
+```ts
+import { trackPromises } from 'emitnlog/tracker';
+
+const tracker = trackPromises();
+
+// Track some operations
+const result1 = tracker.track(fetchUserData(), 'fetch-user');
+const result2 = tracker.track(saveConfiguration(), 'save-config');
+
+// Wait for all tracked promises to settle
+await tracker.wait();
+console.log('All operations complete');
+```
+
+### Server Shutdown Coordination
+
+```ts
+import { trackPromises } from 'emitnlog/tracker';
+import { withTimeout } from 'emitnlog/utils';
+
+const shutdownTracker = trackPromises({ logger: serverLogger });
+
+// Track cleanup operations
+shutdownTracker.track(database.close(), 'db-close');
+shutdownTracker.track(cache.flush(), 'cache-flush');
+shutdownTracker.track(server.close(), 'server-close');
+
+// Graceful shutdown with timeout
+try {
+  await withTimeout(shutdownTracker.wait(), 30000);
+  console.log('Graceful shutdown completed');
+} catch {
+  console.log('Shutdown timeout - forcing exit');
+}
+```
+
+### Performance Monitoring
+
+```ts
+import { trackPromises } from 'emitnlog/tracker';
+
+const tracker = trackPromises();
+
+// Monitor promise performance
+tracker.onSettled((event) => {
+  const status = event.rejected ? 'FAILED' : 'SUCCESS';
+  const label = event.label ?? 'unlabeled';
+  console.log(`${label}: ${event.duration}ms - ${status}`);
+});
+
+// Track operations with labels
+tracker.track(apiCall(), 'api-request');
+tracker.track(() => processData(), 'data-processing'); // More accurate timing
+```
+
+### Key Features
+
+- **Centralized Waiting**: `wait()` takes a snapshot of current promises - new promises tracked during the wait aren't included
+- **Real-time Events**: Get notified when promises settle with detailed timing and result information
+- **Promise Suppliers**: Track functions that return promises for more accurate timing measurements
+- **Automatic Cleanup**: Promises are automatically removed when they settle to prevent memory leaks
 
 ## Utilities
 
