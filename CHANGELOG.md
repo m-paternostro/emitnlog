@@ -1,5 +1,24 @@
 # emitnlog
 
+## 0.5.0
+
+### Minor Changes
+
+- b9eb592: Add `mapOnEvent` to make it easier to expose internal notifiers
+- 8244da8: Add a dynamic version of `fromEnv` that supports both neutral and node
+- 78adc68: Debounce notifications and debounce utility
+- 9f3b5fc: Add `fromEnv` to allow configuring the logger via environment variables
+- be6a5f0: Add tags to `trackMethods`
+- df3fb93: Add `PromiseTracker` and `trackPromise` for monitoring and coordinating multiple unrelated promises
+- 5a737c1: The tracker invocation now expose the 'stage' information as a property
+- c540029: Loggers now support a format option that includes a JSON serialization version of a log line
+- d2ee3d7: Allow notifier without type parameter
+
+### Patch Changes
+
+- c4996dc: Allow mapOnEvent to skip an event
+- 28e902b: Add operation template to `trackMethods`
+
 ## 0.4.1
 
 ### Patch Changes
