@@ -430,6 +430,10 @@ subscription.close();
 
 Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners.
 
+### Debounced Notifications
+
+The notifier can be created with a debounced delay for scenarios in which the events are notified too quickly.
+
 ```ts
 import { createEventNotifier } from 'emitnlog/notifier';
 
@@ -730,6 +734,36 @@ console.log('This logs after half a second');
 ```
 
 Often useful in cooldowns, stabilization intervals, and tests.
+
+### debounce
+
+Delays function execution until after calls have stopped for a specified period. Returns promises that resolve when the operation completes:
+
+```ts
+import { debounce } from 'emitnlog/utils';
+
+// Basic debouncing
+const debouncedSave = debounce(saveUserData, 500);
+
+// Multiple calls - only the last executes
+const promise1 = debouncedSave({ name: 'Alice' });
+const promise2 = debouncedSave({ name: 'Bob' });
+// After 500ms: saves Bob's data, both promises resolve with same result
+
+// Cancel or flush pending calls
+debouncedSave.cancel(); // Cancels pending execution
+debouncedSave.flush(); // Executes immediately
+
+// Advanced options
+const debouncedFetch = debounce(fetchData, {
+  delay: 300,
+  leading: true, // Execute immediately on first call
+  waitForPrevious: true, // Wait for previous promise
+  accumulator: (prev, current) => [...(prev || []), ...current], // Combine arguments
+});
+```
+
+Perfect for handling rapid user input, API calls, or file system events where you only need the final result.
 
 ### withTimeout
 

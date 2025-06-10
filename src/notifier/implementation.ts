@@ -1,3 +1,4 @@
+import { debounce } from '../utils/async/debounce.ts';
 import type { DeferredValue } from '../utils/async/deferred-value.ts';
 import { createDeferredValue } from '../utils/async/deferred-value.ts';
 import type { EventNotifier } from './definition.ts';
@@ -16,7 +17,13 @@ import type { EventNotifier } from './definition.ts';
  *
  * All listeners are automatically cleaned up via the returned `close()` methods.
  *
- * @example
+ * When `debounceDelay` is specified, rapid successive calls to `notify()` will be debounced, ensuring that all
+ * listeners (and `waitForEvent()`) receive only the final event after the delay period. This is useful for scenarios
+ * like file watching, user input handling, or batching rapid state changes. For more complex debouncing needs (argument
+ * accumulation, leading edge execution, etc.), consider using the `debounce` utility directly on your notification
+ * logic.
+ *
+ * @example Basic usage
  *
  * ```ts
  * class Car {
@@ -63,14 +70,59 @@ import type { EventNotifier } from './definition.ts';
  * stopListener.close();
  * ```
  *
+ * @example With debounced notifications
+ *
+ * ```ts
+ * const fileWatcher = createEventNotifier<{ path: string }>({ debounceDelay: 300 });
+ *
+ * fileWatcher.onEvent(({ path }) => {
+ *   console.log(`File changed: ${path}`);
+ * });
+ *
+ * // Rapid file changes - only the last one triggers listeners
+ * fileWatcher.notify({ path: 'file1.txt' });
+ * fileWatcher.notify({ path: 'file2.txt' });
+ * fileWatcher.notify({ path: 'file3.txt' });
+ * // After 300ms: logs "File changed: file3.txt"
+ *
+ * // waitForEvent also gets the debounced result
+ * const finalEvent = await fileWatcher.waitForEvent(); // { path: 'file3.txt' }
+ * ```
+ *
  * @template T The shape of the event data.
  * @template E Optional error type (defaults to Error).
+ * @param options Optional configuration including debounce delay.
  * @returns An EventNotifier that supports listener registration, notification, and error handling.
  */
-export const createEventNotifier = <T = void, E = Error>(): EventNotifier<T, E> => {
+export const createEventNotifier = <T = void, E = Error>(options?: { debounceDelay?: number }): EventNotifier<T, E> => {
   const listeners = new Set<(event: T) => unknown>();
   let errorHandler: ((error: E) => void) | undefined;
   let deferredEvent: DeferredValue<T> | undefined;
+
+  const notify = (event: T | (() => T)) => {
+    if (!listeners.size && !deferredEvent) {
+      return;
+    }
+
+    if (typeof event === 'function') {
+      event = (event as () => T)();
+    }
+
+    for (const listener of listeners) {
+      try {
+        void listener(event);
+      } catch (error) {
+        if (errorHandler) {
+          errorHandler(error as E);
+        }
+      }
+    }
+
+    if (deferredEvent) {
+      deferredEvent.resolve(event);
+      deferredEvent = undefined;
+    }
+  };
 
   return {
     close: () => {
@@ -89,30 +141,7 @@ export const createEventNotifier = <T = void, E = Error>(): EventNotifier<T, E> 
 
     waitForEvent: () => (deferredEvent || (deferredEvent = createDeferredValue<T>())).promise,
 
-    notify: (event: T | (() => T)) => {
-      if (!listeners.size && !deferredEvent) {
-        return;
-      }
-
-      if (typeof event === 'function') {
-        event = (event as () => T)();
-      }
-
-      for (const listener of listeners) {
-        try {
-          void listener(event);
-        } catch (error) {
-          if (errorHandler) {
-            errorHandler(error as E);
-          }
-        }
-      }
-
-      if (deferredEvent) {
-        deferredEvent.resolve(event);
-        deferredEvent = undefined;
-      }
-    },
+    notify: options?.debounceDelay !== undefined ? debounce(notify, options.debounceDelay) : notify,
 
     onError: (handler) => {
       errorHandler = handler;

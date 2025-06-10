@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import type { EventNotifier, OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
@@ -340,6 +340,117 @@ describe('emitnlog.notifier', () => {
       await delay(10);
 
       expect(events).toEqual(values);
+    });
+  });
+
+  describe('debouncing', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    test('should debounce notifications to listeners', async () => {
+      const debouncedNotifier = createEventNotifier<string>({ debounceDelay: 300 });
+      const events: string[] = [];
+
+      debouncedNotifier.onEvent((event) => events.push(event));
+
+      // Rapid notifications - only the last should reach listeners
+      debouncedNotifier.notify('first');
+      debouncedNotifier.notify('second');
+      debouncedNotifier.notify('third');
+
+      // No events yet
+      expect(events).toEqual([]);
+
+      // Advance time to trigger debounced execution
+      jest.advanceTimersByTime(300);
+
+      // Only the last event should be received
+      expect(events).toEqual(['third']);
+    });
+
+    test('should debounce waitForEvent results', async () => {
+      const debouncedNotifier = createEventNotifier<string>({ debounceDelay: 300 });
+
+      const eventPromise = debouncedNotifier.waitForEvent();
+
+      // Rapid notifications
+      debouncedNotifier.notify('first');
+      debouncedNotifier.notify('second');
+      debouncedNotifier.notify('third');
+
+      // Advance time to trigger debounced execution
+      jest.advanceTimersByTime(300);
+
+      // waitForEvent should resolve with the last value
+      await expect(eventPromise).resolves.toBe('third');
+    });
+
+    test('should ensure listeners and waitForEvent receive the same debounced result', async () => {
+      const debouncedNotifier = createEventNotifier<string>({ debounceDelay: 300 });
+      const events: string[] = [];
+
+      debouncedNotifier.onEvent((event) => events.push(event));
+      const eventPromise = debouncedNotifier.waitForEvent();
+
+      // Rapid notifications
+      debouncedNotifier.notify('first');
+      debouncedNotifier.notify('second');
+      debouncedNotifier.notify('final');
+
+      // Advance time to trigger debounced execution
+      jest.advanceTimersByTime(300);
+
+      // Both should receive the same final result
+      await expect(eventPromise).resolves.toBe('final');
+      expect(events).toEqual(['final']);
+    });
+
+    test('should work with function events when debounced', async () => {
+      const debouncedNotifier = createEventNotifier<string>({ debounceDelay: 300 });
+      const events: string[] = [];
+      let callCount = 0;
+
+      debouncedNotifier.onEvent((event) => events.push(event));
+
+      // Function that tracks invocation count
+      const eventFn = () => {
+        callCount++;
+        return `computed-${callCount}`;
+      };
+
+      // Rapid notifications with functions
+      debouncedNotifier.notify(() => eventFn());
+      debouncedNotifier.notify(() => eventFn());
+      debouncedNotifier.notify(() => eventFn());
+
+      expect(callCount).toBe(0); // Functions not called yet
+
+      // Advance time to trigger debounced execution
+      jest.advanceTimersByTime(300);
+
+      // Only the last function should be called once
+      expect(callCount).toBe(1);
+      expect(events).toEqual(['computed-1']);
+    });
+
+    test('should work without debouncing when no debounceDelay specified', async () => {
+      const regularNotifier = createEventNotifier<string>();
+      const events: string[] = [];
+
+      regularNotifier.onEvent((event) => events.push(event));
+
+      // Rapid notifications should all go through immediately
+      regularNotifier.notify('first');
+      regularNotifier.notify('second');
+      regularNotifier.notify('third');
+
+      // All events should be received immediately
+      expect(events).toEqual(['first', 'second', 'third']);
     });
   });
 });

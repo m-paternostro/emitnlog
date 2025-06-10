@@ -132,6 +132,7 @@ export const startPolling = <T, const V = undefined>(
   options?: PollingOptions<T, V>,
 ): { readonly wait: Promise<T | V | undefined>; readonly close: () => Promise<void> } => {
   const deferred = createDeferredValue<T | V | undefined>();
+  interval = Math.max(0, Math.ceil(interval));
 
   let resolving = false;
   let invocationIndex = -1;
