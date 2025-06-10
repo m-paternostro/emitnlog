@@ -1,5 +1,5 @@
-import type { Logger } from '../logger/definition.ts';
-import type { OnEvent } from '../notifier/definition.ts';
+import type { Logger } from '../../logger/definition.ts';
+import type { OnEvent } from '../../notifier/definition.ts';
 import type { InvocationStack } from './stack/definition.ts';
 
 /**

@@ -1,4 +1,4 @@
-import { isNotNullable } from '../utils/common/is-not-nullable.ts';
+import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type { InvocationTracker, Tags } from './definition.ts';
 
 /**
