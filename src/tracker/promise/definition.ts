@@ -1,3 +1,5 @@
+import type { Simplify } from 'type-fest';
+
 import type { OnEvent } from '../../notifier/definition.ts';
 
 /**
@@ -118,7 +120,8 @@ export type PromiseTracker = {
    * @param label Optional label for identification in events and logs
    * @returns The same promise for chaining
    */
-  readonly track: <T>(promise: Promise<T> | (() => Promise<T>), label?: string) => Promise<T>;
+  track<T>(promise: Promise<T> | (() => Promise<T>)): Promise<T>;
+  track<T>(label: string, promise: Promise<T> | (() => Promise<T>)): Promise<T>;
 
   /**
    * Waits for all currently tracked promises to settle (resolve or reject).
@@ -258,3 +261,187 @@ export type PromiseSettledEvent = {
    */
   readonly result?: unknown;
 };
+
+/**
+ * A specialized promise tracker that caches async operations by ID, ensuring each operation runs only once while its
+ * returned promise is not settled.
+ *
+ * PromiseHolder is ideal when you need to prevent duplicate expensive operations, such as API calls, database queries,
+ * or file system operations. Unlike PromiseTracker which focuses on coordination and monitoring, PromiseHolder
+ * emphasizes operation deduplication and caching.
+ *
+ * The holder maintains a cache of ongoing operations by their unique IDs. When the same ID is requested multiple times,
+ * the holder returns the same promise, ensuring the underlying operation executes only once. The cache is automatically
+ * cleaned up when operations complete.
+ *
+ * When to use PromiseHolder vs PromiseTracker:
+ *
+ * - Use PromiseHolder for caching expensive operations that might be requested multiple times
+ * - Use PromiseTracker for coordinating multiple different operations (like shutdown procedures), when there is no reason
+ *   to identify an operation, or to track actual promises instead of operations.
+ *
+ * @example Basic caching of API calls
+ *
+ * ```ts
+ * import { holdPromises } from 'emitnlog/tracker';
+ *
+ * const holder = holdPromises();
+ *
+ * // First call executes the API request
+ * const user1 = holder.track('user-123', () => fetchUserFromAPI(123));
+ *
+ * // Second call returns the same promise, no duplicate API call
+ * const user2 = holder.track('user-123', () => fetchUserFromAPI(123));
+ *
+ * console.log(user1 === user2); // true - same promise instance
+ * ```
+ *
+ * @example Database query deduplication
+ *
+ * ```ts
+ * import { holdPromises } from 'emitnlog/tracker';
+ *
+ * const queryHolder = holdPromises({ logger: dbLogger });
+ *
+ * // Multiple components request the same data simultaneously
+ * const results = await Promise.all([
+ *   queryHolder.track('product-456', () => db.query('SELECT * FROM products WHERE id = 456')),
+ *   queryHolder.track('product-456', () => db.query('SELECT * FROM products WHERE id = 456')),
+ *   queryHolder.track('product-456', () => db.query('SELECT * FROM products WHERE id = 456')),
+ * ]);
+ * // Only one database query was executed, but all components get the result
+ * ```
+ *
+ * @example File system operation caching
+ *
+ * ```ts
+ * import { holdPromises } from 'emitnlog/tracker';
+ *
+ * const fileHolder = holdPromises();
+ *
+ * // Cache expensive file operations
+ * const processFile = async (filename: string) => {
+ *   return fileHolder.track(`process-${filename}`, async () => {
+ *     const content = await fs.readFile(filename, 'utf8');
+ *     return processLargeFile(content); // Expensive operation
+ *   });
+ * };
+ *
+ * // Multiple calls to processFile with same filename will reuse the result
+ * const result1 = await processFile('large-data.json');
+ * const result2 = await processFile('large-data.json'); // Uses cached promise
+ * ```
+ *
+ * @example Configuration loading with fallback
+ *
+ * ```ts
+ * import { holdPromises } from 'emitnlog/tracker';
+ *
+ * const configHolder = holdPromises();
+ *
+ * const getConfig = (env: string) => {
+ *   return configHolder.track(`config-${env}`, async () => {
+ *     try {
+ *       return await loadConfigFromRemote(env);
+ *     } catch {
+ *       return loadDefaultConfig();
+ *     }
+ *   });
+ * };
+ * ```
+ */
+export type PromiseHolder = Simplify<
+  Omit<PromiseTracker, 'track'> & {
+    /**
+     * Checks if an operation with the given ID is currently cached (ongoing).
+     *
+     * Returns `true` if a promise with the specified ID is currently in progress. Once the operation completes
+     * (resolves or rejects), the cache entry is automatically removed and this method will return `false`.
+     *
+     * This method is useful for conditional logic, debugging, or monitoring cache state without triggering any
+     * operations.
+     *
+     * @example Conditional operation execution
+     *
+     * ```ts
+     * const holder = holdPromises();
+     *
+     * if (!holder.has('expensive-calc')) {
+     *   console.log('Starting expensive calculation...');
+     * } else {
+     *   console.log('Calculation already in progress...');
+     * }
+     *
+     * const result = await holder.track('expensive-calc', () => performCalculation());
+     * ```
+     *
+     * @example Cache monitoring
+     *
+     * ```ts
+     * const holder = holdPromises();
+     *
+     * // Start some operations
+     * holder.track('op1', () => longRunningTask1());
+     * holder.track('op2', () => longRunningTask2());
+     *
+     * console.log(`Active operations: op1=${holder.has('op1')}, op2=${holder.has('op2')}`);
+     * ```
+     *
+     * @param id The operation ID to check
+     * @returns True if the operation is currently cached/ongoing, false otherwise
+     */
+    readonly has: (id: string) => boolean;
+
+    /**
+     * Caches and tracks an async operation by its unique ID, ensuring it runs only once per ID.
+     *
+     * When called with an ID that's already cached, returns the existing promise without executing the supplier again.
+     * When called with a new ID, executes the supplier function and caches the resulting promise.
+     *
+     * The cache is automatically cleaned up when the operation settles (resolves or rejects), allowing the same ID to
+     * be used again for future operations.
+     *
+     * Operations are tracked with the same monitoring capabilities as PromiseTracker, including timing measurements and
+     * event notifications.
+     *
+     * Clients are expected to ensure that the id is unique based on the nature of the operation: for example, in some
+     * cases the id may refer to operation itself, in others it may need to be augmented with argument information.
+     *
+     * @example API call deduplication
+     *
+     * ```ts
+     * const holder = holdPromises();
+     *
+     * // These calls happen simultaneously from different parts of the app
+     * const [result1, result2, result3] = await Promise.all([
+     *   holder.track('user-data', () => fetchUserProfile()),
+     *   holder.track('user-data', () => fetchUserProfile()),
+     *   holder.track('user-data', () => fetchUserProfile()),
+     * ]);
+     * // Only one fetchUserProfile() call was made, all get the same result
+     * ```
+     *
+     * @example Error handling with caching
+     *
+     * ```ts
+     * const holder = holdPromises();
+     *
+     * try {
+     *   const result = await holder.track('risky-op', () => riskyAsyncOperation());
+     *   console.log('Success:', result);
+     * } catch (error) {
+     *   console.log('Failed:', error);
+     *   // The failed operation is removed from cache, so retry is possible
+     *
+     *   // Later retry with same ID works
+     *   const retryResult = await holder.track('risky-op', () => riskyAsyncOperation());
+     * }
+     * ```
+     *
+     * @param id Unique identifier for the operation. Operations with the same ID will be deduplicated.
+     * @param supplier Function that returns the promise to execute. Only called once per unique ID.
+     * @returns The promise from the supplier (cached or fresh)
+     */
+    track<T>(id: string, supplier: () => Promise<T>): Promise<T>;
+  }
+>;
