@@ -23,7 +23,7 @@ describe('emitnlog.tracker.promise', () => {
   describe('track', () => {
     test('should track a resolved promise and update size', async () => {
       const tracker = trackPromises();
-      const promise = tracker.track(Promise.resolve('result'), 'test-label');
+      const promise = tracker.track('test-label', Promise.resolve('result'));
 
       expect(tracker.size).toBe(1);
       const result = await promise;
@@ -34,7 +34,7 @@ describe('emitnlog.tracker.promise', () => {
     test('should track a rejected promise and update size', async () => {
       const tracker = trackPromises();
       const error = new Error('test error');
-      const promise = tracker.track(Promise.reject(error), 'test-label');
+      const promise = tracker.track('test-label', Promise.reject(error));
 
       expect(tracker.size).toBe(1);
       await expect(promise).rejects.toThrow(error);
@@ -58,7 +58,7 @@ describe('emitnlog.tracker.promise', () => {
       const tracker = trackPromises();
       const supplierFn = jest.fn(() => Promise.resolve('supplier-result'));
 
-      const promise = tracker.track(supplierFn, 'supplier-test');
+      const promise = tracker.track('supplier-test', supplierFn);
 
       expect(tracker.size).toBe(1);
       expect(supplierFn).toHaveBeenCalledTimes(1);
@@ -75,7 +75,7 @@ describe('emitnlog.tracker.promise', () => {
         throw error;
       });
 
-      const promise = tracker.track(supplierFn, 'sync-throw-test');
+      const promise = tracker.track('sync-throw-test', supplierFn);
 
       expect(tracker.size).toBe(1);
       await expect(promise).rejects.toThrow(error);
@@ -87,7 +87,7 @@ describe('emitnlog.tracker.promise', () => {
       const error = new Error('async error');
       const supplierFn = jest.fn(() => Promise.reject(error));
 
-      const promise = tracker.track(supplierFn, 'async-reject-test');
+      const promise = tracker.track('async-reject-test', supplierFn);
 
       expect(tracker.size).toBe(1);
       await expect(promise).rejects.toThrow(error);
@@ -141,8 +141,8 @@ describe('emitnlog.tracker.promise', () => {
         }, 200);
       });
 
-      void tracker.track(promise1, 'promise1');
-      void tracker.track(promise2, 'promise2');
+      void tracker.track('promise1', promise1);
+      void tracker.track('promise2', promise2);
 
       expect(tracker.size).toBe(2);
       expect(resolved1).toBe(false);
@@ -200,7 +200,7 @@ describe('emitnlog.tracker.promise', () => {
         }, 100);
       });
 
-      void tracker.track(firstPromise, 'first');
+      void tracker.track('first', firstPromise);
       const waitPromise = tracker.wait();
 
       // Track another promise after wait() is called - this one takes longer
@@ -210,7 +210,7 @@ describe('emitnlog.tracker.promise', () => {
           resolve();
         }, 200);
       });
-      void tracker.track(secondPromise, 'second');
+      void tracker.track('second', secondPromise);
 
       // Advance time to resolve only the first promise
       jest.advanceTimersByTime(100);
@@ -251,7 +251,7 @@ describe('emitnlog.tracker.promise', () => {
         events.push(event);
       });
 
-      const promise = tracker.track(Promise.resolve('test-result'), 'test-label');
+      const promise = tracker.track('test-label', Promise.resolve('test-result'));
       await promise;
 
       expect(events).toHaveLength(1);
@@ -268,7 +268,7 @@ describe('emitnlog.tracker.promise', () => {
       });
 
       const error = new Error('test error');
-      const promise = tracker.track(Promise.reject(error), 'error-label');
+      const promise = tracker.track('error-label', Promise.reject(error));
 
       await expect(promise).rejects.toThrow(error);
 
@@ -306,7 +306,7 @@ describe('emitnlog.tracker.promise', () => {
         events.push(event);
       });
 
-      const promise = tracker.track(Promise.resolve(undefined), 'undefined-result');
+      const promise = tracker.track('undefined-result', Promise.resolve(undefined));
       await promise;
 
       expect(events).toHaveLength(1);
@@ -323,7 +323,7 @@ describe('emitnlog.tracker.promise', () => {
       tracker.onSettled((event) => events1.push(event));
       tracker.onSettled((event) => events2.push(event));
 
-      const promise = tracker.track(Promise.resolve('multi-listener'), 'test');
+      const promise = tracker.track('test', Promise.resolve('multi-listener'));
       await promise;
 
       expect(events1).toHaveLength(1);
@@ -346,7 +346,7 @@ describe('emitnlog.tracker.promise', () => {
           }),
       );
 
-      const promise = tracker.track(supplierFn, 'timing-test');
+      const promise = tracker.track('timing-test', supplierFn);
 
       jest.advanceTimersByTime(100);
       await promise;
@@ -362,8 +362,8 @@ describe('emitnlog.tracker.promise', () => {
       const tracker = trackPromises();
       const originalPromise = Promise.resolve('shared');
 
-      const tracked1 = tracker.track(originalPromise, 'first-track');
-      const tracked2 = tracker.track(originalPromise, 'second-track');
+      const tracked1 = tracker.track('first-track', originalPromise);
+      const tracked2 = tracker.track('second-track', originalPromise);
 
       expect(tracker.size).toBe(1);
 
@@ -379,7 +379,7 @@ describe('emitnlog.tracker.promise', () => {
       tracker.onSettled((event) => events.push(event));
 
       const promises = Array.from({ length: 5 }, (_, i) =>
-        tracker.track(Promise.resolve(`result-${i}`), `promise-${i}`),
+        tracker.track(`promise-${i}`, Promise.resolve(`result-${i}`)),
       );
 
       expect(tracker.size).toBe(5);
@@ -396,10 +396,10 @@ describe('emitnlog.tracker.promise', () => {
 
       tracker.onSettled((event) => events.push(event));
 
-      const resolvedPromise = tracker.track(Promise.resolve('success'), 'resolved');
+      const resolvedPromise = tracker.track('resolved', Promise.resolve('success'));
 
       const error = new Error('failure');
-      const rejectedPromise = tracker.track(Promise.reject(error), 'rejected');
+      const rejectedPromise = tracker.track('rejected', Promise.reject(error));
 
       expect(tracker.size).toBe(2);
 
@@ -422,7 +422,7 @@ describe('emitnlog.tracker.promise', () => {
       // Track and resolve multiple promises
       const promises = [];
       for (let i = 0; i < 10; i++) {
-        const promise = tracker.track(Promise.resolve(i), `promise-${i}`);
+        const promise = tracker.track(`promise-${i}`, Promise.resolve(i));
         promises.push(promise);
       }
       await Promise.all(promises);
@@ -444,12 +444,12 @@ describe('emitnlog.tracker.promise', () => {
 
       const tracker = trackPromises({ logger: testLogger });
 
-      const promise = tracker.track(Promise.resolve('logged'), 'logged-promise');
+      const promise = tracker.track('logged-promise', Promise.resolve('logged'));
       await promise;
 
       // Should have logged tracking and resolution
-      expect(testLogger).toHaveLoggedWith('debug', 'promise: tracking a promise with label logged-promise');
-      expect(testLogger).toHaveLoggedWith('debug', 'promise: promise with label logged-promise resolved in');
+      expect(testLogger).toHaveLoggedWith('debug', "promise: tracking a promise with label 'logged-promise'");
+      expect(testLogger).toHaveLoggedWith('debug', "promise: promise with label 'logged-promise' resolved in");
     });
   });
 });

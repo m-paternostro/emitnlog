@@ -636,8 +636,8 @@ import { trackPromises } from 'emitnlog/tracker';
 const tracker = trackPromises();
 
 // Track some operations
-const result1 = tracker.track(fetchUserData(), 'fetch-user');
-const result2 = tracker.track(saveConfiguration(), 'save-config');
+const result1 = tracker.track('fetch-user', fetchUserData());
+const result2 = tracker.track('save-config', saveConfiguration());
 
 // Wait for all tracked promises to settle
 await tracker.wait();
@@ -653,9 +653,9 @@ import { withTimeout } from 'emitnlog/utils';
 const shutdownTracker = trackPromises({ logger: serverLogger });
 
 // Track cleanup operations
-shutdownTracker.track(database.close(), 'db-close');
-shutdownTracker.track(cache.flush(), 'cache-flush');
-shutdownTracker.track(server.close(), 'server-close');
+shutdownTracker.track('db-close', database.close());
+shutdownTracker.track('cache-flush', cache.flush());
+shutdownTracker.track('server-close', server.close());
 
 // Graceful shutdown with timeout
 try {
@@ -681,8 +681,8 @@ tracker.onSettled((event) => {
 });
 
 // Track operations with labels
-tracker.track(apiCall(), 'api-request');
-tracker.track(() => processData(), 'data-processing'); // More accurate timing
+tracker.track('api-request', apiCall());
+tracker.track('data-processing', () => processData()); // More accurate timing
 ```
 
 ### Key Features
@@ -691,6 +691,26 @@ tracker.track(() => processData(), 'data-processing'); // More accurate timing
 - **Real-time Events**: Get notified when promises settle with detailed timing and result information
 - **Promise Suppliers**: Track functions that return promises for more accurate timing measurements
 - **Automatic Cleanup**: Promises are automatically removed when they settle to prevent memory leaks
+
+## Promise Holder
+
+For scenarios where you need to prevent duplicate execution of expensive operations, use `holdPromises()` instead. It provides the same API as Promise Tracker but caches operations by ID, ensuring each operation runs only once while its promise is unsettled.
+
+```ts
+import { holdPromises } from 'emitnlog/tracker';
+
+const holder = holdPromises();
+
+// Multiple simultaneous requests for the same operation
+const [result1, result2, result3] = await Promise.all([
+  holder.track('user-123', () => fetchUserFromAPI(123)),
+  holder.track('user-123', () => fetchUserFromAPI(123)),
+  holder.track('user-123', () => fetchUserFromAPI(123)),
+]);
+// Only one API call was made, all get the same result
+```
+
+Use **Promise Holder** for caching expensive operations that might be requested multiple times (API calls, database queries), and **Promise Tracker** for coordinating multiple different operations (shutdown procedures, monitoring). Consult the code documentation for detailed usage examples and advanced features.
 
 ## Utilities
 
