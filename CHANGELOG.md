@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.6.0
+
+### Minor Changes
+
+- 195cec8: Add PromiseHolder to prevent duplicate execution of expensive asynchronous operations
+
 ## 0.5.0
 
 ### Minor Changes
