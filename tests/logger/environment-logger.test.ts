@@ -73,7 +73,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should pass level and format to fallbackLogger', () => {
         const fallbackLogger = createTestLogger();
-        const fallbackLoggerSpy = jest.fn(() => fallbackLogger);
+        const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
 
         process.env.EMITNLOG_LEVEL = 'warning';
         process.env.EMITNLOG_FORMAT = 'json';
@@ -85,7 +85,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should pass options level and format to fallbackLogger when env vars not set', () => {
         const fallbackLogger = createTestLogger();
-        const fallbackLoggerSpy = jest.fn(() => fallbackLogger);
+        const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
 
         fromEnv({ level: 'error', format: 'colorful', fallbackLogger: fallbackLoggerSpy });
 
@@ -401,7 +401,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should use all provided options', () => {
         const fallbackLogger = createTestLogger();
-        const fallbackLoggerSpy = jest.fn(() => fallbackLogger);
+        const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
 
         const logger = fromEnv({ level: 'alert', format: 'unformatted-json', fallbackLogger: fallbackLoggerSpy });
 

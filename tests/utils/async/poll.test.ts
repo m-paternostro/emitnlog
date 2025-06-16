@@ -177,7 +177,7 @@ describe('emitnlog.utils.poll', () => {
       .mockImplementationOnce(() => Promise.resolve('continue'))
       .mockImplementationOnce(() => Promise.resolve('stop'));
 
-    const interrupt = jest.fn((val: unknown): boolean => val === 'stop');
+    const interrupt = jest.fn((val: unknown, _index: number): boolean => val === 'stop');
 
     const { wait } = startPolling(asyncOperation, 1000, { interrupt });
 
