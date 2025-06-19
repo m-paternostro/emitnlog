@@ -104,7 +104,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "build:ts": "tsc",
+    "typecheck": "tsc",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "lint:check": "eslint",
@@ -114,7 +114,7 @@
     "test:coverage:open": "open ./coverage/index.html",
     "test:smoke": "node tests-smoke/run.js",
     "test:smoke:build": "node tests-smoke/run.js --build",
-    "validate": "npm run build:ts && npm run build && npm run format:check && npm run lint:check",
+    "validate": "npm run typecheck && npm run build && npm run format:check && npm run lint:check",
     "postvalidate": "npm run test:coverage && npm run test:smoke",
     "changeset": "changeset"
   },
