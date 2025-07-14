@@ -694,7 +694,9 @@ tracker.track('data-processing', () => processData()); // More accurate timing
 
 ## Promise Holder
 
-For scenarios where you need to prevent duplicate execution of expensive operations, use `holdPromises()` instead. It provides the same API as Promise Tracker but caches operations by ID, ensuring each operation runs only once while its promise is unsettled.
+Promise Holder is a **specialized Promise Tracker** that adds transient caching capabilities. It prevents duplicate execution of expensive operations by caching ongoing promises by ID — the cache is automatically cleared when promises settle (resolve or reject).
+
+This is perfect for scenarios where the same expensive operation might be requested multiple times simultaneously, such as API calls, database queries, or file operations.
 
 ```ts
 import { holdPromises } from 'emitnlog/tracker';
@@ -710,7 +712,157 @@ const [result1, result2, result3] = await Promise.all([
 // Only one API call was made, all get the same result
 ```
 
-Use **Promise Holder** for caching expensive operations that might be requested multiple times (API calls, database queries), and **Promise Tracker** for coordinating multiple different operations (shutdown procedures, monitoring). Consult the code documentation for detailed usage examples and advanced features.
+### Key Features
+
+- **Transient Caching**: Operations are cached only while their promises are unsettled
+- **Automatic Cleanup**: Cache entries are automatically removed when promises settle
+- **Deduplication**: Multiple requests for the same ID share the same promise instance
+- **Full Promise Tracker API**: Inherits all tracking, waiting, and event capabilities
+
+### Database Query Deduplication
+
+```ts
+import { holdPromises } from 'emitnlog/tracker';
+
+const queryHolder = holdPromises({ logger: dbLogger });
+
+const getUserById = (id: number) => {
+  return queryHolder.track(`user-${id}`, async () => {
+    console.log(`Executing query for user ${id}`);
+    return await db.query('SELECT * FROM users WHERE id = ?', [id]);
+  });
+};
+
+// Multiple components requesting the same user
+const user1 = await getUserById(456);
+const user2 = await getUserById(456); // Uses cached result, no duplicate query
+
+// After the promise settles, the cache is cleared
+// Next request will execute a fresh query
+const user3 = await getUserById(456); // New query executed
+```
+
+## Promise Vault
+
+Promise Vault is a **specialized Promise Holder** that provides persistent caching of expensive operations. Unlike Promise Holder which automatically clears the cache when promises settle, Promise Vault retains cached promises indefinitely until manually cleared.
+
+This is ideal for operations that should execute only once per application lifecycle, such as initialization routines, configuration loading, or API calls for static data.
+
+```ts
+import { vaultPromises } from 'emitnlog/tracker';
+
+const vault = vaultPromises();
+
+// Application initialization that happens only once
+const initializeApp = () => vault.track('app-init', () => setupApplication());
+const loadConfig = () => vault.track('config', () => fetchConfiguration());
+
+// Multiple calls return the same cached result
+const app1 = await initializeApp(); // Executes setupApplication()
+const app2 = await initializeApp(); // Uses cached result
+const config = await loadConfig(); // Executes fetchConfiguration()
+```
+
+### Key Features
+
+- **Persistent Caching**: Promises remain cached even after settlement
+- **Manual Cache Control**: Use `clear()` or `forget()` to invalidate cache entries
+- **Flexible Error Handling**: Configure automatic retry on failure or manual retry
+- **Full Promise Holder API**: Inherits all caching, tracking, and event capabilities
+
+### Configuration Management
+
+```ts
+import { vaultPromises } from 'emitnlog/tracker';
+
+const configVault = vaultPromises({ logger: configLogger });
+
+const getConfig = (environment: string) => {
+  return configVault.track(`config-${environment}`, async () => {
+    console.log(`Loading config for ${environment}...`);
+    return await fetchConfigFromRemote(environment);
+  });
+};
+
+// Initial load
+const config1 = await getConfig('production');
+
+// Subsequent calls use cached result (no network call)
+const config2 = await getConfig('production');
+
+// Force refresh when needed
+configVault.forget('config-production');
+const freshConfig = await getConfig('production'); // New network call
+```
+
+### Automatic Retry on Failure
+
+```ts
+import { vaultPromises } from 'emitnlog/tracker';
+
+// Vault that automatically clears failed operations for retry
+const retryVault = vaultPromises({ forgetOnRejection: true, logger: apiLogger });
+
+const fetchData = async (id: string) => {
+  return retryVault.track(`data-${id}`, async () => {
+    const response = await fetch(`/api/data/${id}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
+    return response.json();
+  });
+};
+
+// First attempt fails and is automatically removed from cache
+try {
+  await fetchData('123');
+} catch (error) {
+  console.log('First attempt failed, will retry');
+}
+
+// Second attempt executes fresh (not cached)
+const data = await fetchData('123'); // New attempt
+```
+
+### Cache Management
+
+```ts
+import { vaultPromises } from 'emitnlog/tracker';
+
+const vault = vaultPromises();
+
+// Check if operation is cached
+if (vault.has('expensive-operation')) {
+  console.log('Operation already cached');
+}
+
+// Clear specific cache entry
+vault.forget('expensive-operation');
+
+// Clear all cached entries
+vault.clear();
+
+// Current cache size
+console.log(`Cache contains ${vault.size} entries`);
+```
+
+## Promise Tracking Comparison
+
+| Feature             | [Promise Tracker](#promise-tracker) | [Promise Holder](#promise-holder)    | [Promise Vault](#promise-vault)        |
+| ------------------- | ----------------------------------- | ------------------------------------ | -------------------------------------- |
+| **Primary Purpose** | Coordinate multiple operations      | Prevent duplicate execution          | Long-term result caching               |
+| **Caching**         | No caching                          | Transient (during promise lifecycle) | Persistent (until manually cleared)    |
+| **Use Cases**       | Shutdown coordination, monitoring   | API calls, database queries          | Initialization, configuration, caching |
+| **Cache Cleanup**   | N/A                                 | Automatic on settlement              | Manual via `clear()` or `forget()`     |
+| **Error Handling**  | Pass-through                        | Cached temporarily                   | Configurable via `forgetOnRejection`   |
+| **API**             | Basic tracking                      | Adds `has()` method                  | Adds `clear()`, `forget()` methods     |
+| **Memory Usage**    | Minimal                             | Low (auto-cleanup)                   | Higher (manual cleanup required)       |
+
+### When to Use Each
+
+- **Promise Tracker**: Use when you need to coordinate multiple different operations (like server shutdown) or monitor promise performance without caching
+- **Promise Holder**: Use when you want to prevent duplicate execution of expensive operations that might be requested multiple times during their lifecycle
+- **Promise Vault**: Use when you need long-term caching of expensive operations that should execute only once per application session
 
 ## Utilities
 
