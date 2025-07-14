@@ -4,7 +4,7 @@ import type { Logger } from '../../logger/definition.ts';
 import { OFF_LOGGER } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
-import type { PromiseHolder, PromiseSettledEvent, PromiseTracker } from './definition.ts';
+import type { PromiseHolder, PromiseSettledEvent, PromiseTracker, PromiseVault } from './definition.ts';
 
 /**
  * Creates a new promise tracker for monitoring promises and coordinating async operations.
@@ -117,11 +117,13 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
       first: string | Promise<T> | (() => Promise<T>),
       second?: Promise<T> | (() => Promise<T>),
       idMap?: Map<string, Promise<unknown>>,
+      vault?: boolean,
+      forgetOnRejection?: boolean,
     ): Promise<T> => {
       const label = typeof first === 'string' ? first : undefined;
       const promise = typeof first === 'string' ? (second as Promise<T> | (() => Promise<T>)) : first;
 
-      if (label && idMap) {
+      if (label !== undefined && idMap) {
         const existing = idMap.get(label);
         if (existing) {
           logger.d`returning existing promise for label '${label}'`;
@@ -158,7 +160,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
         (result) => {
           promises.delete(trackedPromise);
 
-          if (label && idMap) {
+          if (label !== undefined && idMap && !vault) {
             idMap.delete(label);
           }
 
@@ -178,7 +180,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
         (error: unknown) => {
           promises.delete(trackedPromise);
 
-          if (label && idMap) {
+          if (label !== undefined && idMap && (!vault || forgetOnRejection)) {
             idMap.delete(label);
           }
 
@@ -197,7 +199,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
         },
       );
 
-      if (label && idMap) {
+      if (label !== undefined && idMap) {
         idMap.set(label, finalPromise);
       }
 
@@ -207,20 +209,21 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
 };
 
 /**
- * Creates a new promise holder for caching async operations and preventing duplicate execution.
+ * Creates a new promise holder for transiently caching ongoing async operations to preventing duplicate execution.
  *
- * The promise holder maintains a cache of ongoing operations identified by unique IDs. When the same operation is
- * requested multiple times (same ID), the holder returns the cached promise instead of executing the operation again.
- * This is particularly useful for expensive operations like API calls, database queries, or file system operations that
- * might be requested simultaneously from different parts of an application.
+ * The Promise Holder is a Promise Tracker that maintains a cache of ongoing operations identified by unique IDs,
+ * automatically clearing the cache when the operation completes. When an operation identified by the same ID is
+ * requested multiple times in a short period of time, the holder returns the cached promise instead of executing the
+ * operation again. This is particularly useful for expensive operations like API calls, database queries, or file
+ * system operations that might be requested simultaneously from different parts of an application.
  *
  * Each holder instance is independent and manages its own operation cache. The cache is automatically cleaned up when
  * operations complete, and comprehensive logging is provided when a logger is configured.
  *
  * **Key differences from PromiseTracker:**
  *
- * - **PromiseHolder**: Caches operations by ID to prevent duplicates, ideal for deduplication
  * - **PromiseTracker**: Coordinates multiple different operations, ideal for shutdown/monitoring scenarios
+ * - **PromiseHolder**: Caches ongoing operations by ID to prevent duplicates, ideal for deduplication
  *
  * @example Basic API call caching
  *
@@ -367,4 +370,122 @@ export const holdPromises = (options?: PromiseTrackerOptions): PromiseHolder => 
   };
 };
 
+/**
+ * Creates a new promise vault for persistent caching of expensive operations.
+ *
+ * The vault maintains a permanent cache of settled promises until explicitly cleared, making it ideal for expensive
+ * operations that don't change frequently such as configuration loading, initialization routines, or API calls for
+ * static data.
+ *
+ * Unlike PromiseHolder which automatically clears cached promises when they settle, PromiseVault retains all cached
+ * promises indefinitely until manually cleared via `clear()` or `forget()`. This provides long-term caching for
+ * operations that should execute only once per application lifecycle.
+ *
+ * @example Application initialization
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const initVault = vaultPromises({ logger: appLogger });
+ *
+ * // These operations happen only once, even across multiple calls
+ * const initializeDatabase = () => initVault.track('database', () => setupDatabaseConnection());
+ * const loadConfiguration = () => initVault.track('config', () => fetchAppConfiguration());
+ *
+ * // Later calls return cached results instantly
+ * const config = await loadConfiguration(); // Uses cached promise
+ * ```
+ *
+ * @example Configuration with refresh capability
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const configVault = vaultPromises();
+ *
+ * const getConfig = (env: string) => {
+ *   return configVault.track(`config-${env}`, () => fetchConfigFromRemote(env));
+ * };
+ *
+ * // Force refresh when needed
+ * configVault.forget('config-production');
+ * const freshConfig = await getConfig('production'); // New network call
+ * ```
+ *
+ * @example Automatic retry on failure
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * // Vault that automatically clears failed operations for retry
+ * const retryVault = vaultPromises({
+ *   logger: apiLogger,
+ *   forgetOnRejection: true
+ * });
+ *
+ * const fetchData = async (id: string) => {
+ *   return retryVault.track(`data-${id}`, async () => {
+ *     const response = await fetch(`/api/data/${id}`);
+ *     if (!response.ok) {
+ *       throw new Error(`Failed to fetch data: ${response.status}`);
+ *     }
+ *     return response.json();
+ *   });
+ * };
+ *
+ * // First attempt fails and is automatically removed from cache
+ * try {
+ *   await fetchData('123');
+ * } catch (error) {
+ *   console.log('First attempt failed, will retry');
+ * }
+ *
+ * // Second attempt executes fresh (not cached)
+ * const data = await fetchData('123'); // New attempt
+ * ```
+ *
+ * @param options Configuration options for the vault
+ * @param options.forgetOnRejection When true, failed operations are automatically removed from the cache, allowing
+ *   immediate retries. When false (default), failed operations remain cached and must be manually cleared with
+ *   `forget()` to enable retries.
+ * @param options.logger Optional logger for internal operations. If not provided, logging is disabled. The logger
+ *   will be prefixed with 'promise' for easy identification.
+ * @returns A new PromiseVault instance
+ */
+export const vaultPromises = (options?: PromiseVaultOptions): PromiseVault => {
+  const idMap = new Map<string, Promise<unknown>>();
+
+  const tracker = trackPromises(options);
+
+  return {
+    get size() {
+      return idMap.size;
+    },
+
+    onSettled: tracker.onSettled,
+
+    wait: tracker.wait,
+
+    has: (id: string) => idMap.has(id),
+
+    clear: () => {
+      idMap.clear();
+    },
+
+    forget: (id: string) => idMap.delete(id),
+
+    track: <T>(id: string, supplier: () => Promise<T>): Promise<T> =>
+      (
+        tracker.track as (
+          id: string,
+          promise: Promise<T> | (() => Promise<T>),
+          idMap: Map<string, Promise<unknown>>,
+          vault: boolean,
+          forgetOnRejection?: boolean,
+        ) => Promise<T>
+      )(id, supplier, idMap, true, options?.forgetOnRejection),
+  };
+};
+
 type PromiseTrackerOptions = { readonly logger?: Logger };
+type PromiseVaultOptions = { readonly forgetOnRejection?: boolean } & PromiseTrackerOptions;

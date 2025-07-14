@@ -216,69 +216,22 @@ export type PromiseTracker = {
 };
 
 /**
- * Event data emitted when a tracked promise settles (resolves or rejects).
- *
- * This event provides comprehensive information about the promise lifecycle, including timing data, optional labeling,
- * success/failure status, and result values. The duration measurement starts from when `track()` is invoked, or more
- * accurately, from when a promise supplier function is called.
- */
-export type PromiseSettledEvent = {
-  /**
-   * Optional label provided when tracking the promise.
-   *
-   * Labels help identify specific promises in logs and event handlers, especially useful when tracking multiple
-   * promises of the same type.
-   */
-  readonly label?: string;
-
-  /**
-   * Duration of the promise lifecycle in milliseconds.
-   *
-   * For direct promises, timing starts when `track()` is called. For promise suppliers (functions), timing starts when
-   * the supplier function is invoked, providing more accurate measurements of the actual async operation duration.
-   *
-   * @example
-   *
-   * ```ts
-   * // Less accurate - includes time between track() call and promise creation
-   * tracker.track(someAsyncFunction(), 'operation');
-   *
-   * // More accurate - measures only the async operation itself
-   * tracker.track(() => someAsyncFunction(), 'operation');
-   * ```
-   */
-  readonly duration: number;
-
-  /**
-   * Indicates whether the promise was rejected.
-   *
-   * When `true`, the promise rejected with an error. When `false` or undefined, the promise resolved successfully.
-   */
-  readonly rejected?: boolean;
-
-  /**
-   * The result of the promise, either the resolved rejected value.
-   */
-  readonly result?: unknown;
-};
-
-/**
- * A specialized promise tracker that caches async operations by ID, ensuring each operation runs only once while its
- * returned promise is not settled.
+ * A specialized implementation of the Promise Tracker that (transiently) caches async operations by ID, ensuring each
+ * operation runs only once *while* its returned promise is not settled.
  *
  * PromiseHolder is ideal when you need to prevent duplicate expensive operations, such as API calls, database queries,
  * or file system operations. Unlike PromiseTracker which focuses on coordination and monitoring, PromiseHolder
  * emphasizes operation deduplication and caching.
  *
- * The holder maintains a cache of ongoing operations by their unique IDs. When the same ID is requested multiple times,
- * the holder returns the same promise, ensuring the underlying operation executes only once. The cache is automatically
- * cleaned up when operations complete.
+ * The holder maintains a cache of ongoing operations by their unique IDs - in other words, the cache happens while
+ * the promise is not settled. When the same ID is requested multiple times, the holder returns the same promise,
+ * ensuring the underlying operation executes only once. The cache is automatically cleaned up when operations complete.
  *
  * When to use PromiseHolder vs PromiseTracker:
  *
  * - Use PromiseHolder for caching expensive operations that might be requested multiple times
- * - Use PromiseTracker for coordinating multiple different operations (like shutdown procedures), when there is no reason
- *   to identify an operation, or to track actual promises instead of operations.
+ * - Use PromiseTracker for coordinating multiple different operations (like shutdown procedures), when there is no
+ *   reason to identify an operation, or to track actual promises instead of operations.
  *
  * @example Basic caching of API calls
  *
@@ -445,3 +398,384 @@ export type PromiseHolder = Simplify<
     track<T>(id: string, supplier: () => Promise<T>): Promise<T>;
   }
 >;
+
+/**
+ * A persistent caching implementation of PromiseHolder that retains settled promises until manually cleared.
+ *
+ * PromiseVault provides long-term caching of expensive operations that don't change frequently, such as configuration
+ * loading, initialization routines, or API calls for static data. Unlike PromiseHolder which automatically clears
+ * cached promises when they settle, PromiseVault maintains the cache indefinitely until explicitly cleared.
+ *
+ * This is particularly useful for:
+ * - Application initialization that should happen only once
+ * - Configuration loading that remains valid for the application lifetime
+ * - Expensive computations with results that don't change
+ * - API calls for static or rarely-changing data
+ *
+ * **Cache Management:**
+ * - Promises remain cached even after settlement (success or failure)
+ * - Manual control via `clear()` to empty entire cache or `forget()` for specific entries
+ * - Failed operations can be automatically cleared with `forgetOnRejection` option, or manually with `forget()`
+ *
+ * **Comparison with other promise utilities:**
+ * - `PromiseTracker`: Coordination and monitoring, no caching
+ * - `PromiseHolder`: Transient caching during promise lifecycle only
+ * - `PromiseVault`: Persistent caching with manual lifecycle control
+ *
+ * @example Application initialization caching
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const initVault = vaultPromises({ logger: appLogger });
+ *
+ * // These expensive operations happen only once, even across multiple calls
+ * const initializeDatabase = () => initVault.track('database', () => setupDatabaseConnection());
+ * const loadConfiguration = () => initVault.track('config', () => fetchAppConfiguration());
+ * const setupAuthentication = () => initVault.track('auth', () => initializeAuthSystem());
+ *
+ * // Multiple components can safely call these - only first call executes
+ * await Promise.all([
+ *   initializeDatabase(),
+ *   loadConfiguration(),
+ *   setupAuthentication(),
+ * ]);
+ *
+ * // Later in the application - these return cached results instantly
+ * const config = await loadConfiguration(); // Uses cached promise
+ * const dbConnection = await initializeDatabase(); // Uses cached promise
+ * ```
+ *
+ * @example Configuration management with refresh capability
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const configVault = vaultPromises({ logger: configLogger });
+ *
+ * const getConfig = (environment: string) => {
+ *   return configVault.track(`config-${environment}`, async () => {
+ *     console.log(`Loading config for ${environment}...`);
+ *     return await fetchConfigFromRemote(environment);
+ *   });
+ * };
+ *
+ * // Initial load
+ * const config1 = await getConfig('production');
+ *
+ * // Subsequent calls use cached result
+ * const config2 = await getConfig('production'); // No network call
+ *
+ * // Force refresh when needed
+ * configVault.forget('config-production');
+ * const freshConfig = await getConfig('production'); // New network call
+ * ```
+ *
+ * @example Static data caching with selective invalidation
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const dataVault = vaultPromises();
+ *
+ * // Cache expensive computations or API calls
+ * const getStaticData = (dataType: string) => {
+ *   return dataVault.track(`static-${dataType}`, async () => {
+ *     return await fetchStaticDataFromAPI(dataType);
+ *   });
+ * };
+ *
+ * // Load various static data - cached indefinitely
+ * const countries = await getStaticData('countries');
+ * const currencies = await getStaticData('currencies');
+ * const timezones = await getStaticData('timezones');
+ *
+ * // Invalidate specific cache entries when data changes
+ * dataVault.forget('static-countries'); // Only countries will be refetched
+ *
+ * // Or clear all cached data
+ * dataVault.clear();
+ * ```
+ *
+ * @example Resource loading with error handling
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const resourceVault = vaultPromises({ logger: resourceLogger });
+ *
+ * const loadResource = async (resourceId: string) => {
+ *   return resourceVault.track(`resource-${resourceId}`, async () => {
+ *     const response = await fetch(`/api/resources/${resourceId}`);
+ *     if (!response.ok) {
+ *       throw new Error(`Failed to load resource: ${response.status}`);
+ *     }
+ *     return response.json();
+ *   });
+ * };
+ *
+ * // Handle errors and retries
+ * try {
+ *   const resource = await loadResource('important-data');
+ * } catch (error) {
+ *   console.error('Resource load failed:', error);
+ *
+ *   // Remove failed attempt from cache to allow retry
+ *   resourceVault.forget('resource-important-data');
+ *
+ *   // Retry with fresh attempt
+ *   const resource = await loadResource('important-data');
+ * }
+ * ```
+ *
+ * @example Automatic retry on failure with forgetOnRejection
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * // Vault that automatically clears failed operations for retry
+ * const retryVault = vaultPromises({
+ *   logger: apiLogger,
+ *   forgetOnRejection: true
+ * });
+ *
+ * const fetchWithRetry = async (url: string) => {
+ *   return retryVault.track(`fetch-${url}`, async () => {
+ *     const response = await fetch(url);
+ *     if (!response.ok) {
+ *       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+ *     }
+ *     return response.json();
+ *   });
+ * };
+ *
+ * // First call fails and is automatically removed from cache
+ * try {
+ *   await fetchWithRetry('/api/data');
+ * } catch (error) {
+ *   console.log('First attempt failed');
+ * }
+ *
+ * // Second call executes fresh attempt (not cached)
+ * try {
+ *   const data = await fetchWithRetry('/api/data'); // New attempt
+ *   console.log('Retry succeeded:', data);
+ * } catch (error) {
+ *   console.log('Retry also failed');
+ * }
+ * ```
+ *
+ * @example Mixed caching strategies
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * // Cache successful results but allow retries for failures
+ * const smartVault = vaultPromises({ forgetOnRejection: true });
+ *
+ * const getConfigWithFallback = async (env: string) => {
+ *   return smartVault.track(`config-${env}`, async () => {
+ *     try {
+ *       // Try remote config first
+ *       return await fetchRemoteConfig(env);
+ *     } catch (remoteError) {
+ *       // Fall back to local config
+ *       console.warn(`Remote config failed, using local: ${remoteError.message}`);
+ *       return await loadLocalConfig(env);
+ *     }
+ *   });
+ * };
+ *
+ * // If remote fails, operation throws and is cleared from cache
+ * // If local succeeds, result is cached permanently
+ * const config = await getConfigWithFallback('production');
+ * ```
+ *
+ * @example Performance monitoring with persistent caching
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const performanceVault = vaultPromises({ logger: perfLogger });
+ *
+ * // Monitor cache hit rates
+ * const getCacheStats = () => {
+ *   return {
+ *     size: performanceVault.size,
+ *     entries: Array.from({length: performanceVault.size}).map((_, i) => `entry-${i}`)
+ *   };
+ * };
+ *
+ * // Track performance of cached operations
+ * performanceVault.onSettled((event) => {
+ *   const cacheHit = event.duration < 10; // Cached results are very fast
+ *   console.log(`${event.label}: ${event.duration}ms (${cacheHit ? 'CACHE HIT' : 'CACHE MISS'})`);
+ * });
+ *
+ * const expensiveOperation = (id: string) => {
+ *   return performanceVault.track(`operation-${id}`, async () => {
+ *     // Simulate expensive operation
+ *     await new Promise(resolve => setTimeout(resolve, 1000));
+ *     return `Result for ${id}`;
+ *   });
+ * };
+ *
+ * // First call: cache miss, slow
+ * await expensiveOperation('test'); // ~1000ms
+ *
+ * // Second call: cache hit, fast
+ * await expensiveOperation('test'); // ~1ms
+ * ```
+ *
+ * @example Graceful cache invalidation patterns
+ *
+ * ```ts
+ * import { vaultPromises } from 'emitnlog/tracker';
+ *
+ * const cacheVault = vaultPromises();
+ *
+ * // Time-based invalidation
+ * const cacheTimestamps = new Map<string, number>();
+ * const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+ *
+ * const getWithTTL = async (key: string, fetcher: () => Promise<any>) => {
+ *   const now = Date.now();
+ *   const timestamp = cacheTimestamps.get(key);
+ *
+ *   if (timestamp && now - timestamp > CACHE_TTL) {
+ *     cacheVault.forget(key);
+ *     cacheTimestamps.delete(key);
+ *   }
+ *
+ *   if (!cacheVault.has(key)) {
+ *     cacheTimestamps.set(key, now);
+ *   }
+ *
+ *   return cacheVault.track(key, fetcher);
+ * };
+ *
+ * // Usage with automatic TTL
+ * const data = await getWithTTL('user-settings', () => fetchUserSettings());
+ * ```
+ */
+export type PromiseVault = PromiseHolder & {
+  /**
+   * Clears all cached promises from the vault.
+   *
+   * After calling this method, all subsequent `track()` calls will execute their suppliers regardless of whether
+   * they were previously cached. This is useful for global cache invalidation or cleanup scenarios.
+   *
+   * @example Global cache reset
+   *
+   * ```ts
+   * const vault = vaultPromises();
+   *
+   * // Cache some operations
+   * await vault.track('config', () => loadConfig());
+   * await vault.track('data', () => loadData());
+   *
+   * console.log(vault.size); // 2
+   *
+   * // Clear all cached entries
+   * vault.clear();
+   *
+   * console.log(vault.size); // 0
+   *
+   * // Next calls will execute suppliers again
+   * await vault.track('config', () => loadConfig()); // Executes loadConfig()
+   * ```
+   */
+  clear(): void;
+
+  /**
+   * Removes a specific cached promise from the vault.
+   *
+   * This allows selective invalidation of cache entries. The next `track()` call with the same ID will execute the
+   * supplier again instead of returning the cached promise.
+   *
+   * @example Selective cache invalidation
+   *
+   * ```ts
+   * const vault = vaultPromises();
+   *
+   * // Cache some operations
+   * await vault.track('user-123', () => fetchUser(123));
+   * await vault.track('user-456', () => fetchUser(456));
+   *
+   * // Invalidate specific user
+   * const wasRemoved = vault.forget('user-123');
+   * console.log(wasRemoved); // true
+   *
+   * // user-123 will be fetched again, user-456 uses cached version
+   * await vault.track('user-123', () => fetchUser(123)); // Executes fetchUser(123)
+   * await vault.track('user-456', () => fetchUser(456)); // Uses cached promise
+   * ```
+   *
+   * @example Error recovery
+   *
+   * ```ts
+   * const vault = vaultPromises();
+   *
+   * try {
+   *   await vault.track('risky-op', () => riskyOperation());
+   * } catch (error) {
+   *   // Remove failed operation from cache to allow retry
+   *   vault.forget('risky-op');
+   *
+   *   // Retry will execute the operation again
+   *   await vault.track('risky-op', () => riskyOperation());
+   * }
+   * ```
+   *
+   * @param id The ID of the cached promise to remove
+   * @returns True if the entry was found and removed, false if it wasn't in the cache
+   */
+  forget(id: string): boolean;
+};
+
+/**
+ * Event data emitted when a tracked promise settles (resolves or rejects).
+ *
+ * This event provides comprehensive information about the promise lifecycle, including timing data, optional labeling,
+ * success/failure status, and result values. The duration measurement starts from when `track()` is invoked, or more
+ * accurately, from when a promise supplier function is called.
+ */
+export type PromiseSettledEvent = {
+  /**
+   * Optional label provided when tracking the promise.
+   *
+   * Labels help identify specific promises in logs and event handlers, especially useful when tracking multiple
+   * promises of the same type.
+   */
+  readonly label?: string;
+
+  /**
+   * Duration of the promise lifecycle in milliseconds.
+   *
+   * For direct promises, timing starts when `track()` is called. For promise suppliers (functions), timing starts when
+   * the supplier function is invoked, providing more accurate measurements of the actual async operation duration.
+   *
+   * @example
+   *
+   * ```ts
+   * // Less accurate - includes time between track() call and promise creation
+   * tracker.track(someAsyncFunction(), 'operation');
+   *
+   * // More accurate - measures only the async operation itself
+   * tracker.track(() => someAsyncFunction(), 'operation');
+   * ```
+   */
+  readonly duration: number;
+
+  /**
+   * Indicates whether the promise was rejected.
+   *
+   * When `true`, the promise rejected with an error. When `false` or undefined, the promise resolved successfully.
+   */
+  readonly rejected?: boolean;
+
+  /**
+   * The result of the promise, either the resolved rejected value.
+   */
+  readonly result?: unknown;
+};
