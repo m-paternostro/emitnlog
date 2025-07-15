@@ -11,6 +11,8 @@ import { delay } from './delay.ts';
  * @example
  *
  * ```ts
+ * import { withTimeout } from 'emitnlog/utils';
+ *
  * const promise: Promise<string | undefined> = withTimeout(fetchContent(uri), 5000);
  * const content: string = await promise.then((value) => value ?? '');
  * ```
@@ -18,6 +20,8 @@ import { delay } from './delay.ts';
  * @example
  *
  * ```ts
+ * import { withTimeout } from 'emitnlog/utils';
+ *
  * const promise: Promise<string | -1> = withTimeout(fetchContent(uri), 5000, -1);
  * const content: string | undefined = await promise.then((value) => (value === -1 ? undefined : value));
  * ```

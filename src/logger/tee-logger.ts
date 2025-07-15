@@ -19,6 +19,8 @@ import { OFF_LOGGER } from './off-logger.ts';
  * @example
  *
  * ```ts
+ * import { tee } from 'emitnlog/logger';
+ *
  * const logger = tee(consoleLogger, fileLogger);
  * logger.info('This will be logged to both console and file');
  * ```

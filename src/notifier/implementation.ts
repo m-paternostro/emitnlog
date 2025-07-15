@@ -26,6 +26,8 @@ import type { EventNotifier } from './definition.ts';
  * @example Basic usage
  *
  * ```ts
+ * import { createEventNotifier } from 'emitnlog/notifier';
+ *
  * class Car {
  *   private _onStartNotifier = createEventNotifier<{ mileage: number }>();
  *   public onStart = this._onStartNotifier.onEvent;
@@ -73,6 +75,8 @@ import type { EventNotifier } from './definition.ts';
  * @example With debounced notifications
  *
  * ```ts
+ * import { createEventNotifier } from 'emitnlog/notifier';
+ *
  * const fileWatcher = createEventNotifier<{ path: string }>({ debounceDelay: 300 });
  *
  * fileWatcher.onEvent(({ path }) => {

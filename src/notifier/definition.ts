@@ -20,6 +20,8 @@ export type EventNotifier<T = void, E = Error> = {
    * @example
    *
    * ```ts
+   * import { createEventNotifier } from 'emitnlog/notifier';
+   *
    * const notifier = createEventNotifier<string>();
    * const subscription = notifier.onEvent((message) => {
    *   console.log(`Received message: ${message}`);
@@ -54,6 +56,8 @@ export type EventNotifier<T = void, E = Error> = {
    * @example Basic usage
    *
    * ```ts
+   * import { createEventNotifier } from 'emitnlog/notifier';
+   *
    * const notifier = createEventNotifier<string>();
    *
    * const event = await notifier.waitForEvent();
@@ -63,6 +67,8 @@ export type EventNotifier<T = void, E = Error> = {
    * @example Using in a loop
    *
    * ```ts
+   * import type { EventNotifier } from 'emitnlog/notifier';
+   *
    * async function logNext5(notifier: EventNotifier<string>) {
    *   for (let i = 0; i < 5; i++) {
    *     const value = await notifier.waitForEvent();
@@ -90,6 +96,8 @@ export type EventNotifier<T = void, E = Error> = {
    * @example
    *
    * ```ts
+   * import { createEventNotifier } from 'emitnlog/notifier';
+   *
    * const notifier = createEventNotifier<{ type: string; value: number }>();
    * notifier.onEvent((event) => {
    *   console.log(`Received ${event.type} with value:`, event.value);

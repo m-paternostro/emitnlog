@@ -62,6 +62,8 @@ import type { OnEvent } from '../../notifier/definition.ts';
  * @example Monitoring promise performance
  *
  * ```ts
+ * import { trackPromises } from 'emitnlog/tracker';
+ *
  * const tracker = trackPromises();
  *
  * tracker.onSettled((event) => {
@@ -80,6 +82,8 @@ export type PromiseTracker = {
    * @example
    *
    * ```ts
+   * import { trackPromises } from 'emitnlog/tracker';
+   *
    * const tracker = trackPromises();
    * console.log(tracker.size); // 0
    *
@@ -105,6 +109,8 @@ export type PromiseTracker = {
    * @example Tracking direct promises
    *
    * ```ts
+   * import { trackPromises } from 'emitnlog/tracker';
+   *
    * const tracker = trackPromises();
    * const result = await tracker.track(fetch('/api/data'), 'api-fetch');
    * ```
@@ -112,6 +118,8 @@ export type PromiseTracker = {
    * @example Tracking promise suppliers for accurate timing
    *
    * ```ts
+   * import { trackPromises } from 'emitnlog/tracker';
+   *
    * const tracker = trackPromises();
    * const result = await tracker.track(() => processLargeDataset(data), 'data-processing');
    * ```
@@ -138,6 +146,8 @@ export type PromiseTracker = {
    * @example Server shutdown coordination
    *
    * ```ts
+   * import { trackPromises } from 'emitnlog/tracker';
+   *
    * const tracker = trackPromises();
    *
    * // Start background operations
@@ -189,6 +199,8 @@ export type PromiseTracker = {
    * @example Performance monitoring
    *
    * ```ts
+   * import { trackPromises } from 'emitnlog/tracker';
+   *
    * const tracker = trackPromises();
    *
    * tracker.onSettled((event) => {
@@ -317,6 +329,8 @@ export type PromiseHolder = Simplify<
      * @example Conditional operation execution
      *
      * ```ts
+     * import { holdPromises } from 'emitnlog/tracker';
+     *
      * const holder = holdPromises();
      *
      * if (!holder.has('expensive-calc')) {
@@ -331,6 +345,8 @@ export type PromiseHolder = Simplify<
      * @example Cache monitoring
      *
      * ```ts
+     * import { holdPromises } from 'emitnlog/tracker';
+     *
      * const holder = holdPromises();
      *
      * // Start some operations
@@ -363,6 +379,8 @@ export type PromiseHolder = Simplify<
      * @example API call deduplication
      *
      * ```ts
+     * import { holdPromises } from 'emitnlog/tracker';
+     *
      * const holder = holdPromises();
      *
      * // These calls happen simultaneously from different parts of the app
@@ -377,6 +395,8 @@ export type PromiseHolder = Simplify<
      * @example Error handling with caching
      *
      * ```ts
+     * import { holdPromises } from 'emitnlog/tracker';
+     *
      * const holder = holdPromises();
      *
      * try {
@@ -491,7 +511,7 @@ export type PromiseHolder = Simplify<
  * const timezones = await getStaticData('timezones');
  *
  * // Invalidate specific cache entries when data changes
- * dataVault.forget('static-countries'); // Only countries will be refetched
+ * dataVault.forget('static-countries'); // Only countries will be re-fetched
  *
  * // Or clear all cached data
  * dataVault.clear();
@@ -668,6 +688,8 @@ export type PromiseVault = PromiseHolder & {
    * @example Global cache reset
    *
    * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
    * const vault = vaultPromises();
    *
    * // Cache some operations
@@ -696,6 +718,8 @@ export type PromiseVault = PromiseHolder & {
    * @example Selective cache invalidation
    *
    * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
    * const vault = vaultPromises();
    *
    * // Cache some operations
@@ -714,6 +738,8 @@ export type PromiseVault = PromiseHolder & {
    * @example Error recovery
    *
    * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
    * const vault = vaultPromises();
    *
    * try {

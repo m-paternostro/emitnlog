@@ -4,6 +4,8 @@
  * @example
  *
  * ```ts
+ * import { isNotNullable } from 'emitnlog/utils';
+ *
  * const arr: (string | undefined | null)[] = ['a', null, 'b', undefined, 'c'];
  * const result: string[] = arr.filter(isNotNullable);
  * ```

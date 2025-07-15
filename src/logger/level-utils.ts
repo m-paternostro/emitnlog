@@ -46,6 +46,8 @@ export const isLogLevel = (value: unknown): value is LogLevel => {
  * @example
  *
  * ```ts
+ * import { toLevelWeight } from 'emitnlog/logger';
+ *
  * const errorWeight = toLevelWeight('error'); // Returns 3
  * const debugWeight = toLevelWeight('debug'); // Returns 7
  *

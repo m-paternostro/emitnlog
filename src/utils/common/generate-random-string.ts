@@ -5,6 +5,8 @@
  * @example
  *
  * ```ts
+ * import { generateRandomString } from 'emitnlog/utils';
+ *
  * // Generate a random string with default length (8)
  * const id = generateRandomString();
  *

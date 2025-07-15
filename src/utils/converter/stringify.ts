@@ -33,12 +33,15 @@ export type StringifyOptions = {
  * @example Simple usage
  *
  * ```ts
+ * import { stringify } from 'emitnlog/utils';
  * const str = stringify({ key: 'value' });
  * ```
  *
  * @example With options
  *
  * ```ts
+ * import { stringify } from 'emitnlog/utils';
+ *
  * // Include stack trace for errors
  * const error = new Error('Something went wrong');
  * const strWithStack = stringify(error, { includeStack: true });

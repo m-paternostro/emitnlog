@@ -47,6 +47,8 @@ export interface DeferredValue<T> {
    * @example Reusing a deferred value
    *
    * ```ts
+   * import { createDeferredValue } from 'emitnlog/utils';
+   *
    * const deferred = createDeferredValue<string>();
    *
    * // First use
@@ -62,6 +64,8 @@ export interface DeferredValue<T> {
    * @example Chainable usage
    *
    * ```ts
+   * import { createDeferredValue } from 'emitnlog/utils';
+   *
    * const deferred = createDeferredValue<number>();
    * deferred.resolve(1);
    * await deferred.promise;
