@@ -75,6 +75,8 @@ export type DebouncedFunction<TArgs extends unknown[], TReturn> = {
  * @example Basic usage
  *
  * ```ts
+ * import { debounce } from 'emitnlog/utils';
+ *
  * const search = debounce(async (query: string) => {
  *   const response = await fetch(`/api/search?q=${query}`);
  *   return response.json();
@@ -93,6 +95,8 @@ export type DebouncedFunction<TArgs extends unknown[], TReturn> = {
  * @example With leading edge execution
  *
  * ```ts
+ * import { debounce } from 'emitnlog/utils';
+ *
  * const saveData = debounce(
  *   async (data: any) => {
  *     return await api.save(data);
@@ -108,6 +112,8 @@ export type DebouncedFunction<TArgs extends unknown[], TReturn> = {
  * @example With argument accumulation
  *
  * ```ts
+ * import { debounce } from 'emitnlog/utils';
+ *
  * const batchProcessor = debounce(
  *   async (ids: number[]) => {
  *     return await api.processBatch(ids);
@@ -132,6 +138,8 @@ export type DebouncedFunction<TArgs extends unknown[], TReturn> = {
  * @example With waiting for previous promises
  *
  * ```ts
+ * import { debounce } from 'emitnlog/utils';
+ *
  * const sequentialDebounce = debounce(
  *   async (value: string) => {
  *     await longRunningOperation(value);

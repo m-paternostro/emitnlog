@@ -57,6 +57,8 @@ export type PollingOptions<T, V> = {
  * @example Simple polling at regular intervals
  *
  * ```ts
+ * import { startPolling } from 'emitnlog/utils';
+ *
  * // Poll every 5 seconds until manually stopped
  * const closeable = startPolling(() => fetchLatestData(), 5_000);
  *
@@ -70,6 +72,8 @@ export type PollingOptions<T, V> = {
  * @example Basic polling until a condition is met
  *
  * ```ts
+ * import { startPolling } from 'emitnlog/utils';
+ *
  * const { wait, close } = startPolling(() => fetchStatus(), 1000, {
  *   interrupt: (status) => status === 'completed',
  * });
@@ -81,6 +85,8 @@ export type PollingOptions<T, V> = {
  * @example Polling with timeout
  *
  * ```ts
+ * import { startPolling } from 'emitnlog/utils';
+ *
  * const { wait } = startPolling(() => checkJobStatus(jobId), 2000, {
  *   timeout: 30000, // Stop after 30 seconds
  *   interrupt: (status) => ['completed', 'failed'].includes(status),
@@ -98,6 +104,8 @@ export type PollingOptions<T, V> = {
  * @example Polling with maximum retries
  *
  * ```ts
+ * import { startPolling } from 'emitnlog/utils';
+ *
  * const { wait } = startPolling(() => checkJobStatus(jobId), 2000, {
  *   retryLimit: 5, // Stop after 5 attempts
  *   logger: console,
@@ -109,6 +117,8 @@ export type PollingOptions<T, V> = {
  * @example Manual control of polling
  *
  * ```ts
+ * import { startPolling } from 'emitnlog/utils';
+ *
  * const poll = startPolling(() => fetchDataPoints(), 5000);
  *
  * // Stop polling after some external event

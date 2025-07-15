@@ -4,6 +4,8 @@
  * @example
  *
  * ```ts
+ * import { delay } from 'emitnlog/utils';
+ *
  * // Wait for 500 milliseconds before continuing
  * await delay(500);
  * console.log('This will be logged after 500ms');

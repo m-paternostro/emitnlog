@@ -18,6 +18,8 @@ import type { InvocationTracker, Tags } from './definition.ts';
  * @example
  *
  * ```ts
+ * import { trackMethods } from 'emitnlog/tracker';
+ *
  * // Track all methods of a plain object
  * const calculator = { add: (a, b) => a + b, subtract: (a, b) => a - b };
  * trackMethods(tracker, calculator);
@@ -27,6 +29,8 @@ import type { InvocationTracker, Tags } from './definition.ts';
  * @example
  *
  * ```ts
+ * import { trackMethods } from 'emitnlog/tracker';
+ *
  * // Track specific methods only
  * class UserService {
  *   createUser(name) {
@@ -48,6 +52,8 @@ import type { InvocationTracker, Tags } from './definition.ts';
  * @example
  *
  * ```ts
+ * import { trackMethods } from 'emitnlog/tracker';
+ *
  * // Track methods of built-in types
  * const mySet = new Set([1, 2, 3]);
  * trackMethods(tracker, mySet, { methods: ['add', 'delete'], trackBuiltIn: true });

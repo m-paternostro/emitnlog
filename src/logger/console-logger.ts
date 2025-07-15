@@ -9,6 +9,8 @@ import { emitLine } from './emitter.ts';
  * @example
  *
  * ```ts
+ * import { ConsoleLogger } from 'emitnlog/logger';
+ *
  * // Create a console logger
  * const logger = new ConsoleLogger();
  *

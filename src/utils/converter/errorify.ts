@@ -4,6 +4,7 @@
  * @example
  *
  * ```ts
+ * import { errorify } from 'emitnlog/utils';
  * const error = errorify('An error occurred');
  * ```
  *

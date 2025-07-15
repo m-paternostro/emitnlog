@@ -61,6 +61,8 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Template Literals
  *
  * ```ts
+ * import { withPrefix } from 'emitnlog/logger';
+ *
  * const dbLogger = withPrefix(logger, 'DB');
  * const queryTime = 42;
  *
@@ -72,6 +74,8 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Nested Prefixes
  *
  * ```ts
+ * import { withPrefix } from 'emitnlog/logger';
+ *
  * const dbLogger = withPrefix(logger, 'DB');
  * const userDbLogger = withPrefix(dbLogger, 'users');
  * // Type of userDbLogger is PrefixedLogger<'DB.users'>
@@ -84,6 +88,8 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Error Handling
  *
  * ```ts
+ * import { withPrefix } from 'emitnlog/logger';
+ *
  * const dbLogger = withPrefix(logger, 'DB');
  *
  * // Errors maintain their original objects while prefixing the message
@@ -98,6 +104,8 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Custom Separators
  *
  * ```ts
+ * import { withPrefix } from 'emitnlog/logger';
+ *
  * // Custom prefix separator
  * const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
  * const v1Logger = withPrefix(apiLogger, 'v1');
@@ -113,6 +121,8 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Fallback Prefix
  *
  * ```ts
+ * import { withPrefix } from 'emitnlog/logger';
+ *
  * // Add a fallback prefix when the logger isn't already prefixed
  * const serviceLogger = withPrefix(logger, 'UserService', { fallbackPrefix: 'APP' });
  * serviceLogger.info('Service started');
@@ -130,6 +140,8 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Level Filtering
  *
  * ```ts
+ * import { withPrefix } from 'emitnlog/logger';
+ *
  * const dbLogger = withPrefix(logger, 'DB');
  *
  * // Level filtering works the same as the underlying logger
@@ -347,7 +359,7 @@ export const withPrefix = <
  * @example Basic Appending
  *
  * ```ts
- * import { consoleLogger, withPrefix, appendPrefix } from 'emitnlog/logger';
+ * import { ConsoleLogger, appendPrefix, withPrefix } from 'emitnlog/logger';
  *
  * const logger = new ConsoleLogger();
  * const dbLogger = withPrefix(logger, 'DB');
@@ -360,6 +372,8 @@ export const withPrefix = <
  * @example Multiple Levels of Nesting
  *
  * ```ts
+ * import { appendPrefix, withPrefix  } from 'emitnlog/logger';
+ *
  * const serviceLogger = withPrefix(logger, 'UserService');
  * const repositoryLogger = appendPrefix(serviceLogger, 'Repository');
  * const cacheLogger = appendPrefix(repositoryLogger, 'Cache');
@@ -383,6 +397,8 @@ export const withPrefix = <
  * @example Type Safety
  *
  * ```ts
+ * import { appendPrefix, withPrefix } from 'emitnlog/logger';
+ *
  * const dbLogger = withPrefix(logger, 'DB');
  * const userLogger = appendPrefix(dbLogger, 'User');
  * // Type of userLogger is PrefixedLogger<'DB.User', '.'>
@@ -418,7 +434,7 @@ export const appendPrefix = <
  * @example Basic Reset
  *
  * ```ts
- * import { ConsoleLogger, withPrefix, resetPrefix } from 'emitnlog/logger';
+ * import { ConsoleLogger, resetPrefix, withPrefix } from 'emitnlog/logger';
  *
  * const logger = new ConsoleLogger();
  * const dbLogger = withPrefix(logger, 'DB');
@@ -434,6 +450,8 @@ export const appendPrefix = <
  * @example Switching Context
  *
  * ```ts
+ * import { appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+ *
  * // Start with a deeply nested logger
  * const serviceLogger = withPrefix(logger, 'UserService');
  * const repoLogger = appendPrefix(serviceLogger, 'Repository');
@@ -450,6 +468,8 @@ export const appendPrefix = <
  * @example Custom Configuration
  *
  * ```ts
+ * import { appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+ *
  * const existingLogger = withPrefix(logger, 'OldPrefix');
  *
  * // Reset with custom separators
@@ -463,6 +483,8 @@ export const appendPrefix = <
  * @example Reusing Root Logger
  *
  * ```ts
+ * import { appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+ *
  * // Multiple loggers sharing the same root but with different prefixes
  * const dbLogger = withPrefix(logger, 'DB');
  * const complexDbLogger = appendPrefix(dbLogger, 'Complex'); // Prefix: "DB.Complex"

@@ -50,6 +50,8 @@ import { createBasicInvocationStack, createThreadSafeInvocationStack } from './s
  * @example
  *
  * ```ts
+ * import { createInvocationTracker } from 'emitnlog/tracker';
+ *
  * const tracker = createInvocationTracker({ tags: { service: 'auth' } });
  *
  * tracker.onCompleted((invocation) => {
@@ -66,6 +68,8 @@ import { createBasicInvocationStack, createThreadSafeInvocationStack } from './s
  * @example
  *
  * ```ts
+ * import { createInvocationTracker } from 'emitnlog/tracker';
+ *
  * // Creates a tracker for the operations 'fetchUser' and 'fetchAccount'.
  * const tracker = createInvocationTracker<'fetchUser', 'fetchAccount'>();
  * const fetchUser = tracker.track('fetchUser', fetchUserFn);

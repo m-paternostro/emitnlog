@@ -11,6 +11,8 @@ import { createThreadSafeInvocationStack } from '../../invocation/stack/implemen
  * @example
  *
  * ```ts
+ * import { createAsyncLocalStorageInvocationStack } from 'emitnlog/tracker/node';
+ *
  * const stack = createAsyncLocalStorageInvocationStack({ logger });
  * const tracker = createInvocationTracker({ stack });
  * const fetchUser = tracker.track('fetchUser', fetchUserFn);
