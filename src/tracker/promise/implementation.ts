@@ -117,7 +117,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
       first: string | Promise<T> | (() => Promise<T>),
       second?: Promise<T> | (() => Promise<T>),
       idMap?: Map<string, Promise<unknown>>,
-      vault?: boolean,
+      keep?: boolean,
       forgetOnRejection?: boolean,
     ): Promise<T> => {
       const label = typeof first === 'string' ? first : undefined;
@@ -160,7 +160,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
         (result) => {
           promises.delete(trackedPromise);
 
-          if (label !== undefined && idMap && !vault) {
+          if (label !== undefined && idMap && !keep) {
             idMap.delete(label);
           }
 
@@ -180,7 +180,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
         (error: unknown) => {
           promises.delete(trackedPromise);
 
-          if (label !== undefined && idMap && (!vault || forgetOnRejection)) {
+          if (label !== undefined && idMap && (!keep || forgetOnRejection)) {
             idMap.delete(label);
           }
 
@@ -474,16 +474,16 @@ export const vaultPromises = (options?: PromiseVaultOptions): PromiseVault => {
 
     forget: (id: string) => idMap.delete(id),
 
-    track: <T>(id: string, supplier: () => Promise<T>): Promise<T> =>
+    track: <T>(id: string, supplier: () => Promise<T>, opt?: { forget?: boolean }): Promise<T> =>
       (
         tracker.track as (
           id: string,
           promise: Promise<T> | (() => Promise<T>),
           idMap: Map<string, Promise<unknown>>,
-          vault: boolean,
+          keep?: boolean,
           forgetOnRejection?: boolean,
         ) => Promise<T>
-      )(id, supplier, idMap, true, options?.forgetOnRejection),
+      )(id, supplier, idMap, !opt?.forget, options?.forgetOnRejection),
   };
 };
 

@@ -317,7 +317,7 @@ interface PromiseSettledEvent {
 
 ## Promise Holder
 
-Promise Holder is a **specialized Promise Tracker** that adds transient caching capabilities. It prevents duplicate execution of expensive operations by caching ongoing promises by ID — the cache is automatically cleared when promises settle (resolve or reject).
+Promise Holder is a specialized [Promise Tracker](#promise-tracker) that adds transient caching capabilities. It prevents duplicate execution of expensive operations by caching ongoing promises by ID — the cache is automatically cleared when promises settle (resolve or reject).
 
 This is perfect for scenarios where the same expensive operation might be requested multiple times simultaneously, such as API calls, database queries, or file operations.
 
@@ -397,7 +397,7 @@ console.log(`Cache contains ${holder.size} ongoing operations`);
 
 ## Promise Vault
 
-Promise Vault is a **specialized Promise Holder** that provides persistent caching of expensive operations. Unlike Promise Holder which automatically clears the cache when promises settle, Promise Vault retains cached promises indefinitely until manually cleared.
+Promise Vault is a specialized [Promise Holder](#promise-holder) that provides persistent caching of expensive operations. Unlike Promise Holder which automatically clears the cache when promises settle, Promise Vault retains cached promises indefinitely until manually cleared.
 
 This is ideal for operations that should execute only once per application lifecycle, such as initialization routines, configuration loading, or API calls for static data.
 
@@ -441,6 +441,24 @@ const config2 = await getConfig('production');
 // Force refresh when needed
 configVault.forget('config-production');
 const freshConfig = await getConfig('production'); // New network call
+```
+
+### Per-Operation Cache Control
+
+You can control caching behavior on a per-operation basis using the `forget` option. When `forget: true`, the operation behaves like [Promise Holder](#promise-holder) (transient caching), while `forget: false` or default provides the standard persistent caching:
+
+```ts
+import { vaultPromises } from 'emitnlog/tracker';
+
+const vault = vaultPromises();
+
+// Mix persistent and transient caching in the same vault
+const config = await vault.track('app-config', () => loadConfig()); // Persistent
+const liveData = await vault.track('live-feed', () => fetchLiveFeed(), { forget: true }); // Transient
+
+// config stays cached, liveData is cleared after settlement
+const sameConfig = await vault.track('app-config', () => loadConfig()); // Uses cache
+const newLiveData = await vault.track('live-feed', () => fetchLiveFeed(), { forget: true }); // Executes again
 ```
 
 ### Automatically Forget to Allow Retry on Failure

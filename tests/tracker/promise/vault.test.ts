@@ -515,6 +515,304 @@ describe('emitnlog.tracker.promise.vault', () => {
     });
   });
 
+  describe('forget option in track method', () => {
+    test('should use persistent caching by default (forget: false)', async () => {
+      const vault = vaultPromises();
+      const supplierFn = jest.fn(() => Promise.resolve('persistent-result'));
+
+      // First call executes the supplier
+      const result1 = await vault.track('default-behavior', supplierFn);
+      expect(result1).toBe('persistent-result');
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(1); // Should remain in cache
+
+      // Second call uses cached result
+      const result2 = await vault.track('default-behavior', supplierFn);
+      expect(result2).toBe('persistent-result');
+      expect(supplierFn).toHaveBeenCalledTimes(1); // Not called again
+      expect(vault.size).toBe(1); // Still in cache
+    });
+
+    test('should use persistent caching when forget: false is explicit', async () => {
+      const vault = vaultPromises();
+      const supplierFn = jest.fn(() => Promise.resolve('explicit-persistent'));
+
+      // First call with explicit forget: false
+      const result1 = await vault.track('explicit-persistent', supplierFn, { forget: false });
+      expect(result1).toBe('explicit-persistent');
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(1);
+
+      // Second call should use cached result
+      const result2 = await vault.track('explicit-persistent', supplierFn, { forget: false });
+      expect(result2).toBe('explicit-persistent');
+      expect(supplierFn).toHaveBeenCalledTimes(1); // Not called again
+      expect(vault.size).toBe(1);
+    });
+
+    test('should use transient caching when forget: true (PromiseHolder behavior)', async () => {
+      const vault = vaultPromises();
+      const supplierFn = jest.fn(() => Promise.resolve('transient-result'));
+
+      // First call executes and caches temporarily
+      const result1 = await vault.track('transient-op', supplierFn, { forget: true });
+      expect(result1).toBe('transient-result');
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(0); // Should be cleared after settlement
+
+      // Second call executes again (not cached)
+      const result2 = await vault.track('transient-op', supplierFn, { forget: true });
+      expect(result2).toBe('transient-result');
+      expect(supplierFn).toHaveBeenCalledTimes(2); // Called again
+      expect(vault.size).toBe(0); // Still cleared
+    });
+
+    test('should handle mixed caching strategies in same vault', async () => {
+      const vault = vaultPromises();
+      const persistentSupplier = jest.fn(() => Promise.resolve('persistent'));
+      const transientSupplier = jest.fn(() => Promise.resolve('transient'));
+
+      // Persistent operation
+      const persistent1 = await vault.track('persistent-op', persistentSupplier, { forget: false });
+      expect(persistent1).toBe('persistent');
+      expect(vault.size).toBe(1);
+
+      // Transient operation
+      const transient1 = await vault.track('transient-op', transientSupplier, { forget: true });
+      expect(transient1).toBe('transient');
+      expect(vault.size).toBe(1); // Only persistent operation remains
+
+      // Verify behaviors persist
+      const persistent2 = await vault.track('persistent-op', persistentSupplier, { forget: false });
+      const transient2 = await vault.track('transient-op', transientSupplier, { forget: true });
+
+      expect(persistent2).toBe('persistent');
+      expect(transient2).toBe('transient');
+      expect(persistentSupplier).toHaveBeenCalledTimes(1); // Cached
+      expect(transientSupplier).toHaveBeenCalledTimes(2); // Not cached
+      expect(vault.size).toBe(1); // Still only persistent operation
+    });
+
+    test('should handle error scenarios with forget: true', async () => {
+      const vault = vaultPromises();
+      const error = new Error('transient operation failed');
+      const supplierFn = jest.fn(() => Promise.reject(error));
+
+      // First call fails and is cleared automatically
+      await expect(vault.track('transient-error', supplierFn, { forget: true })).rejects.toThrow(error);
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(0); // Should be cleared
+
+      // Second call executes again (not cached)
+      await expect(vault.track('transient-error', supplierFn, { forget: true })).rejects.toThrow(error);
+      expect(supplierFn).toHaveBeenCalledTimes(2); // Called again
+      expect(vault.size).toBe(0); // Still cleared
+    });
+
+    test('should handle error scenarios with forget: false', async () => {
+      const vault = vaultPromises();
+      const error = new Error('persistent operation failed');
+      const supplierFn = jest.fn(() => Promise.reject(error));
+
+      // First call fails and is cached
+      await expect(vault.track('persistent-error', supplierFn, { forget: false })).rejects.toThrow(error);
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(1); // Should remain in cache
+
+      // Second call uses cached failure
+      await expect(vault.track('persistent-error', supplierFn, { forget: false })).rejects.toThrow(error);
+      expect(supplierFn).toHaveBeenCalledTimes(1); // Not called again
+      expect(vault.size).toBe(1); // Still in cache
+    });
+
+    test('should respect forgetOnRejection option even when forget: false', async () => {
+      const vault = vaultPromises({ forgetOnRejection: true });
+      const error = new Error('should be cleared by forgetOnRejection');
+      const supplierFn = jest.fn(() => Promise.reject(error));
+
+      // forget: false but forgetOnRejection: true should clear on failure
+      await expect(vault.track('error-with-global-forget', supplierFn, { forget: false })).rejects.toThrow(error);
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(0); // Should be cleared by forgetOnRejection
+
+      // Second call executes again
+      await expect(vault.track('error-with-global-forget', supplierFn, { forget: false })).rejects.toThrow(error);
+      expect(supplierFn).toHaveBeenCalledTimes(2); // Called again
+      expect(vault.size).toBe(0);
+    });
+
+    test('should handle concurrent operations with forget: true', async () => {
+      const vault = vaultPromises();
+      let resolvePromise: (value: string) => void;
+      const delayedPromise = new Promise<string>((resolve) => {
+        resolvePromise = resolve;
+      });
+      const supplierFn = jest.fn(() => delayedPromise);
+
+      // Start multiple concurrent requests with forget: true
+      const promises = Array.from({ length: 3 }, () =>
+        vault.track('concurrent-transient', supplierFn, { forget: true }),
+      );
+
+      expect(supplierFn).toHaveBeenCalledTimes(1);
+      expect(vault.size).toBe(1); // Operation in progress
+
+      // All promises should be the same instance
+      promises.forEach((promise, index) => {
+        if (index > 0) {
+          expect(promise).toBe(promises[0]);
+        }
+      });
+
+      // Resolve the operation
+      resolvePromise!('concurrent-result');
+      const results = await Promise.all(promises);
+
+      expect(results).toEqual(Array(3).fill('concurrent-result'));
+      expect(vault.size).toBe(0); // Should be cleared after settlement
+
+      // New request should execute fresh
+      const newResult = await vault.track('concurrent-transient', supplierFn, { forget: true });
+      expect(newResult).toBe('concurrent-result');
+      expect(supplierFn).toHaveBeenCalledTimes(2); // Called again
+    });
+
+    test('should allow switching forget behavior for same operation ID', async () => {
+      const vault = vaultPromises();
+      const supplierFn = jest.fn(() => Promise.resolve('switchable-result'));
+
+      // First call with forget: true (transient)
+      const result1 = await vault.track('switchable-op', supplierFn, { forget: true });
+      expect(result1).toBe('switchable-result');
+      expect(vault.size).toBe(0); // Cleared
+
+      // Second call with forget: false (persistent)
+      const result2 = await vault.track('switchable-op', supplierFn, { forget: false });
+      expect(result2).toBe('switchable-result');
+      expect(vault.size).toBe(1); // Cached
+
+      // Third call should use cached result
+      const result3 = await vault.track('switchable-op', supplierFn, { forget: false });
+      expect(result3).toBe('switchable-result');
+      expect(supplierFn).toHaveBeenCalledTimes(2); // Called twice total
+      expect(vault.size).toBe(1);
+    });
+
+    test('should emit events for both persistent and transient operations', async () => {
+      const vault = vaultPromises();
+      const events: PromiseSettledEvent[] = [];
+
+      vault.onSettled((event) => {
+        events.push(event);
+      });
+
+      // Persistent operation
+      await vault.track('persistent-event', () => Promise.resolve('persistent'), { forget: false });
+
+      // Transient operation
+      await vault.track('transient-event', () => Promise.resolve('transient'), { forget: true });
+
+      expect(events).toHaveLength(2);
+      expect(events[0]).toMatchObject({
+        label: 'persistent-event',
+        duration: expect.any(Number),
+        result: 'persistent',
+      });
+      expect(events[1]).toMatchObject({ label: 'transient-event', duration: expect.any(Number), result: 'transient' });
+
+      // Only persistent operation should remain
+      expect(vault.size).toBe(1);
+    });
+
+    test('should handle forget option with logging', async () => {
+      const testLogger = createTestLogger();
+      const vault = vaultPromises({ logger: testLogger });
+
+      // Test both persistent and transient operations
+      await vault.track('logged-persistent', () => Promise.resolve('persistent'), { forget: false });
+      await vault.track('logged-transient', () => Promise.resolve('transient'), { forget: true });
+
+      expect(testLogger).toHaveLoggedWith(
+        'debug',
+        "promise: tracking a promise supplier with label 'logged-persistent'",
+      );
+      expect(testLogger).toHaveLoggedWith('debug', "promise: promise with label 'logged-persistent' resolved in");
+      expect(testLogger).toHaveLoggedWith(
+        'debug',
+        "promise: tracking a promise supplier with label 'logged-transient'",
+      );
+      expect(testLogger).toHaveLoggedWith('debug', "promise: promise with label 'logged-transient' resolved in");
+    });
+
+    test('should handle synchronous errors with forget: true', async () => {
+      const vault = vaultPromises();
+      const error = new Error('sync error with forget');
+      const throwingSupplier = jest.fn(() => {
+        throw error;
+      });
+
+      // First call throws and should be cleared
+      await expect(vault.track('sync-error-transient', throwingSupplier, { forget: true })).rejects.toThrow(error);
+      expect(vault.size).toBe(0); // Should be cleared
+
+      // Second call executes again
+      await expect(vault.track('sync-error-transient', throwingSupplier, { forget: true })).rejects.toThrow(error);
+      expect(throwingSupplier).toHaveBeenCalledTimes(2); // Called again
+      expect(vault.size).toBe(0);
+    });
+
+    test('should handle complex scenarios with mixed options and global forgetOnRejection', async () => {
+      const vault = vaultPromises({ forgetOnRejection: true });
+      const successSupplier = jest.fn(() => Promise.resolve('success'));
+      const errorSupplier = jest.fn(() => Promise.reject(new Error('failure')));
+
+      // Success with forget: false - should be cached (overrides global forgetOnRejection for success)
+      await vault.track('success-persistent', successSupplier, { forget: false });
+      expect(vault.size).toBe(1);
+
+      // Success with forget: true - should be cleared
+      await vault.track('success-transient', successSupplier, { forget: true });
+      expect(vault.size).toBe(1); // Only persistent success remains
+
+      // Error with forget: false - should be cleared due to global forgetOnRejection
+      await expect(vault.track('error-persistent', errorSupplier, { forget: false })).rejects.toThrow();
+      expect(vault.size).toBe(1); // Still only persistent success
+
+      // Error with forget: true - should be cleared
+      await expect(vault.track('error-transient', errorSupplier, { forget: true })).rejects.toThrow();
+      expect(vault.size).toBe(1); // Still only persistent success
+
+      // Verify cached success is still available
+      const cachedSuccess = await vault.track('success-persistent', successSupplier, { forget: false });
+      expect(cachedSuccess).toBe('success');
+      expect(successSupplier).toHaveBeenCalledTimes(2); // Called twice (once persistent, once transient)
+    });
+
+    test('should validate that forget option does not affect other operations', async () => {
+      const vault = vaultPromises();
+      const supplier1 = jest.fn(() => Promise.resolve('result1'));
+      const supplier2 = jest.fn(() => Promise.resolve('result2'));
+      const supplier3 = jest.fn(() => Promise.resolve('result3'));
+
+      // Mix of operations with different forget settings
+      await vault.track('op1', supplier1, { forget: false }); // Persistent
+      await vault.track('op2', supplier2, { forget: true }); // Transient
+      await vault.track('op3', supplier3); // Default (persistent)
+
+      expect(vault.size).toBe(2); // op1 and op3 should be cached
+
+      // Second calls
+      await vault.track('op1', supplier1, { forget: false }); // Should use cache
+      await vault.track('op2', supplier2, { forget: true }); // Should execute again
+      await vault.track('op3', supplier3); // Should use cache
+
+      expect(supplier1).toHaveBeenCalledTimes(1); // Cached
+      expect(supplier2).toHaveBeenCalledTimes(2); // Not cached
+      expect(supplier3).toHaveBeenCalledTimes(1); // Cached
+      expect(vault.size).toBe(2); // Still op1 and op3
+    });
+  });
+
   describe('edge cases', () => {
     test('should handle suppliers that throw synchronously', async () => {
       const vault = vaultPromises();
