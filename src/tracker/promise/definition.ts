@@ -757,6 +757,154 @@ export type PromiseVault = PromiseHolder & {
    * @returns True if the entry was found and removed, false if it wasn't in the cache
    */
   forget(id: string): boolean;
+
+  /**
+   * Caches and tracks an async operation with configurable persistence behavior.
+   *
+   * Extends PromiseHolder's caching functionality with optional per-operation control over cache persistence. By
+   * default, promises remain cached even after settlement (standard PromiseVault behavior). When the `forget` option
+   * is enabled, the operation behaves like PromiseHolder - automatically clearing the cache entry when the promise
+   * settles.
+   *
+   * This provides fine-grained control over caching strategy, allowing you to mix persistent and transient caching
+   * within the same vault instance based on the specific needs of each operation.
+   *
+   * @example Default persistent caching
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * // Standard behavior - promise cached indefinitely
+   * await vault.track('config', () => loadConfiguration());
+   * await vault.track('config', () => loadConfiguration()); // Uses cached promise
+   * ```
+   *
+   * @example Transient caching with forget option
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * // First call executes and caches temporarily
+   * await vault.track('temp-data', () => fetchTemporaryData(), { forget: true });
+   *
+   * // Second call executes again (cache was cleared after first completion)
+   * await vault.track('temp-data', () => fetchTemporaryData(), { forget: true });
+   * ```
+   *
+   * @example Mixed caching strategies
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * // Persistent cache for stable configuration
+   * const config = await vault.track('app-config', () => loadAppConfig());
+   *
+   * // Transient cache for time-sensitive data
+   * const liveData = await vault.track('live-feed', () => fetchLiveFeed(), { forget: true });
+   *
+   * // User-specific data that should be cached persistently
+   * const userData = await vault.track(`user-${userId}`, () => fetchUserData(userId));
+   *
+   * // Temporary computations that shouldn't persist
+   * const tempResult = await vault.track(`calc-${requestId}`, () => performCalculation(), { forget: true });
+   * ```
+   *
+   * @example Dynamic cache behavior based on conditions
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * const fetchData = async (id: string, isTemporary: boolean) => {
+   *   return vault.track(
+   *     `data-${id}`,
+   *     () => expensiveFetchOperation(id),
+   *     { forget: isTemporary }
+   *   );
+   * };
+   *
+   * // Persistent caching for important data
+   * await fetchData('critical-config', false);
+   *
+   * // Transient caching for temporary requests
+   * await fetchData('temp-analysis', true);
+   * ```
+   *
+   * @example Session-based caching with cleanup
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * const getSessionData = async (sessionId: string, persistent: boolean = false) => {
+   *   return vault.track(
+   *     `session-${sessionId}`,
+   *     () => loadSessionFromDatabase(sessionId),
+   *     { forget: !persistent }
+   *   );
+   * };
+   *
+   * // Short-lived session data (cleared after use)
+   * await getSessionData('temp-session-123', false);
+   *
+   * // Long-lived session data (cached until manual cleanup)
+   * await getSessionData('permanent-session-456', true);
+   * ```
+   *
+   * @example Error handling with different cache strategies
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * const robustFetch = async (url: string, cacheFailures: boolean = false) => {
+   *   try {
+   *     return await vault.track(
+   *       `fetch-${url}`,
+   *       async () => {
+   *         const response = await fetch(url);
+   *         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+   *         return response.json();
+   *       },
+   *       { forget: !cacheFailures }
+   *     );
+   *   } catch (error) {
+   *     if (!cacheFailures) {
+   *       // For transient operations, failed attempts are automatically cleared
+   *       console.log('Failed attempt cleared, retry available');
+   *     } else {
+   *       // For persistent operations, manually clear to allow retry
+   *       vault.forget(`fetch-${url}`);
+   *       console.log('Failed attempt manually cleared');
+   *     }
+   *     throw error;
+   *   }
+   * };
+   *
+   * // Don't cache failures - automatic retry capability
+   * await robustFetch('/api/temporary-data', false);
+   *
+   * // Cache everything including failures - manual retry control
+   * await robustFetch('/api/critical-data', true);
+   * ```
+   *
+   * @param id Unique identifier for the operation. Operations with the same ID will be deduplicated.
+   * @param supplier Function that returns the promise to execute. Only called once per unique ID (unless cache is cleared).
+   * @param options Configuration options for this specific operation
+   * @param options.forget When true, automatically removes the cached promise when it settles, making this operation
+   *   behave like PromiseHolder. When false or undefined (default), uses standard PromiseVault persistence behavior.
+   * @returns The promise from the supplier (cached or fresh)
+   */
+  track<T>(id: string, supplier: () => Promise<T>, options?: { forget?: boolean }): Promise<T>;
 };
 
 /**
