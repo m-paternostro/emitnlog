@@ -13,7 +13,7 @@ describe('emitnlog.utils.stringify', () => {
 
   test('should stringify Date objects as ISO strings by default', () => {
     const date = new Date('2023-01-01T12:00:00Z');
-    expect(stringify(date)).toBe('2023-01-01 12:00:00.000');
+    expect(stringify(date)).toBe('2023-01-01T12:00:00.000Z');
   });
 
   test('should stringify Date objects using locale format when useLocale is true', () => {
@@ -72,7 +72,11 @@ describe('emitnlog.utils.stringify', () => {
   });
 
   test('should respect maxDepth option', () => {
-    const deepObj = { level1: { level2: { level3: { level4: { level5: 'deep value' } } } } };
+    const deepObj = { level1: { level2: { level3: { level4: { level5: { level6: { level7: 'deep value' } } } } } } };
+
+    // With very small depth
+    const zeroResult = stringify(deepObj, { maxDepth: 0 });
+    expect(zeroResult).toBe('[object Object]');
 
     // With very small depth
     const shallowResult = stringify(deepObj, { maxDepth: 1 });
@@ -82,8 +86,13 @@ describe('emitnlog.utils.stringify', () => {
 
     // With custom higher depth - should include the full structure
     const deepResult = stringify(deepObj, { maxDepth: 10 });
-    expect(deepResult).toContain('level5');
+    expect(deepResult).toContain('level7');
     expect(deepResult).toContain('deep value');
+
+    // With custom higher depth - should include the full structure
+    const allResult = stringify(deepObj, { maxDepth: -1 });
+    expect(allResult).toContain('level7');
+    expect(allResult).toContain('deep value');
   });
 
   test('should handle special objects like Map and Set', () => {
@@ -104,31 +113,24 @@ describe('emitnlog.utils.stringify', () => {
   });
 
   test('should handle Map objects with circular references', () => {
-    const map = new Map([
-      ['key1', 'value1'],
-      ['key2', 'value2'],
-    ]);
-    expect(stringify(map)).toBe('{"key1":"value1","key2":"value2"}');
-
     const circularMap = new Map();
     const obj: Record<string, unknown> = {};
 
-    circularMap.set('circular', obj);
+    circularMap.set('key1', obj);
     obj['ref'] = obj;
 
-    expect(stringify(circularMap)).toBe('Map(1)');
+    expect(stringify(circularMap)).toBe('{"key1":{"ref":"[Circular Reference]"}}');
+    expect(stringify(circularMap, { maxDepth: -1 })).toBe('{"key1":{"ref":"[Circular Reference]"}}');
   });
 
   test('should handle Set objects with circular references', () => {
-    const set = new Set(['value1', 'value2']);
-    expect(stringify(set)).toBe('["value1","value2"]');
-
     const circularSet = new Set();
     const setObj: Record<string, unknown> = {};
     circularSet.add(setObj);
     setObj['ref'] = setObj;
 
-    expect(stringify(circularSet)).toBe('Set(1)');
+    expect(stringify(circularSet)).toBe('[{"ref":"[Circular Reference]"}]');
+    expect(stringify(circularSet, { maxDepth: -1 })).toBe('[{"ref":"[Circular Reference]"}]');
   });
 
   test('should handle special objects like RegExp', () => {
@@ -203,5 +205,128 @@ describe('emitnlog.utils.stringify', () => {
     expect(() => stringify({}, null)).not.toThrow();
     // @ts-expect-error - Testing with invalid maxDepth
     expect(() => stringify({}, { maxDepth: 'not a number' })).not.toThrow();
+  });
+
+  describe('array truncation', () => {
+    test('should truncate large arrays with default limit (100 elements)', () => {
+      const largeArray = Array.from({ length: 150 }, (_, i) => i);
+      const result = stringify(largeArray);
+
+      expect(result).toContain('0');
+      expect(result).toContain('99'); // Last element before truncation
+      expect(result).toContain('...(50)');
+      expect(result).not.toContain('149'); // Should not contain last element
+    });
+
+    test('should not truncate arrays smaller than the default limit', () => {
+      const smallArray = Array.from({ length: 50 }, (_, i) => i);
+      const result = stringify(smallArray);
+
+      expect(result).toContain('0');
+      expect(result).toContain('49');
+      expect(result).not.toContain('...');
+    });
+
+    test('should respect custom maxArrayElements option', () => {
+      const array = Array.from({ length: 20 }, (_, i) => i);
+      const result = stringify(array, { maxArrayElements: 5 });
+
+      expect(result).toContain('0');
+      expect(result).toContain('4');
+      expect(result).toContain('...(15)');
+      expect(result).not.toContain('19');
+    });
+
+    test('should respect 0 maxArrayElements option', () => {
+      const array = Array.from({ length: 20 }, (_, i) => i);
+      const result = stringify(array, { maxArrayElements: 0 });
+      expect(result).toBe('["...(20)"]');
+    });
+
+    test('should disable array truncation when maxArrayElements is negative', () => {
+      const largeArray = Array.from({ length: 200 }, (_, i) => i);
+      const result = stringify(largeArray, { maxArrayElements: -1 });
+
+      expect(result).toContain('0');
+      expect(result).toContain('199');
+      expect(result).not.toContain('...');
+    });
+
+    test('should truncate Set objects like arrays', () => {
+      const largeSet = new Set(Array.from({ length: 150 }, (_, i) => i));
+      const result = stringify(largeSet);
+
+      expect(result).toContain('0');
+      expect(result).toContain('99');
+      expect(result).toContain('...(50)');
+      expect(result).not.toContain('149');
+    });
+  });
+
+  describe('object property truncation', () => {
+    test('should truncate objects with many properties with default limit (50 properties)', () => {
+      const largeObject = Object.fromEntries(Array.from({ length: 80 }, (_, i) => [`prop${i}`, i]));
+      const result = stringify(largeObject);
+
+      expect(result).toContain('prop0');
+      expect(result).toContain('prop49');
+      expect(result).toContain('...(30)');
+      expect(result).not.toContain('prop79');
+    });
+
+    test('should not truncate objects with fewer properties than the default limit', () => {
+      const smallObject = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`prop${i}`, i]));
+      const result = stringify(smallObject);
+
+      expect(result).toContain('prop0');
+      expect(result).toContain('prop19');
+      expect(result).not.toContain('... and');
+    });
+
+    test('should respect custom maxProperties option', () => {
+      const obj = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [`prop${i}`, i]));
+      const result = stringify(obj, { maxProperties: 3 });
+
+      expect(result).toContain('prop0');
+      expect(result).toContain('prop2');
+      expect(result).toContain('...(12)');
+      expect(result).not.toContain('prop14');
+    });
+
+    test('should disable object truncation when maxProperties is negative', () => {
+      const largeObject = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`prop${i}`, i]));
+      const result = stringify(largeObject, { maxProperties: -1 });
+
+      expect(result).toContain('prop0');
+      expect(result).toContain('prop99');
+      expect(result).not.toContain('... and');
+    });
+  });
+
+  describe('combined truncation scenarios', () => {
+    test('should handle objects containing large arrays', () => {
+      const obj = {
+        smallProp: 'value',
+        largeArray: Array.from({ length: 150 }, (_, i) => i),
+        anotherProp: 'another value',
+      };
+      const result = stringify(obj);
+
+      expect(result).toContain('smallProp');
+      expect(result).toContain('largeArray');
+      expect(result).toContain('...(50)'); // Array truncation
+      expect(result).toContain('anotherProp');
+    });
+
+    test('should handle arrays containing large objects', () => {
+      const largeObj = Object.fromEntries(Array.from({ length: 80 }, (_, i) => [`prop${i}`, i]));
+      const array = ['item1', largeObj, 'item3'];
+      const result = stringify(array);
+
+      expect(result).toContain('item1');
+      expect(result).toContain('item3');
+      // The large object inside should be stringified but might not be truncated
+      // since it's not the top-level object
+    });
   });
 });

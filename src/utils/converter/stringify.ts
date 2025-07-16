@@ -1,4 +1,4 @@
-import { isNotNullable } from '../common/is-not-nullable.ts';
+import { exhaustiveCheck } from '../common/exhaustive-check.ts';
 
 /**
  * Options for the stringify function
@@ -15,7 +15,8 @@ export type StringifyOptions = {
   readonly pretty?: boolean;
 
   /**
-   * Maximum depth for recursive object serialization (default: 5)
+   * Maximum depth for recursive object serialization (default: 5).
+   * Use a negative number to disable the depth limit.
    */
   readonly maxDepth?: number;
 
@@ -24,6 +25,18 @@ export type StringifyOptions = {
    * instead of `toISOString()`
    */
   readonly useLocale?: boolean;
+
+  /**
+   * Maximum number of array elements to show before truncating (default: 100)
+   * Use a negative number to disable the array element limit.
+   */
+  readonly maxArrayElements?: number;
+
+  /**
+   * Maximum number of object properties to show before truncating (default: 50)
+   * Use a negative number to disable the object property limit.
+   */
+  readonly maxProperties?: number;
 };
 
 /**
@@ -59,41 +72,49 @@ export type StringifyOptions = {
  * @returns {string} The string representation of the value.
  */
 export const stringify = (value: unknown, options?: StringifyOptions): string => {
-  try {
-    const { includeStack = false, pretty = false, maxDepth = 5, useLocale = false } = options || {};
+  const {
+    includeStack = false,
+    pretty = false,
+    maxDepth = 5,
+    useLocale = false,
+    maxArrayElements = 100,
+    maxProperties = 50,
+  } = options || {};
 
-    const stringifyInternal = (val: unknown, depth = 0): string => {
-      try {
-        if (depth > maxDepth && typeof val === 'object' && isNotNullable(val)) {
-          return Array.isArray(val) ? `Array(${val.length})` : '[object Object]';
-        }
+  const prepare = (val: unknown, depth = 0, seen = new WeakSet()): unknown => {
+    const type = typeof val;
+    switch (type) {
+      case 'string':
+      case 'number':
+      case 'bigint':
+      case 'boolean':
+      case 'undefined':
+      case 'symbol':
+      case 'function':
+        return val;
 
-        if (val === undefined) {
-          return 'undefined';
-        }
-
-        if (val === null) {
-          return 'null';
-        }
-
+      case 'object': {
         if (val instanceof Date) {
           try {
-            return useLocale ? val.toLocaleString() : val.toISOString().replace('T', ' ').slice(0, -1);
+            return useLocale ? val.toLocaleString() : val.toISOString();
           } catch {
             return '[Invalid Date]';
           }
         }
 
         if (val instanceof Error) {
-          const message = val.message || val.name || '[unknown error]';
-          return includeStack && val.stack ? `${message}\n${val.stack}` : message;
+          try {
+            const message = val.message || val.name || '[unknown error]';
+            return includeStack && val.stack ? `${message}\n${val.stack}` : message;
+          } catch {
+            return '[Invalid Error]';
+          }
         }
 
         if (val instanceof Map) {
-          if (depth < maxDepth) {
+          if (maxDepth < 0 || depth < maxDepth) {
             try {
-              const entries: unknown = Object.fromEntries(val);
-              return pretty ? JSON.stringify(entries, undefined, 2) : JSON.stringify(entries);
+              return prepare(Object.fromEntries(val), depth + 1, seen);
             } catch {
               // ignore
             }
@@ -102,10 +123,9 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
         }
 
         if (val instanceof Set) {
-          if (depth < maxDepth) {
+          if (maxDepth < 0 || depth < maxDepth) {
             try {
-              const array = Array.from(val);
-              return pretty ? JSON.stringify(array, undefined, 2) : JSON.stringify(array);
+              return prepare(Array.from(val), depth + 1, seen);
             } catch {
               // ignore
             }
@@ -121,80 +141,121 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           }
         }
 
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-base-to-string
-          const stringValue = String(val);
-          const type = typeof val;
-          switch (type) {
-            case 'boolean':
-            case 'number':
-            case 'string':
-            case 'bigint':
-            case 'symbol':
-            case 'function':
-              return stringValue;
+        if (!val) {
+          return val;
+        }
 
-            default: {
-              // Handle objects (including arrays)
-              if (depth >= maxDepth) {
-                return Array.isArray(val) ? `Array(${val.length})` : '[object Object]';
-              }
+        if (seen.has(val)) {
+          return '[Circular Reference]';
+        }
+        seen.add(val);
 
-              if (stringValue === '[object Object]' || Array.isArray(val)) {
-                try {
-                  // For depth limiting and circular references
-                  const seen = new WeakSet();
-                  const replacer = (key: string, val2: unknown) => {
-                    try {
-                      if (key === '') return val2;
+        if (Array.isArray(val)) {
+          if (maxDepth < 0 || depth < maxDepth) {
+            if (maxArrayElements >= 0 && val.length > maxArrayElements) {
+              const truncatedArray = val.slice(0, maxArrayElements);
+              truncatedArray.push(`...(${val.length - maxArrayElements})`);
+              val = truncatedArray;
+            }
 
-                      if (typeof val2 === 'object' && isNotNullable(val2)) {
-                        if (seen.has(val2)) {
-                          return '[Circular]';
-                        }
-                        seen.add(val2);
-
-                        if (depth + 1 >= maxDepth) {
-                          if (Array.isArray(val2)) {
-                            return `Array(${val2.length})`;
-                          }
-                          return '[object Object]';
-                        }
-                      }
-                      return val2;
-                    } catch {
-                      return '[Error in replacer]';
-                    }
-                  };
-
-                  return pretty ? JSON.stringify(val, replacer, 2) : JSON.stringify(val, replacer);
-                } catch {
-                  if (Array.isArray(val)) {
-                    return `Array(${val.length})`;
-                  }
-
-                  try {
-                    const keys = Object.keys(val as object);
-                    return `{${keys.join(', ')}}`;
-                  } catch {
-                    return stringValue;
-                  }
-                }
-              }
-              return stringValue;
+            try {
+              return (val as unknown[]).map((item) => prepare(item, depth + 1, seen));
+            } catch {
+              // ignore
             }
           }
-        } catch {
-          return '[Non-stringifiable value]';
+          return `Array(${(val as unknown[]).length})`;
         }
-      } catch {
-        return '[Stringify error]';
-      }
-    };
 
-    return stringifyInternal(value);
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string
+        const stringValue = String(val);
+        if (stringValue !== '[object Object]') {
+          return stringValue;
+        }
+
+        if (maxDepth < 0 || depth < maxDepth) {
+          try {
+            let keys = Object.keys(val);
+            if (!keys.length) {
+              return '{}';
+            }
+
+            if (maxProperties >= 0 && keys.length > maxProperties) {
+              const originalLength = keys.length;
+              keys = keys.slice(0, maxProperties);
+              const truncatedObj: Record<string, unknown> = {};
+              for (let i = 0; i < maxProperties; i++) {
+                const key = keys[i];
+                truncatedObj[key] = (val as Record<string, unknown>)[key];
+              }
+
+              const truncatedKey = `...(${originalLength - maxProperties})`;
+              keys.push(truncatedKey);
+              truncatedObj[truncatedKey] = '...';
+
+              val = truncatedObj;
+            }
+
+            const result: Record<string, unknown> = {};
+            for (const key of keys) {
+              result[key] = prepare((val as Record<string, unknown>)[key], depth + 1, seen);
+            }
+            return result;
+          } catch {
+            // ignore
+          }
+        }
+
+        return '[object Object]';
+      }
+
+      default:
+        exhaustiveCheck(type);
+        return val;
+    }
+  };
+
+  const convert = (val: unknown): string => {
+    const type = typeof val;
+    switch (type) {
+      case 'string':
+        return val as string;
+
+      case 'number':
+      case 'bigint':
+      case 'boolean':
+      case 'undefined':
+      case 'symbol':
+      case 'function':
+        return String(val);
+
+      case 'object': {
+        try {
+          return pretty ? JSON.stringify(val, undefined, 2) : JSON.stringify(val);
+        } catch {
+          if (Array.isArray(val)) {
+            return `Array(${val.length})`;
+          }
+
+          try {
+            const keys = Object.keys(val as object);
+            return `{${keys.join(', ')}}`;
+          } catch {
+            return String(val);
+          }
+        }
+      }
+
+      default:
+        exhaustiveCheck(type);
+        return String(val);
+    }
+  };
+
+  try {
+    const converted = prepare(value);
+    return convert(converted);
   } catch {
-    // Absolute last resort fallback
-    return '[Stringify fatal error]';
+    return '[Stringify Error]';
   }
 };

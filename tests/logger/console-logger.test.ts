@@ -3,18 +3,14 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import { ConsoleLogger } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.ConsoleLogger', () => {
-  // Spy on console.log
-  let consoleLogSpy: jest.Mock;
+  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeEach(() => {
-    // Create a spy on console.log
-
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined) as jest.Mock;
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => void 0);
   });
 
   afterEach(() => {
-    // Clear all mocks
-    jest.clearAllMocks();
+    consoleLogSpy.mockRestore();
   });
 
   test('should write logs to console.log', () => {
@@ -138,5 +134,49 @@ describe('emitnlog.logger.ConsoleLogger', () => {
     // Additional arguments should be passed as separate parameters to console.log
     expect(consoleLogSpy.mock.calls[0][1]).toEqual(context);
     expect(consoleLogSpy.mock.calls[0][2]).toBe(additionalInfo);
+  });
+
+  describe('stringify options', () => {
+    test('should use default stringify options', () => {
+      const logger = new ConsoleLogger();
+      const largeArray = Array.from({ length: 150 }, (_, i) => i);
+
+      logger.i`Large array: ${largeArray}`;
+
+      const loggedMessage = consoleLogSpy.mock.calls[0]?.[0] as string;
+      expect(loggedMessage).toContain('...(50)');
+    });
+
+    test('should respect custom stringify options for array truncation', () => {
+      const logger = new ConsoleLogger('info', 'colorful', { stringifyOptions: { maxArrayElements: 5 } });
+      const array = Array.from({ length: 20 }, (_, i) => i);
+
+      logger.i`Array: ${array}`;
+
+      const loggedMessage = consoleLogSpy.mock.calls[0]?.[0] as string;
+      expect(loggedMessage).toContain('...(15)');
+    });
+
+    test('should respect custom stringify options for object truncation', () => {
+      const logger = new ConsoleLogger('info', 'colorful', { stringifyOptions: { maxProperties: 3 } });
+      const obj = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`prop${i}`, i]));
+
+      logger.i`Object: ${obj}`;
+
+      const loggedMessage = consoleLogSpy.mock.calls[0]?.[0] as string;
+      expect(loggedMessage).toContain('...(7)');
+    });
+
+    test('should disable truncation when options set to negative', () => {
+      const logger = new ConsoleLogger('info', 'colorful', {
+        stringifyOptions: { maxArrayElements: -1, maxProperties: -1 },
+      });
+      const largeArray = Array.from({ length: 150 }, (_, i) => i);
+
+      logger.i`Large array: ${largeArray}`;
+
+      const loggedMessage = consoleLogSpy.mock.calls[0]?.[0] as string;
+      expect(loggedMessage).not.toContain('...');
+    });
   });
 });
