@@ -1,5 +1,16 @@
 # emitnlog
 
+## 0.7.0
+
+### Minor Changes
+
+- 778b2f3: Add PromiseVault to help with code that require caching promises.
+
+### Patch Changes
+
+- bfebe80: Break README into smaller, more consumable, parts.
+- b2f6798: Improve stringify and add stringify options to loggers
+
 ## 0.6.0
 
 ### Minor Changes
