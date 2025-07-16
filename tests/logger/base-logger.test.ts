@@ -505,6 +505,35 @@ describe('emitnlog.logger.BaseLogger', () => {
       expect(logger.emittedLines[1].message).toBe('Computed: result');
       expect(count).toBe(2);
     });
+
+    test('should handle encoded characters in template literals', () => {
+      logger.level = 'info';
+
+      const value = '\nworld';
+      logger.i`hello\n\t${value}`;
+
+      expect(logger.emittedLines).toHaveLength(1);
+      expect(logger.emittedLines[0].level).toBe('info');
+
+      const actual = logger.emittedLines[0].message;
+      expect(actual).toBe(`hello\n\t\nworld`);
+    });
+
+    test('should respect raw encoded characters in template literals', () => {
+      logger.level = 'info';
+
+      const array = ['hello\\n\\t', ''];
+      (array as unknown as Record<string, string[]>).raw = ['hello\\n\\t', ''];
+
+      const value = '\\nworld';
+      logger.i(array as unknown as TemplateStringsArray, value);
+
+      expect(logger.emittedLines).toHaveLength(1);
+      expect(logger.emittedLines[0].level).toBe('info');
+
+      const actual = logger.emittedLines[0].message;
+      expect(actual).toBe(`hello\\n\\t\\nworld`);
+    });
   });
 
   describe('args() method', () => {
