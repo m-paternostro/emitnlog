@@ -554,6 +554,17 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).toMatch(new RegExp(`.+ Test message 1\n$`));
   });
 
+  test('should respect custom stringify options', async () => {
+    const logger = new FileLogger({ filePath: testLogFile, stringifyOptions: { maxArrayElements: 5 } });
+    const array = Array.from({ length: 20 }, (_, i) => i);
+
+    logger.i`Array: ${array}`;
+    await logger.close();
+
+    const content = await readLogFile();
+    expect(content).toContain('...(15)');
+  });
+
   describe('handling errors', () => {
     let failCount = 2;
     const spy = jest.fn();

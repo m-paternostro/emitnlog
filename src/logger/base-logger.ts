@@ -1,4 +1,5 @@
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
+import type { StringifyOptions } from '../utils/converter/stringify.ts';
 import { stringify } from '../utils/converter/stringify.ts';
 import type { Logger, LogLevel, LogMessage } from './definition.ts';
 import { shouldEmitEntry } from './level-utils.ts';
@@ -21,13 +22,17 @@ export abstract class BaseLogger implements Logger {
    */
   private _pendingArgs: unknown[] = [];
 
+  private readonly _options?: BaseLoggerOptions;
+
   /**
    * Creates a new BaseLogger with the specified minimum severity level.
    *
    * @param level The minimum severity level for log entries (default: 'info')
+   * @param options Options for how values are stringified in log messages
    */
-  public constructor(level: LogLevel | 'off' = 'info') {
+  public constructor(level: LogLevel | 'off' = 'info', options?: BaseLoggerOptions) {
     this.level = level;
+    this._options = options;
   }
 
   public args(...args: unknown[]): Logger {
@@ -143,7 +148,7 @@ export abstract class BaseLogger implements Logger {
     if (typeof message === 'function') {
       message = (message as () => unknown)();
     }
-    return stringify(message);
+    return stringify(message, this._options?.stringifyOptions);
   }
 
   /**
@@ -232,3 +237,13 @@ export abstract class BaseLogger implements Logger {
     return args;
   }
 }
+
+/**
+ * Options for the BaseLogger class.
+ */
+export type BaseLoggerOptions = {
+  /**
+   * Options for how values are stringified in log messages.
+   */
+  readonly stringifyOptions?: StringifyOptions;
+};

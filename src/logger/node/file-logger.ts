@@ -7,6 +7,7 @@ import { startPolling } from '../../utils/async/poll.ts';
 import { withTimeout } from '../../utils/async/with-timeout.ts';
 import { errorify } from '../../utils/converter/errorify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
+import type { BaseLoggerOptions } from '../base-logger.ts';
 import { BaseLogger } from '../base-logger.ts';
 import type { LogLevel } from '../definition.ts';
 import type { EmitterFormat } from '../emitter.ts';
@@ -15,7 +16,7 @@ import { emitLine, formatSupportsArgs } from '../emitter.ts';
 /**
  * Configuration options for the FileLogger
  */
-export type FileLoggerOptions = {
+export type FileLoggerOptions = BaseLoggerOptions & {
   /**
    * The minimum severity level for log entries (default: 'info')
    */
@@ -207,7 +208,7 @@ export class FileLogger extends BaseLogger {
     const retryDelayMs = isString ? 500 : (filePathOrOptions.retryDelayMs ?? 500);
     const errorHandler = isString ? undefined : filePathOrOptions.errorHandler;
 
-    super(logLevel);
+    super(logLevel, isString ? undefined : filePathOrOptions);
 
     if (!filePath) {
       throw new Error('File path is required');

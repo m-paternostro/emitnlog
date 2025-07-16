@@ -1,3 +1,4 @@
+import type { BaseLoggerOptions } from './base-logger.ts';
 import { BaseLogger } from './base-logger.ts';
 import type { LogLevel } from './definition.ts';
 import type { EmitterFormat } from './emitter.ts';
@@ -39,9 +40,10 @@ export class ConsoleErrorLogger extends BaseLogger {
    *
    * @param level - The log level to use (default: 'info')
    * @param format - The format of the emitted lines (default: 'colorful')
+   * @param options - Options for the logger
    */
-  public constructor(level?: LogLevel, format: EmitterFormat = 'colorful') {
-    super(level);
+  public constructor(level?: LogLevel, format: EmitterFormat = 'colorful', options?: BaseLoggerOptions) {
+    super(level, options);
     this.format = format;
   }
 
