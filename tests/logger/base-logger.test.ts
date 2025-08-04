@@ -255,9 +255,9 @@ describe('emitnlog.logger.BaseLogger', () => {
       expect(logger.emittedLines).toEqual([]);
       expect(count).toBe(0);
       //
-      logger.info(() => `Computed: ${String(expensiveOperation())}`);
-      logger.debug(() => `Computed: ${String(expensiveOperation())}`);
-      logger.warning(() => `Computed: ${String(expensiveOperation())}`);
+      logger.info(() => `Computed: ${expensiveOperation()}`);
+      logger.debug(() => `Computed: ${expensiveOperation()}`);
+      logger.warning(() => `Computed: ${expensiveOperation()}`);
       //
       expect(logger.emittedLines[0].level).toBe('info');
       expect(logger.emittedLines[0].message).toBe('Computed: result');
