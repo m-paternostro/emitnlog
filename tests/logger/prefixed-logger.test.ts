@@ -446,9 +446,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(emittedLines).toEqual([]);
       expect(count).toBe(0);
       //
-      prefixedLogger.info(() => `Computed: ${String(expensiveOperation())}`);
-      prefixedLogger.debug(() => `Computed: ${String(expensiveOperation())}`);
-      prefixedLogger.warning(() => `Computed: ${String(expensiveOperation())}`);
+      prefixedLogger.info(() => `Computed: ${expensiveOperation()}`);
+      prefixedLogger.debug(() => `Computed: ${expensiveOperation()}`);
+      prefixedLogger.warning(() => `Computed: ${expensiveOperation()}`);
       //
       expect(emittedLines).toEqual(['[info] test: Computed: result', '[warning] test: Computed: result']);
       expect(count).toBe(2);
