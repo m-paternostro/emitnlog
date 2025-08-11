@@ -103,7 +103,7 @@ progressNotifier.notify(() => {
 
 ## Promise-based Event Waiting
 
-Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners. The promise only rejects if the notifier is closed before the next event is emitted.
+Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners. The promise only rejects if the notifier is closed before the next event is emitted - in this case it rejects with a `ClosedError`.
 
 ```ts
 import { createEventNotifier } from 'emitnlog/notifier';

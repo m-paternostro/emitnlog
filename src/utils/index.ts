@@ -4,6 +4,8 @@ export * from './async/delay.ts';
 export * from './async/poll.ts';
 export * from './async/types.ts';
 export * from './async/with-timeout.ts';
+export * from './common/canceled-error.ts';
+export * from './common/closed-error.ts';
 export * from './common/exhaustive-check.ts';
 export * from './common/generate-random-string.ts';
 export * from './common/is-not-nullable.ts';

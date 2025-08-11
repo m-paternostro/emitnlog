@@ -1,6 +1,7 @@
 import { debounce } from '../utils/async/debounce.ts';
 import type { DeferredValue } from '../utils/async/deferred-value.ts';
 import { createDeferredValue } from '../utils/async/deferred-value.ts';
+import { ClosedError } from '../utils/common/closed-error.ts';
 import type { EventNotifier } from './definition.ts';
 
 /**
@@ -105,39 +106,44 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
   let errorHandler: ((error: E) => void) | undefined;
   let deferredEvent: DeferredValue<T> | undefined;
 
-  const basicNotify = (event: T | (() => T)) => {
+  const basicNotify = (event?: T | (() => T)) => {
     if (!listeners.size && !deferredEvent) {
       return;
     }
 
-    if (typeof event === 'function') {
-      event = (event as () => T)();
-    }
+    const value: T = typeof event === 'function' ? (event as () => T)() : (event as T);
 
     for (const listener of listeners) {
       try {
-        void listener(event);
+        void listener(value);
       } catch (error) {
         if (errorHandler) {
-          errorHandler(error as E);
+          try {
+            errorHandler(error as E);
+          } catch {
+            // ignore
+          }
         }
       }
     }
 
     if (deferredEvent) {
-      deferredEvent.resolve(event);
+      deferredEvent.resolve(value);
       deferredEvent = undefined;
     }
   };
 
-  const notify = options?.debounceDelay !== undefined ? debounce(basicNotify, options.debounceDelay) : basicNotify;
+  const debounced = options?.debounceDelay !== undefined ? debounce(basicNotify, options.debounceDelay) : undefined;
+  const notify = debounced ?? basicNotify;
 
   return {
     close: () => {
+      debounced?.cancel(true);
+
       listeners.clear();
 
       if (deferredEvent) {
-        deferredEvent.reject(new Error('EventNotifier closed'));
+        deferredEvent.reject(new ClosedError('EventNotifier closed'));
         deferredEvent = undefined;
       }
 

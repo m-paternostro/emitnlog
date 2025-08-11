@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { debounce } from '../../../src/utils/index.ts';
+import { CanceledError, debounce } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.debounce', () => {
   beforeEach(() => {
@@ -489,7 +489,7 @@ describe('emitnlog.utils.debounce', () => {
       jest.advanceTimersByTime(300);
 
       expect(mockFn).not.toHaveBeenCalled();
-      await expect(promise).rejects.toThrow('Debounced function call was cancelled');
+      await expect(promise).rejects.toBeInstanceOf(CanceledError);
     });
 
     test('should not affect already resolved promises', async () => {
@@ -520,11 +520,38 @@ describe('emitnlog.utils.debounce', () => {
       const promise2 = debouncedFn('test2');
       jest.advanceTimersByTime(300);
 
-      await expect(promise1).rejects.toThrow('Debounced function call was cancelled');
+      await expect(promise1).rejects.toBeInstanceOf(CanceledError);
       await expect(promise2).resolves.toBe('result: test2');
 
       expect(mockFn).toHaveBeenCalledTimes(1);
       expect(mockFn).toHaveBeenCalledWith('test2');
+    });
+
+    test('silent cancel should not reject pending promises and should clear timers/args', () => {
+      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const debouncedFn = debounce(mockFn, 300);
+
+      let settled = false;
+      const p = debouncedFn('x').then(
+        () => {
+          settled = true;
+        },
+        () => {
+          settled = true;
+        },
+      );
+
+      // Cancel silently; do not reject pending promise
+      debouncedFn.cancel(true);
+
+      // Advance timers; function should not run and promise should remain unsettled
+      jest.advanceTimersByTime(1000);
+
+      expect(mockFn).not.toHaveBeenCalled();
+      expect(settled).toBe(false);
+
+      // Avoid awaiting p to prevent hanging the test
+      void p;
     });
   });
 

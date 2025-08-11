@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 
 import type { EventNotifier, OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
-import { delay } from '../../src/utils/index.ts';
+import { ClosedError, delay } from '../../src/utils/index.ts';
 
 describe('emitnlog.notifier', () => {
   test('should be able to create a notifier with no type parameters', () => {
@@ -346,7 +346,7 @@ describe('emitnlog.notifier', () => {
       const n = createEventNotifier<string>();
       const p = n.waitForEvent();
       n.close();
-      await expect(p).rejects.toThrow('EventNotifier closed');
+      await expect(p).rejects.toBeInstanceOf(ClosedError);
     });
   });
 
@@ -467,8 +467,39 @@ describe('emitnlog.notifier', () => {
       n.notify('x');
       n.close();
       jest.advanceTimersByTime(100);
-      await expect(p).rejects.toThrow('EventNotifier closed');
+      await expect(p).rejects.toBeInstanceOf(ClosedError);
       jest.useRealTimers();
+    });
+
+    test('onError accepts undefined to clear handler and does not throw if handler throws', () => {
+      const n = createEventNotifier<string>();
+      const errors: unknown[] = [];
+      n.onError((e) => errors.push(e));
+
+      // listener throws -> captured by error handler
+      n.onEvent(() => {
+        throw new Error('boom');
+      });
+      n.notify('a');
+      expect(errors).toHaveLength(1);
+
+      // error handler itself throws; it must not break flow
+      n.onError(() => {
+        throw new Error('handler-error');
+      });
+      // second listener should still be notified despite handler throwing
+      const received: string[] = [];
+      n.onEvent((e) => received.push(e));
+      n.notify('b');
+      expect(received).toEqual(['b']);
+
+      // Clear handler
+      n.onError(undefined);
+      // Throwing listener now should not be captured anywhere (no throws from notify)
+      n.onEvent(() => {
+        throw new Error('ignored');
+      });
+      expect(() => n.notify('c')).not.toThrow();
     });
   });
 });
