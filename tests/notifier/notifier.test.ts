@@ -341,6 +341,13 @@ describe('emitnlog.notifier', () => {
 
       expect(events).toEqual(values);
     });
+
+    test('should reject if notifier is closed before the next event', async () => {
+      const n = createEventNotifier<string>();
+      const p = n.waitForEvent();
+      n.close();
+      await expect(p).rejects.toThrow('EventNotifier closed');
+    });
   });
 
   describe('debouncing', () => {
@@ -451,6 +458,17 @@ describe('emitnlog.notifier', () => {
 
       // All events should be received immediately
       expect(events).toEqual(['first', 'second', 'third']);
+    });
+
+    test('closing cancels pending debounced notify and rejects waiter', async () => {
+      const n = createEventNotifier<string>({ debounceDelay: 100 });
+      jest.useFakeTimers();
+      const p = n.waitForEvent();
+      n.notify('x');
+      n.close();
+      jest.advanceTimersByTime(100);
+      await expect(p).rejects.toThrow('EventNotifier closed');
+      jest.useRealTimers();
     });
   });
 });

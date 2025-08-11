@@ -103,7 +103,7 @@ progressNotifier.notify(() => {
 
 ## Promise-based Event Waiting
 
-Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners:
+Use `waitForEvent()` to get a Promise that resolves when the next event occurs, without interfering with subscribed listeners. The promise only rejects if the notifier is closed before the next event is emitted.
 
 ```ts
 import { createEventNotifier } from 'emitnlog/notifier';
@@ -171,6 +171,15 @@ async function waitForConnection() {
 // Both the subscription and the waiting will receive events
 statusNotifier.notify('connecting');
 statusNotifier.notify('connected');
+
+### Closing Behavior
+
+- `waitForEvent()` will reject with an error if `close()` is called before the next event occurs.
+- After closing, you can still call `waitForEvent()` again; a new internal waiter will be created and the next `notify()` will resolve it.
+
+### Lazy Evaluation Nuance
+
+If you call `notify()` with a function, it will only be executed when there are active listeners or a pending waiter created by `waitForEvent()`. This ensures lazy computations still happen when someone is awaiting the next event, even if no listeners are registered.
 ```
 
 ## Debounced Notifications

@@ -98,12 +98,14 @@ import type { EventNotifier } from './definition.ts';
  * @param options Optional configuration including debounce delay.
  * @returns An EventNotifier that supports listener registration, notification, and error handling.
  */
-export const createEventNotifier = <T = void, E = Error>(options?: { debounceDelay?: number }): EventNotifier<T, E> => {
+export const createEventNotifier = <T = void, E = Error>(options?: {
+  readonly debounceDelay?: number;
+}): EventNotifier<T, E> => {
   const listeners = new Set<(event: T) => unknown>();
   let errorHandler: ((error: E) => void) | undefined;
   let deferredEvent: DeferredValue<T> | undefined;
 
-  const notify = (event: T | (() => T)) => {
+  const basicNotify = (event: T | (() => T)) => {
     if (!listeners.size && !deferredEvent) {
       return;
     }
@@ -128,9 +130,17 @@ export const createEventNotifier = <T = void, E = Error>(options?: { debounceDel
     }
   };
 
+  const notify = options?.debounceDelay !== undefined ? debounce(basicNotify, options.debounceDelay) : basicNotify;
+
   return {
     close: () => {
       listeners.clear();
+
+      if (deferredEvent) {
+        deferredEvent.reject(new Error('EventNotifier closed'));
+        deferredEvent = undefined;
+      }
+
       errorHandler = undefined;
     },
 
@@ -145,7 +155,7 @@ export const createEventNotifier = <T = void, E = Error>(options?: { debounceDel
 
     waitForEvent: () => (deferredEvent || (deferredEvent = createDeferredValue<T>())).promise,
 
-    notify: options?.debounceDelay !== undefined ? debounce(notify, options.debounceDelay) : notify,
+    notify,
 
     onError: (handler) => {
       errorHandler = handler;

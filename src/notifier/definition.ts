@@ -9,7 +9,6 @@
  *   - Type-safe event subscriptions via `onEvent`
  *   - Synchronized event notifications via `notify`
  *   - Automatic cleanup of resources via `close`
- *   - Status tracking via `active` property
  *   - Error handling via optional error callback
  */
 export type EventNotifier<T = void, E = Error> = {
@@ -46,8 +45,8 @@ export type EventNotifier<T = void, E = Error> = {
    * The returned promise:
    *
    * - Resolves with the next notified event
-   * - Never rejects
    * - Does not interfere with existing listeners. Moreover, the promise is resolved after the listeners are notified.
+   * - Only rejects if the notifier is closed before a notified event.
    *
    * It is important to notice that the returned promise is tied to a single event: to wait for a subsequent event after
    * the returned promise is settled, call `waitForEvent()` again. Also, avoid caching the returned promise unless the
@@ -89,7 +88,7 @@ export type EventNotifier<T = void, E = Error> = {
    * - Calls all registered listeners with the event in their registration order
    * - Ignores errors thrown by listeners (they won't affect other listeners)
    * - Ignores returned promises (results are not awaited)
-   * - Does nothing if there are no listeners
+   * - Does nothing if there are no listeners and no pending waiters (created via `waitForEvent()`)
    * - If the event is a function, it will be called if there are listeners and its return value will be used as the
    *   event.
    *
