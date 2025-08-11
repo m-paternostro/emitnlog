@@ -1,3 +1,4 @@
+import { CanceledError } from '../common/canceled-error.ts';
 import type { DeferredValue } from './deferred-value.ts';
 import { createDeferredValue } from './deferred-value.ts';
 import type { Timeout } from './types.ts';
@@ -54,8 +55,18 @@ export type DebouncedFunction<TArgs extends unknown[], TReturn> = {
 
   /**
    * Cancels any pending debounced function calls.
+   *
+   * Behavior on cancel:
+   * - If there is a pending debounced call that has not executed yet, the promise returned to all callers of the
+   *   debounced function will be rejected with a `emitnlog/utils/CanceledError`. This behavior can be changed by
+   *   passing `true` as the value of `silent`.
+   * - If there is no pending call, or the last call has already been executed and its promise settled, calling
+   *   `cancel()` has no effect on already resolved/rejected promises.
+   * - Internal timers and accumulated arguments are cleared, so subsequent calls start fresh.
+   *
+   * @param silent If true, pending promises are not rejected; they remain unsettled until callers time out or ignore them.
    */
-  cancel(): void;
+  cancel(silent?: boolean): void;
 
   /**
    * Immediately executes the debounced function with the last provided arguments, bypassing the delay.
@@ -256,7 +267,7 @@ export const debounce = <TArgs extends unknown[], TReturn>(
     return pendingDeferred.promise;
   };
 
-  debouncedFunction.cancel = () => {
+  debouncedFunction.cancel = (silent?: boolean) => {
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId);
       timeoutId = undefined;
@@ -265,8 +276,11 @@ export const debounce = <TArgs extends unknown[], TReturn>(
     hasLeadingBeenCalled = false;
     lastArgs = undefined;
 
-    if (pendingDeferred && !pendingDeferred.settled) {
-      pendingDeferred.reject(new Error('Debounced function call was cancelled'));
+    // If a call is pending (i.e., a promise was returned to callers but the debounced function
+    // has not yet executed), reject that promise to signal cancellation to all awaiting callers,
+    // unless `silent` is true.
+    if (!silent && pendingDeferred && !pendingDeferred.settled) {
+      pendingDeferred.reject(new CanceledError('The debounced function call was cancelled'));
       pendingDeferred = undefined;
     }
   };
