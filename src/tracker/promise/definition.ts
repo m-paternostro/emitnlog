@@ -949,7 +949,7 @@ export type PromiseSettledEvent = {
   readonly rejected?: boolean;
 
   /**
-   * The result of the promise, either the resolved rejected value.
+   * The result of the promise, either the resolved or rejected value.
    */
   readonly result?: unknown;
 };

@@ -79,7 +79,7 @@ import { createInvocationTracker, trackPromises, holdPromises } from 'emitnlog/t
 
 // Function call tracking
 const tracker = createInvocationTracker();
-tracker.onCompleted((inv) => console.log(`${inv.key.operation} took ${inv.duration}ms`));
+tracker.onCompleted((inv) => console.log(`${inv.key.operation} took ${inv.stage.duration}ms`));
 
 const login = tracker.track('login', async (user) => {
   await authenticateUser(user);
