@@ -372,7 +372,7 @@ export const withPrefix = <
  * @example Multiple Levels of Nesting
  *
  * ```ts
- * import { appendPrefix, withPrefix  } from 'emitnlog/logger';
+ * import { appendPrefix, withPrefix } from 'emitnlog/logger';
  *
  * const serviceLogger = withPrefix(logger, 'UserService');
  * const repositoryLogger = appendPrefix(serviceLogger, 'Repository');

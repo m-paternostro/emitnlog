@@ -1,1 +1,12 @@
-{ "singleQuote": true, "trailingComma": "all", "semi": true, "printWidth": 120, "objectWrap": "collapse" }
+{
+  "objectWrap": "collapse",
+  "printWidth": 120,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+
+  "plugins": ["prettier-plugin-jsdoc"],
+  "jsdocCommentLineStrategy": "multiline",
+  "jsdocPreferCodeFences": true,
+  "tsdoc": true
+}

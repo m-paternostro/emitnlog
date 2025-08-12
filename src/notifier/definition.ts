@@ -90,8 +90,8 @@ export type EventNotifier<T = void, E = Error> = {
    * - Ignores errors thrown by listeners (they won't affect other listeners)
    * - Ignores returned promises (results are not awaited)
    * - Does nothing if there are no listeners and no pending waiters (created via `waitForEvent()`)
-   * - If the event is a function, it will be called if there are listeners or a pending waiter, and its return value
-   *   will be used as the event.
+   * - If the event is a function, it will be called if there are listeners or a pending waiter, and its return value will
+   *   be used as the event.
    * - When `T` is `void`, `notify()` can be called without arguments.
    *
    * @example
@@ -112,8 +112,8 @@ export type EventNotifier<T = void, E = Error> = {
   readonly notify: Notify<T>;
 
   /**
-   * Sets the error handler for the notifier, to be called whenever a listener throws an error.
-   * Pass `undefined` to clear the current error handler.
+   * Sets the error handler for the notifier, to be called whenever a listener throws an error. Pass `undefined` to
+   * clear the current error handler.
    *
    * @param handler A function that will be called with any errors thrown by listeners, or `undefined` to clear it.
    */
