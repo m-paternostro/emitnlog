@@ -104,6 +104,9 @@ export const createInvocationTracker = <TOperation extends string = string>(
         closed = true;
 
         invokedNotifier.close();
+        startedNotifier.close();
+        completedNotifier.close();
+        erroredNotifier.close();
         stack.close();
       }
     },

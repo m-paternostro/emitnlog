@@ -20,10 +20,10 @@ The invocation tracker is a focused utility for monitoring function calls — it
 ```ts
 import { createInvocationTracker } from 'emitnlog/tracker';
 
-const tracker = createInvocationTracker({ tags: [{ service: 'auth' }] });
+const tracker = createInvocationTracker({ tags: { service: 'auth' } });
 
 tracker.onCompleted((invocation) => {
-  appLogger.i`✔ ${invocation.key.operation} completed in ${invocation.duration}ms`;
+  appLogger.i`✔ ${invocation.key.operation} completed in ${invocation.stage.duration}ms`;
   updateUI(invocation.args[0]);
 });
 
@@ -49,14 +49,14 @@ tracker.onInvoked((invocation) => {
   const operation = invocation.key.operation;
   switch (operation) {
     case 'saveUser':
-      if (invocation.phase === 'completed' && invocation.parentKey?.operation === 'createUser') {
+      if (invocation.stage.type === 'completed' && invocation.parentKey?.operation === 'createUser') {
         void loadNewUserProfile();
       }
       break;
 
     case 'createUser':
-      if (invocation.phase === 'errored') {
-        void handleUserCreationError(invocation.error);
+      if (invocation.stage.type === 'errored') {
+        void handleUserCreationError(invocation.stage.error);
       }
       break;
 
@@ -124,8 +124,11 @@ The methods are wrapped in-place and preserve their `this` context. You can also
 ```ts
 import { createInvocationTracker } from 'emitnlog/tracker';
 
-interface InvocationTrackerOptions<TOperation extends string> {
-  tags?: Array<Record<string, unknown>>; // Metadata tags
+interface InvocationTrackerOptions {
+  // Metadata tags; array of { name, value } or record { [name]: value }
+  tags?:
+    | readonly { name: string; value: string | number | boolean }[]
+    | { readonly [name: string]: string | number | boolean };
   logger?: Logger; // Optional logger for automatic logging
   stack?: InvocationStack; // Custom stack for parent-child relationships
 }
@@ -142,35 +145,40 @@ The tracker emits detailed events for each invocation:
 
 ```ts
 tracker.onInvoked((invocation) => {
-  // Called for all phases: 'invoked', 'completed', 'errored'
-  console.log(`${invocation.key.operation} phase: ${invocation.phase}`);
+  // Called for all stages: 'started', 'completed', 'errored'
+  console.log(`${invocation.key.operation} stage: ${invocation.stage.type}`);
 });
 
 tracker.onCompleted((invocation) => {
   // Only called when function completes successfully
-  console.log(`${invocation.key.operation} completed in ${invocation.duration}ms`);
+  console.log(`${invocation.key.operation} completed in ${invocation.stage.duration}ms`);
 });
 
 tracker.onErrored((invocation) => {
   // Only called when function throws an error
-  console.error(`${invocation.key.operation} failed:`, invocation.error);
+  console.error(`${invocation.key.operation} failed:`, invocation.stage.error);
 });
 ```
 
 ### Invocation Data Structure
 
 ```ts
-interface InvocationEvent<TOperation extends string> {
+type InvocationBase<TOperation extends string> = {
   key: InvocationKey<TOperation>;
-  parentKey?: InvocationKey<TOperation>;
-  phase: 'invoked' | 'completed' | 'errored';
-  args: readonly unknown[];
-  tags: readonly Record<string, unknown>[];
-  startTime: number;
-  duration?: number; // Available in 'completed' and 'errored' phases
-  result?: unknown; // Available in 'completed' phase
-  error?: Error; // Available in 'errored' phase
-}
+  parentKey?: InvocationKey;
+  args?: readonly unknown[];
+  tags?: readonly { name: string; value: string | number | boolean }[];
+};
+
+type StartedInvocation<TOperation extends string> = InvocationBase<TOperation> & { stage: { type: 'started' } };
+
+type CompletedInvocation<TOperation extends string> = InvocationBase<TOperation> & {
+  stage: { type: 'completed'; duration: number; promiseLike?: boolean; result?: unknown };
+};
+
+type ErroredInvocation<TOperation extends string> = InvocationBase<TOperation> & {
+  stage: { type: 'errored'; duration: number; promiseLike?: boolean; error: unknown };
+};
 ```
 
 ### Method Tracking Options
@@ -178,14 +186,16 @@ interface InvocationEvent<TOperation extends string> {
 ```ts
 interface TrackMethodsOptions<T> {
   methods?: Array<keyof T>; // Specific methods to track
-  tags?: Array<Record<string, unknown>>; // Additional tags
-  exclude?: Array<keyof T>; // Methods to exclude
+  includeConstructor?: boolean; // Include constructor when methods not specified
+  trackBuiltIn?: boolean; // Allow tracking built-in types like Array/Map/Set
+  tags?:
+    | readonly { name: string; value: string | number | boolean }[]
+    | { readonly [name: string]: string | number | boolean };
 }
 
 trackMethods(tracker, service, {
   methods: ['createUser', 'updateUser'], // Only track these methods
-  tags: [{ component: 'user-service' }],
-  exclude: ['internalMethod'], // Exclude specific methods
+  tags: { component: 'user-service' },
 });
 ```
 
@@ -286,10 +296,9 @@ const result2 = tracker.track('existing-promise', existingPromise); // Less accu
 
 ```ts
 tracker.onSettled((event) => {
-  console.log(`Promise ${event.label} settled in ${event.duration}ms`);
-
+  console.log(`Promise ${event.label ?? '(unlabeled)'} settled in ${event.duration}ms`);
   if (event.rejected) {
-    console.error('Promise failed:', event.error);
+    console.error('Promise failed:', event.result);
   } else {
     console.log('Promise result:', event.result);
   }
@@ -300,11 +309,11 @@ tracker.onSettled((event) => {
 
 ```ts
 interface PromiseSettledEvent {
-  label: string | undefined;
+  label?: string;
   duration: number;
-  rejected: boolean;
-  result?: unknown; // Available when resolved
-  error?: Error; // Available when rejected
+  rejected?: boolean;
+  // When resolved, result is the resolved value; when rejected, result is the error
+  result?: unknown;
 }
 ```
 
@@ -562,14 +571,20 @@ You can provide a custom stack implementation to control parent-child relationsh
 import { createInvocationTracker } from 'emitnlog/tracker';
 
 // Custom stack for test isolation
-class TestStack {
-  private stack: Array<unknown> = [];
+import type { InvocationKey, InvocationStack } from 'emitnlog/tracker';
 
-  peek() {
-    return this.stack[this.stack.length - 1];
+class TestStack implements InvocationStack {
+  private stack: InvocationKey[] = [];
+
+  close() {
+    this.stack.length = 0;
   }
 
-  push(item: unknown) {
+  peek() {
+    return this.stack.at(-1);
+  }
+
+  push(item: InvocationKey) {
     this.stack.push(item);
   }
 
