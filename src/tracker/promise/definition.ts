@@ -229,21 +229,21 @@ export type PromiseTracker = {
 
 /**
  * A specialized implementation of the Promise Tracker that (transiently) caches async operations by ID, ensuring each
- * operation runs only once *while* its returned promise is not settled.
+ * operation runs only once _while_ its returned promise is not settled.
  *
  * PromiseHolder is ideal when you need to prevent duplicate expensive operations, such as API calls, database queries,
  * or file system operations. Unlike PromiseTracker which focuses on coordination and monitoring, PromiseHolder
  * emphasizes operation deduplication and caching.
  *
- * The holder maintains a cache of ongoing operations by their unique IDs - in other words, the cache happens while
- * the promise is not settled. When the same ID is requested multiple times, the holder returns the same promise,
- * ensuring the underlying operation executes only once. The cache is automatically cleaned up when operations complete.
+ * The holder maintains a cache of ongoing operations by their unique IDs - in other words, the cache happens while the
+ * promise is not settled. When the same ID is requested multiple times, the holder returns the same promise, ensuring
+ * the underlying operation executes only once. The cache is automatically cleaned up when operations complete.
  *
  * When to use PromiseHolder vs PromiseTracker:
  *
  * - Use PromiseHolder for caching expensive operations that might be requested multiple times
- * - Use PromiseTracker for coordinating multiple different operations (like shutdown procedures), when there is no
- *   reason to identify an operation, or to track actual promises instead of operations.
+ * - Use PromiseTracker for coordinating multiple different operations (like shutdown procedures), when there is no reason
+ *   to identify an operation, or to track actual promises instead of operations.
  *
  * @example Basic caching of API calls
  *
@@ -427,17 +427,20 @@ export type PromiseHolder = Simplify<
  * cached promises when they settle, PromiseVault maintains the cache indefinitely until explicitly cleared.
  *
  * This is particularly useful for:
+ *
  * - Application initialization that should happen only once
  * - Configuration loading that remains valid for the application lifetime
  * - Expensive computations with results that don't change
  * - API calls for static or rarely-changing data
  *
  * **Cache Management:**
+ *
  * - Promises remain cached even after settlement (success or failure)
  * - Manual control via `clear()` to empty entire cache or `forget()` for specific entries
  * - Failed operations can be automatically cleared with `forgetOnRejection` option, or manually with `forget()`
  *
  * **Comparison with other promise utilities:**
+ *
  * - `PromiseTracker`: Coordination and monitoring, no caching
  * - `PromiseHolder`: Transient caching during promise lifecycle only
  * - `PromiseVault`: Persistent caching with manual lifecycle control
@@ -455,11 +458,7 @@ export type PromiseHolder = Simplify<
  * const setupAuthentication = () => initVault.track('auth', () => initializeAuthSystem());
  *
  * // Multiple components can safely call these - only first call executes
- * await Promise.all([
- *   initializeDatabase(),
- *   loadConfiguration(),
- *   setupAuthentication(),
- * ]);
+ * await Promise.all([initializeDatabase(), loadConfiguration(), setupAuthentication()]);
  *
  * // Later in the application - these return cached results instantly
  * const config = await loadConfiguration(); // Uses cached promise
@@ -554,10 +553,7 @@ export type PromiseHolder = Simplify<
  * import { vaultPromises } from 'emitnlog/tracker';
  *
  * // Vault that automatically clears failed operations for retry
- * const retryVault = vaultPromises({
- *   logger: apiLogger,
- *   forgetOnRejection: true
- * });
+ * const retryVault = vaultPromises({ logger: apiLogger, forgetOnRejection: true });
  *
  * const fetchWithRetry = async (url: string) => {
  *   return retryVault.track(`fetch-${url}`, async () => {
@@ -622,7 +618,7 @@ export type PromiseHolder = Simplify<
  * const getCacheStats = () => {
  *   return {
  *     size: performanceVault.size,
- *     entries: Array.from({length: performanceVault.size}).map((_, i) => `entry-${i}`)
+ *     entries: Array.from({ length: performanceVault.size }).map((_, i) => `entry-${i}`),
  *   };
  * };
  *
@@ -635,7 +631,7 @@ export type PromiseHolder = Simplify<
  * const expensiveOperation = (id: string) => {
  *   return performanceVault.track(`operation-${id}`, async () => {
  *     // Simulate expensive operation
- *     await new Promise(resolve => setTimeout(resolve, 1000));
+ *     await new Promise((resolve) => setTimeout(resolve, 1000));
  *     return `Result for ${id}`;
  *   });
  * };
@@ -682,8 +678,8 @@ export type PromiseVault = PromiseHolder & {
   /**
    * Clears all cached promises from the vault.
    *
-   * After calling this method, all subsequent `track()` calls will execute their suppliers regardless of whether
-   * they were previously cached. This is useful for global cache invalidation or cleanup scenarios.
+   * After calling this method, all subsequent `track()` calls will execute their suppliers regardless of whether they
+   * were previously cached. This is useful for global cache invalidation or cleanup scenarios.
    *
    * @example Global cache reset
    *
@@ -762,8 +758,8 @@ export type PromiseVault = PromiseHolder & {
    * Caches and tracks an async operation with configurable persistence behavior.
    *
    * Extends PromiseHolder's caching functionality with optional per-operation control over cache persistence. By
-   * default, promises remain cached even after settlement (standard PromiseVault behavior). When the `forget` option
-   * is enabled, the operation behaves like PromiseHolder - automatically clearing the cache entry when the promise
+   * default, promises remain cached even after settlement (standard PromiseVault behavior). When the `forget` option is
+   * enabled, the operation behaves like PromiseHolder - automatically clearing the cache entry when the promise
    * settles.
    *
    * This provides fine-grained control over caching strategy, allowing you to mix persistent and transient caching
@@ -823,11 +819,7 @@ export type PromiseVault = PromiseHolder & {
    * const vault = vaultPromises();
    *
    * const fetchData = async (id: string, isTemporary: boolean) => {
-   *   return vault.track(
-   *     `data-${id}`,
-   *     () => expensiveFetchOperation(id),
-   *     { forget: isTemporary }
-   *   );
+   *   return vault.track(`data-${id}`, () => expensiveFetchOperation(id), { forget: isTemporary });
    * };
    *
    * // Persistent caching for important data
@@ -845,11 +837,9 @@ export type PromiseVault = PromiseHolder & {
    * const vault = vaultPromises();
    *
    * const getSessionData = async (sessionId: string, persistent: boolean = false) => {
-   *   return vault.track(
-   *     `session-${sessionId}`,
-   *     () => loadSessionFromDatabase(sessionId),
-   *     { forget: !persistent }
-   *   );
+   *   return vault.track(`session-${sessionId}`, () => loadSessionFromDatabase(sessionId), {
+   *     forget: !persistent,
+   *   });
    * };
    *
    * // Short-lived session data (cleared after use)
@@ -875,7 +865,7 @@ export type PromiseVault = PromiseHolder & {
    *         if (!response.ok) throw new Error(`HTTP ${response.status}`);
    *         return response.json();
    *       },
-   *       { forget: !cacheFailures }
+   *       { forget: !cacheFailures },
    *     );
    *   } catch (error) {
    *     if (!cacheFailures) {
@@ -898,7 +888,8 @@ export type PromiseVault = PromiseHolder & {
    * ```
    *
    * @param id Unique identifier for the operation. Operations with the same ID will be deduplicated.
-   * @param supplier Function that returns the promise to execute. Only called once per unique ID (unless cache is cleared).
+   * @param supplier Function that returns the promise to execute. Only called once per unique ID (unless cache is
+   *   cleared).
    * @param options Configuration options for this specific operation
    * @param options.forget When true, automatically removes the cached promise when it settles, making this operation
    *   behave like PromiseHolder. When false or undefined (default), uses standard PromiseVault persistence behavior.

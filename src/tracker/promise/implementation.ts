@@ -418,10 +418,7 @@ export const holdPromises = (options?: PromiseTrackerOptions): PromiseHolder => 
  * import { vaultPromises } from 'emitnlog/tracker';
  *
  * // Vault that automatically clears failed operations for retry
- * const retryVault = vaultPromises({
- *   logger: apiLogger,
- *   forgetOnRejection: true
- * });
+ * const retryVault = vaultPromises({ logger: apiLogger, forgetOnRejection: true });
  *
  * const fetchData = async (id: string) => {
  *   return retryVault.track(`data-${id}`, async () => {
@@ -448,8 +445,8 @@ export const holdPromises = (options?: PromiseTrackerOptions): PromiseHolder => 
  * @param options.forgetOnRejection When true, failed operations are automatically removed from the cache, allowing
  *   immediate retries. When false (default), failed operations remain cached and must be manually cleared with
  *   `forget()` to enable retries.
- * @param options.logger Optional logger for internal operations. If not provided, logging is disabled. The logger
- *   will be prefixed with 'promise' for easy identification.
+ * @param options.logger Optional logger for internal operations. If not provided, logging is disabled. The logger will
+ *   be prefixed with 'promise' for easy identification.
  * @returns A new PromiseVault instance
  */
 export const vaultPromises = (options?: PromiseVaultOptions): PromiseVault => {

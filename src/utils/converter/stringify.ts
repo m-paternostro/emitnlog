@@ -15,8 +15,7 @@ export type StringifyOptions = {
   readonly pretty?: boolean;
 
   /**
-   * Maximum depth for recursive object serialization (default: 5).
-   * Use a negative number to disable the depth limit.
+   * Maximum depth for recursive object serialization (default: 5). Use a negative number to disable the depth limit.
    */
   readonly maxDepth?: number;
 
@@ -27,14 +26,14 @@ export type StringifyOptions = {
   readonly useLocale?: boolean;
 
   /**
-   * Maximum number of array elements to show before truncating (default: 100)
-   * Use a negative number to disable the array element limit.
+   * Maximum number of array elements to show before truncating (default: 100) Use a negative number to disable the
+   * array element limit.
    */
   readonly maxArrayElements?: number;
 
   /**
-   * Maximum number of object properties to show before truncating (default: 50)
-   * Use a negative number to disable the object property limit.
+   * Maximum number of object properties to show before truncating (default: 50) Use a negative number to disable the
+   * object property limit.
    */
   readonly maxProperties?: number;
 };
