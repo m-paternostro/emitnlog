@@ -1,5 +1,16 @@
 # emitnlog
 
+## 0.8.0
+
+### Minor Changes
+
+- 2bd616c: Notifier fixes and implementation improvements
+
+### Patch Changes
+
+- 2bd616c: Tracker documentation and minor improvements
+- a171807: Add the small documents referenced by the README to the packaged project
+
 ## 0.7.0
 
 ### Minor Changes
