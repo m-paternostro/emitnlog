@@ -1,7 +1,7 @@
 import { exhaustiveCheck } from '../../utils/common/exhaustive-check.ts';
 import type { Logger, LogLevel } from '../definition.ts';
 import type { LogFormat } from '../factory.ts';
-import { createConsoleErrorLogger, createConsoleLogLogger } from '../factory.ts';
+import { createConsoleByLevelLogger, createConsoleErrorLogger, createConsoleLogLogger } from '../factory.ts';
 import { isLogLevel } from '../implementation/level-utils.ts';
 import { OFF_LOGGER } from '../off-logger.ts';
 
@@ -33,7 +33,7 @@ export type EnvironmentLoggerOptions = {
   readonly fallbackLogger?: (level?: LogLevel, format?: LogFormat) => Logger | undefined;
 };
 
-type EnvLogger = 'console-log' | 'console-error' | `file:${string}`;
+type EnvLogger = 'console-log' | 'console-error' | 'console-level' | `file:${string}`;
 
 const isEnvLogger = (value: unknown): value is EnvLogger =>
   value === 'console' || value === 'console-error' || (typeof value === 'string' && value.startsWith('file:'));
@@ -128,16 +128,26 @@ export const createLoggerFromEnv = (
   options: EnvironmentLoggerOptions | undefined,
 ): Logger => {
   if (decodedEnv) {
-    if (decodedEnv.envLogger === 'console-log') {
-      return createConsoleLogLogger(decodedEnv.envLevel, decodedEnv.envFormat);
-    }
+    const { envLogger, envLevel, envFormat, envFile } = decodedEnv;
+    switch (envLogger) {
+      case 'console-log':
+        return createConsoleLogLogger(envLevel, envFormat);
 
-    if (decodedEnv.envLogger === 'console-error') {
-      return createConsoleErrorLogger(decodedEnv.envLevel, decodedEnv.envFormat);
-    }
+      case 'console-error':
+        return createConsoleErrorLogger(envLevel, envFormat);
 
-    // eslint-disable-next-line no-undef, no-console
-    console.warn(`The file logger is only supported in Node.js.`);
+      case 'console-level':
+        return createConsoleByLevelLogger(envLevel, envFormat);
+
+      case undefined:
+        break;
+
+      default:
+        if (envFile) {
+          // eslint-disable-next-line no-undef, no-console
+          console.warn(`The file logger is only supported in Node.js.`);
+        }
+    }
   }
 
   return options?.fallbackLogger?.(decodedEnv?.envLevel, decodedEnv?.envFormat) ?? OFF_LOGGER;

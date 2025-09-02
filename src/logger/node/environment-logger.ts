@@ -11,8 +11,9 @@ import { createFileLogger } from './factory.ts';
  * ```
  * EMITNLOG_LOGGER: The logger to use.
  * The possible values are
- *   - `console`: The console logger.
+ *   - `console-log`: The console log logger.
  *   - `console-error`: The console error logger.
+ *   - `console-level`: The console by level logger.
  *   - `file:<path>`: The file logger with the (required) file path information (Node.js only)
  *
  * EMITNLOG_LEVEL: The level to use.
@@ -31,8 +32,8 @@ import { createFileLogger } from './factory.ts';
  * The possible values are
  *   - `plain`
  *   - `colorful`
- *   - `json`
- *   - `unformatted-json`
+ *   - `json-compact`
+ *   - `json-pretty`
  * ```
  *
  * If a environment variable is not set, the associated value in `options` is used.
