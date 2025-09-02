@@ -21,6 +21,13 @@ export type FileSinkOptions = {
   readonly filePath: string;
 
   /**
+   * Whether to prepend a local date (yyyyMMdd-hhmmss_) to the file name.
+   *
+   * @default false
+   */
+  readonly datePrefix?: boolean;
+
+  /**
    * Whether to append to existing file (true) or overwrite (false).
    *
    * @default true
@@ -98,6 +105,7 @@ export const fileSink = (options: FileSinkOptions | string): LogSink => {
 
   const config = {
     filePath: options.filePath,
+    datePrefix: options.datePrefix ?? false,
     append: options.append ?? true,
     encoding: options.encoding ?? 'utf8',
     mode: options.mode ?? 0o666,
@@ -107,7 +115,7 @@ export const fileSink = (options: FileSinkOptions | string): LogSink => {
       ((error) => {
         throw errorify(error);
       }),
-  };
+  } as const satisfies FileSinkOptions;
 
   let resolvedPath: string;
   if (config.filePath.includes(path.sep)) {
@@ -120,6 +128,12 @@ export const fileSink = (options: FileSinkOptions | string): LogSink => {
     }
   } else {
     resolvedPath = path.join(os.tmpdir(), config.filePath);
+  }
+
+  if (config.datePrefix) {
+    const now = new Date();
+    const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    resolvedPath = path.join(path.dirname(resolvedPath), `${datePrefix}_${path.basename(resolvedPath)}`);
   }
 
   let initialized = false;
