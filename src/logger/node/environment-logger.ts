@@ -15,6 +15,7 @@ import { createFileLogger } from './factory.ts';
  *   - `console-error`: The console error logger.
  *   - `console-level`: The console by level logger.
  *   - `file:<path>`: The file logger with the (required) file path information (Node.js only)
+ *   - `file:date:<path>`: Same as 'file:<path>' however the local date is prefixed to the file name (Node.js only)
  *
  * EMITNLOG_LEVEL: The level to use.
  * The possible values are
@@ -95,7 +96,7 @@ export const fromEnv = (options?: EnvironmentLoggerOptions): Logger => {
   const decodedEnv = decodeEnv(env, options);
   return decodedEnv?.envFile
     ? createFileLogger(
-        decodedEnv.envFile,
+        { filePath: decodedEnv.envFile, datePrefix: decodedEnv.envDatePrefix },
         decodedEnv.envLevel,
         decodedEnv.envFormat === 'colorful' ? undefined : decodedEnv.envFormat,
       )

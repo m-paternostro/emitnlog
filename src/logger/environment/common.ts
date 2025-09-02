@@ -62,6 +62,7 @@ type DecodedEnv = {
   readonly envLevel?: LogLevel;
   readonly envFormat?: LogFormat;
   readonly envFile?: string;
+  readonly envDatePrefix?: boolean;
 };
 
 export const decodeEnv = (
@@ -72,13 +73,18 @@ export const decodeEnv = (
   let envLevel: LogLevel | undefined = options?.level;
   let envFormat: LogFormat | undefined = options?.format;
   let envFile: string | undefined;
+  let envDatePrefix: boolean | undefined;
 
   if (env) {
     const envLoggerValue = env[ENV_LOGGER];
     if (isEnvLogger(envLoggerValue)) {
       if (envLoggerValue.startsWith('file:')) {
-        const file = envLoggerValue.slice(5);
+        let file = envLoggerValue.slice(5);
         if (file) {
+          if (file.startsWith('date:')) {
+            file = file.slice(5);
+            envDatePrefix = true;
+          }
           envLogger = envLoggerValue;
           envFile = file;
         } else {
@@ -120,7 +126,7 @@ export const decodeEnv = (
     }
   }
 
-  return envLogger || envLevel || envFormat ? { envLogger, envLevel, envFormat, envFile } : undefined;
+  return envLogger || envLevel || envFormat ? { envLogger, envLevel, envFormat, envFile, envDatePrefix } : undefined;
 };
 
 export const createLoggerFromEnv = (
