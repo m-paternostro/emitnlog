@@ -234,7 +234,7 @@ export default ts.config([
   {
     name: 'node',
     files: ['src/**/node/**/*.ts'],
-    languageOptions: { globals: { ...globals.node } },
+    languageOptions: { globals: { ...globals.node, BufferEncoding: 'readonly' } },
     rules: { 'no-restricted-imports': 'off' },
   },
   {

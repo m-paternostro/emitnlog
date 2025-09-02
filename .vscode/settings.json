@@ -8,15 +8,19 @@
   "cSpell.words": [
     "Ansi",
     "Cayde",
+    "closables",
     "cooldown",
     "cooldowns",
     "emitnlog",
     "errorify",
+    "flushables",
     "github",
     "GITHUB",
     "nullable",
     "Paternostro",
-    "stringifiable"
+    "stringifiable",
+    "stringifier",
+    "Stringifier"
   ],
   "diffEditor.ignoreTrimWhitespace": true,
   "editor.bracketPairColorization.enabled": true,

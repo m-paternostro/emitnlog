@@ -1,6 +1,6 @@
-import type { Logger } from './definition.ts';
-import type { EnvironmentLoggerOptions } from './environment-common.ts';
-import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
+import type { Logger } from '../definition.ts';
+import type { EnvironmentLoggerOptions } from './common.ts';
+import { createLoggerFromEnv, decodeEnv, toEnv } from './common.ts';
 
 /**
  * Returns the logger to use based on the environment variables.

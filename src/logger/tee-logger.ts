@@ -1,4 +1,7 @@
-import type { Logger, LogLevel, LogMessage } from './definition.ts';
+import type { Logger, LogLevel } from './definition.ts';
+import { asDelegatedSink, asSingleSink } from './emitter/common.ts';
+import { createLogger } from './emitter/emitter-logger.ts';
+import { LOWEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 /**
@@ -38,244 +41,23 @@ export const tee = (...loggers: readonly Logger[]): Logger => {
     return loggers[0];
   }
 
-  // Track pending args for the tee logger
-  let pendingArgs: unknown[] = [];
+  const computeLevel = (): LogLevel | 'off' => {
+    const level = loggers.reduce<LogLevel | 'off'>((acc, logger) => {
+      if (logger.level === 'off') {
+        return acc;
+      }
 
-  // Helper to consume pending args similar to BaseLogger
-  const consumePendingArgs = (): readonly unknown[] | undefined => {
-    if (!pendingArgs.length) {
-      return undefined;
-    }
+      if (acc === 'off') {
+        return logger.level;
+      }
 
-    const args = pendingArgs;
-    pendingArgs = [];
-    return args;
+      // Return the most permissive level (i.e., the highest severity) among all loggers
+      return toLevelSeverity(acc) > toLevelSeverity(logger.level) ? acc : logger.level;
+    }, LOWEST_SEVERITY_LOG_LEVEL);
+
+    return level;
   };
 
-  return {
-    get level() {
-      return loggers[0].level;
-    },
-
-    set level(newLevel: LogLevel | 'off') {
-      for (const logger of loggers) {
-        logger.level = newLevel;
-      }
-    },
-
-    args(...args: unknown[]): Logger {
-      // Store args locally instead of forwarding immediately
-      pendingArgs = args;
-      return this;
-    },
-
-    trace(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).trace(message, ...args);
-        } else {
-          logger.trace(message, ...args);
-        }
-      }
-    },
-
-    t(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).t(strings, ...values);
-        } else {
-          logger.t(strings, ...values);
-        }
-      }
-    },
-
-    debug(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).debug(message, ...args);
-        } else {
-          logger.debug(message, ...args);
-        }
-      }
-    },
-
-    d(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).d(strings, ...values);
-        } else {
-          logger.d(strings, ...values);
-        }
-      }
-    },
-
-    info(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).info(message, ...args);
-        } else {
-          logger.info(message, ...args);
-        }
-      }
-    },
-
-    i(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).i(strings, ...values);
-        } else {
-          logger.i(strings, ...values);
-        }
-      }
-    },
-
-    notice(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).notice(message, ...args);
-        } else {
-          logger.notice(message, ...args);
-        }
-      }
-    },
-
-    n(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).n(strings, ...values);
-        } else {
-          logger.n(strings, ...values);
-        }
-      }
-    },
-
-    warning(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).warning(message, ...args);
-        } else {
-          logger.warning(message, ...args);
-        }
-      }
-    },
-
-    w(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).w(strings, ...values);
-        } else {
-          logger.w(strings, ...values);
-        }
-      }
-    },
-
-    error(message: LogMessage | Error | { error: unknown }, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).error(message, ...args);
-        } else {
-          logger.error(message, ...args);
-        }
-      }
-    },
-
-    e(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).e(strings, ...values);
-        } else {
-          logger.e(strings, ...values);
-        }
-      }
-    },
-
-    critical(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).critical(message, ...args);
-        } else {
-          logger.critical(message, ...args);
-        }
-      }
-    },
-
-    c(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).c(strings, ...values);
-        } else {
-          logger.c(strings, ...values);
-        }
-      }
-    },
-
-    alert(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).alert(message, ...args);
-        } else {
-          logger.alert(message, ...args);
-        }
-      }
-    },
-
-    a(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).a(strings, ...values);
-        } else {
-          logger.a(strings, ...values);
-        }
-      }
-    },
-
-    emergency(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).emergency(message, ...args);
-        } else {
-          logger.emergency(message, ...args);
-        }
-      }
-    },
-
-    em(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).em(strings, ...values);
-        } else {
-          logger.em(strings, ...values);
-        }
-      }
-    },
-
-    log(level: LogLevel, message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).log(level, message, ...args);
-        } else {
-          logger.log(level, message, ...args);
-        }
-      }
-    },
-  };
+  const emitter = asSingleSink(...loggers.map(asDelegatedSink));
+  return createLogger(computeLevel, emitter);
 };

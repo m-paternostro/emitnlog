@@ -1,6 +1,6 @@
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { Logger, LogLevel, LogMessage } from './definition.ts';
-import { shouldEmitEntry } from './level-utils.ts';
+import type { Logger } from './definition.ts';
+import { createLogger } from './emitter/emitter-logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
@@ -210,138 +210,20 @@ export const withPrefix = <
     [separatorSymbol]: prefixSeparator,
     [dataSymbol]: { rootLogger: logger, messageSeparator },
 
-    get level() {
-      return logger.level;
-    },
+    ...createLogger(() => logger.level, {
+      sink: (level, message, args) => {
+        const prefixedMessage = (): string => {
+          const loggerPrefix = prefixedLogger[prefixSymbol]!;
+          const loggerMessageSeparator = prefixedLogger[dataSymbol]!.messageSeparator;
+          return `${loggerPrefix}${loggerMessageSeparator}${message}`;
+        };
 
-    set level(value: LogLevel | 'off') {
-      logger.level = value;
-    },
+        logger.log(level, prefixedMessage, ...args);
+      },
 
-    args(...args: unknown[]) {
-      logger.args(...args);
-      return prefixedLogger;
-    },
-
-    trace(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'trace')) {
-        logger.trace(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    t(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'trace')) {
-        logger.t(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    debug(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'debug')) {
-        logger.debug(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    d(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'debug')) {
-        logger.d(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    info(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'info')) {
-        logger.info(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    i(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'info')) {
-        logger.i(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    notice(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'notice')) {
-        logger.notice(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    n(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'notice')) {
-        logger.n(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    warning(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'warning')) {
-        logger.warning(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    w(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'warning')) {
-        logger.w(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    error(error: LogMessage | Error | { error: unknown }, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'error')) {
-        if (error instanceof Error) {
-          logger.error(toMessageProvider(prefixedLogger, error.message), error, ...args);
-        } else if (error && typeof error === 'object' && 'error' in error) {
-          logger.error(toMessageProvider(prefixedLogger, String(error.error)), error, ...args);
-        } else {
-          logger.error(toMessageProvider(prefixedLogger, error as LogMessage), ...args);
-        }
-      }
-    },
-
-    e(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'error')) {
-        logger.e(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    critical(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'critical')) {
-        logger.critical(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    c(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'critical')) {
-        logger.c(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    alert(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'alert')) {
-        logger.alert(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    a(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'alert')) {
-        logger.a(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    emergency(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'emergency')) {
-        logger.emergency(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    em(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'emergency')) {
-        logger.em(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    log(level: LogLevel, message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, level)) {
-        logger.log(level, toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
+      flush: logger.flush,
+      close: logger.close,
+    }),
   };
 
   return prefixedLogger as unknown as WithPrefixResult<TLogger, TPrefix, TSeparator, TFallbackPrefix>;
@@ -545,22 +427,6 @@ export const inspectPrefixedLogger = (
         messageSeparator: logger[dataSymbol]!.messageSeparator,
       }
     : undefined;
-
-const prefixTemplateString = (prefixLogger: PrefixedLogger, strings: TemplateStringsArray): TemplateStringsArray => {
-  const prefix = prefixLogger[prefixSymbol]!;
-  const messageSeparator = prefixLogger[dataSymbol]!.messageSeparator;
-  const newStrings = Array.from(strings);
-  newStrings[0] = `${prefix}${messageSeparator}${newStrings[0]}`;
-  const prefixedStrings = Object.assign(newStrings, { raw: Array.from(strings.raw) });
-  prefixedStrings.raw[0] = `${prefix}${messageSeparator}${prefixedStrings.raw[0]}`;
-  return prefixedStrings as unknown as TemplateStringsArray;
-};
-
-const toMessageProvider = (prefixLogger: PrefixedLogger, message: LogMessage) => () => {
-  const messageString = typeof message === 'function' ? message() : message;
-  const messageSeparator = prefixLogger[dataSymbol]!.messageSeparator;
-  return `${prefixLogger[prefixSymbol]}${messageSeparator}${messageString}`;
-};
 
 type WithPrefixResult<
   TLogger extends Logger,

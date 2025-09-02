@@ -1,5 +1,6 @@
-import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
-import type { LogLevel } from './definition.ts';
+import { exhaustiveCheck } from '../../utils/common/exhaustive-check.ts';
+import { terminalFormatter } from '../../utils/common/terminal-formatter.ts';
+import type { Logger, LogLevel } from '../definition.ts';
 
 /**
  * Checks if a string is a valid LogLevel.
@@ -28,7 +29,7 @@ export const isLogLevel = (value: unknown): value is LogLevel => {
 };
 
 /**
- * Converts a LogLevel to its corresponding numeric weight value for comparison operations.
+ * Converts a LogLevel to its corresponding numeric severity value for comparison operations.
  *
  * This function maps each log level to a numeric value according to its severity, with lower numbers representing
  * higher severity (more important) levels:
@@ -48,8 +49,8 @@ export const isLogLevel = (value: unknown): value is LogLevel => {
  * ```ts
  * import { toLevelWeight } from 'emitnlog/logger';
  *
- * const errorWeight = toLevelWeight('error'); // Returns 3
- * const debugWeight = toLevelWeight('debug'); // Returns 7
+ * const errorWeight = toLevelSeverity('error'); // Returns 3
+ * const debugWeight = toLevelSeverity('debug'); // Returns 7
  *
  * // Compare severity levels
  * if (toLevelWeight('error') < toLevelWeight('debug')) {
@@ -60,7 +61,8 @@ export const isLogLevel = (value: unknown): value is LogLevel => {
  * @param level The log level to convert to a numeric weight
  * @returns The numeric weight corresponding to the specified log level
  */
-export const toLevelWeight = (level: LogLevel): number => {
+
+export const toLevelSeverity = (level: LogLevel): number => {
   switch (level) {
     case 'trace':
       return 8;
@@ -95,6 +97,8 @@ export const toLevelWeight = (level: LogLevel): number => {
   }
 };
 
+export const LOWEST_SEVERITY_LOG_LEVEL: LogLevel = 'emergency';
+
 /**
  * Determines whether a log entry should be emitted based on the configured logger level and the entry's level.
  *
@@ -122,5 +126,56 @@ export const toLevelWeight = (level: LogLevel): number => {
  * @param entryLevel The severity level of the log entry to be evaluated
  * @returns True if the entry should be emitted, false otherwise
  */
-export const shouldEmitEntry = (level: LogLevel | 'off', entryLevel: LogLevel): boolean =>
-  level !== 'off' && toLevelWeight(entryLevel) <= toLevelWeight(level);
+export const shouldEmitEntry = (loggerLevel: Logger | LogLevel | 'off', entryLevel: LogLevel): boolean => {
+  if (!isLogLevel(loggerLevel) && loggerLevel !== 'off') {
+    loggerLevel = loggerLevel.level;
+  }
+
+  if (loggerLevel === 'off') {
+    return false;
+  }
+
+  return toLevelSeverity(loggerLevel) >= toLevelSeverity(entryLevel);
+};
+
+/**
+ * Applies color formatting to text based on the specified log level.
+ *
+ * @param level - The log level to determine appropriate color formatting
+ * @param text - The text to be color-formatted
+ * @returns The text with appropriate ANSI color formatting for terminal display
+ */
+export const decorateLogText = (level: LogLevel, text: string): string => {
+  switch (level) {
+    case 'trace':
+      return terminalFormatter.dim(text);
+
+    case 'debug':
+      return terminalFormatter.dim(text);
+
+    case 'info':
+      return terminalFormatter.cyan(text);
+
+    case 'notice':
+      return terminalFormatter.green(text);
+
+    case 'warning':
+      return terminalFormatter.yellow(text);
+
+    case 'error':
+      return terminalFormatter.red(text);
+
+    case 'critical':
+      return terminalFormatter.magenta(text);
+
+    case 'alert':
+      return terminalFormatter.boldRed(text);
+
+    case 'emergency':
+      return terminalFormatter.redBackground(text);
+
+    default:
+      exhaustiveCheck(level);
+      return text;
+  }
+};

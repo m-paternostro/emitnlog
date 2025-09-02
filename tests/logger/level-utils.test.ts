@@ -1,44 +1,44 @@
 import { describe, expect, test } from '@jest/globals';
 
 import type { LogLevel } from '../../src/logger/index.ts';
-import { shouldEmitEntry, toLevelWeight } from '../../src/logger/index.ts';
+import { shouldEmitEntry, toLevelSeverity } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.level-utils', () => {
   describe('toLevelWeight', () => {
     test('should return 8 for trace level', () => {
-      expect(toLevelWeight('trace')).toBe(8);
+      expect(toLevelSeverity('trace')).toBe(8);
     });
 
     test('should return 7 for debug level', () => {
-      expect(toLevelWeight('debug')).toBe(7);
+      expect(toLevelSeverity('debug')).toBe(7);
     });
 
     test('should return 6 for info level', () => {
-      expect(toLevelWeight('info')).toBe(6);
+      expect(toLevelSeverity('info')).toBe(6);
     });
 
     test('should return 5 for notice level', () => {
-      expect(toLevelWeight('notice')).toBe(5);
+      expect(toLevelSeverity('notice')).toBe(5);
     });
 
     test('should return 4 for warning level', () => {
-      expect(toLevelWeight('warning')).toBe(4);
+      expect(toLevelSeverity('warning')).toBe(4);
     });
 
     test('should return 3 for error level', () => {
-      expect(toLevelWeight('error')).toBe(3);
+      expect(toLevelSeverity('error')).toBe(3);
     });
 
     test('should return 2 for critical level', () => {
-      expect(toLevelWeight('critical')).toBe(2);
+      expect(toLevelSeverity('critical')).toBe(2);
     });
 
     test('should return 1 for alert level', () => {
-      expect(toLevelWeight('alert')).toBe(1);
+      expect(toLevelSeverity('alert')).toBe(1);
     });
 
     test('should return 0 for emergency level', () => {
-      expect(toLevelWeight('emergency')).toBe(0);
+      expect(toLevelSeverity('emergency')).toBe(0);
     });
 
     test('should preserve the severity ordering', () => {
@@ -57,7 +57,7 @@ describe('emitnlog.logger.level-utils', () => {
       // Verify that the weights are in ascending order
       // (lower weight = higher severity)
       for (let i = 0; i < levels.length - 1; i++) {
-        expect(toLevelWeight(levels[i])).toBeLessThan(toLevelWeight(levels[i + 1]));
+        expect(toLevelSeverity(levels[i])).toBeLessThan(toLevelSeverity(levels[i + 1]));
       }
     });
   });

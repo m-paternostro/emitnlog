@@ -45,7 +45,7 @@ export interface Logger {
    *
    * If set to 'off', no log entries are emitted regardless of level.
    */
-  level: LogLevel | 'off';
+  readonly level: LogLevel | 'off';
 
   /**
    * Sets additional arguments to be included with the next log entry. This is particularly useful with the template
@@ -539,6 +539,9 @@ export interface Logger {
    * @param args Additional arguments to include in the log entry
    */
   readonly log: (level: LogLevel, message: LogMessage, ...args: unknown[]) => void;
+
+  readonly flush?: () => void | Promise<void>;
+  readonly close?: () => void | Promise<void>;
 }
 
 /**

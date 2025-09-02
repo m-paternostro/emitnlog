@@ -1,17 +1,11 @@
-import type { Logger, LogLevel } from './definition.ts';
+import type { Logger } from './definition.ts';
 
 /**
  * A logger implementation that does not emit any log entries regardless of level. Useful for completely disabling
  * logging in specific contexts.
  */
-export const OFF_LOGGER: Logger = {
-  get level() {
-    return 'off';
-  },
-
-  set level(_: LogLevel | 'off') {
-    // ignored
-  },
+export const OFF_LOGGER: Logger = Object.freeze({
+  level: 'off',
 
   args: () => OFF_LOGGER,
 
@@ -43,4 +37,4 @@ export const OFF_LOGGER: Logger = {
   em: () => void {},
 
   log: () => void {},
-} as const;
+});

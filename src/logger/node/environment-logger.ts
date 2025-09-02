@@ -1,7 +1,7 @@
 import type { Logger } from '../definition.ts';
-import type { EnvironmentLoggerOptions } from '../environment-common.ts';
-import { createLoggerFromEnv, decodeEnv, toEnv } from '../environment-common.ts';
-import { FileLogger } from './file-logger.ts';
+import type { EnvironmentLoggerOptions } from '../environment/common.ts';
+import { createLoggerFromEnv, decodeEnv, toEnv } from '../environment/common.ts';
+import { createFileLogger } from './factory.ts';
 
 /**
  * Returns the logger to use based on the environment variables.
@@ -93,6 +93,10 @@ export const fromEnv = (options?: EnvironmentLoggerOptions): Logger => {
   const env = toEnv();
   const decodedEnv = decodeEnv(env, options);
   return decodedEnv?.envFile
-    ? new FileLogger(decodedEnv.envFile, decodedEnv.envLevel, decodedEnv.envFormat)
+    ? createFileLogger(
+        decodedEnv.envFile,
+        decodedEnv.envLevel,
+        decodedEnv.envFormat === 'colorful' ? undefined : decodedEnv.envFormat,
+      )
     : createLoggerFromEnv(decodedEnv, options);
 };
