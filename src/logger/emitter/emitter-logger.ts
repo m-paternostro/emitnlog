@@ -3,14 +3,27 @@ import type { BaseLoggerOptions } from '../implementation/base-logger.ts';
 import { BaseLogger } from '../implementation/base-logger.ts';
 import type { LogSink } from './common.ts';
 
-export const createLogger = (
+export function createLogger(
   level: LogLevel | 'off' | (() => LogLevel | 'off'),
-  logSink: LogSink,
+  logSink: LogSink['sink'],
   options?: BaseLoggerOptions,
-): Logger => new EmitterLogger(level, logSink, options);
+): Logger;
+
+export function createLogger<S extends LogSink>(
+  level: LogLevel | 'off' | (() => LogLevel | 'off'),
+  logSink: S,
+  options?: BaseLoggerOptions,
+): Exclude<Logger, 'flush' | 'close'> & Pick<S, 'flush' | 'close'>;
+
+export function createLogger(
+  level: LogLevel | 'off' | (() => LogLevel | 'off'),
+  logSink: LogSink | LogSink['sink'],
+  options?: BaseLoggerOptions,
+): Logger {
+  return new EmitterLogger(level, logSink, options);
+}
 
 class EmitterLogger extends BaseLogger {
-  private readonly _level: LogLevel | 'off' | (() => LogLevel | 'off');
   private readonly logSink: LogSink;
 
   public readonly flush: (() => void | Promise<void>) | undefined;
@@ -18,18 +31,18 @@ class EmitterLogger extends BaseLogger {
 
   public constructor(
     level: LogLevel | 'off' | (() => LogLevel | 'off'),
-    logSink: LogSink,
+    logSink: LogSink | LogSink['sink'],
     options?: BaseLoggerOptions,
   ) {
-    super('info', options);
-    this._level = level;
+    super(level, options);
+
+    if (typeof logSink === 'function') {
+      logSink = { sink: logSink };
+    }
+
     this.logSink = logSink;
     this.flush = logSink.flush && (() => logSink.flush?.());
     this.close = logSink.close && (() => logSink.close?.());
-  }
-
-  public override get level(): LogLevel | 'off' {
-    return typeof this._level === 'function' ? this._level() : this._level;
   }
 
   protected override emit(level: LogLevel, message: string, args: readonly unknown[]): void {

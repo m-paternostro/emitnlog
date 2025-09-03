@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import { errorify } from '../../utils/converter/errorify.ts';
 import type { LogLevel } from '../definition';
 import { type LogFormatter, type LogSink, plainFormatter } from '../emitter';
+import type { AsyncFinalizer } from '../implementation/types.ts';
 
 /**
  * Configuration options for the file sink.
@@ -61,6 +62,8 @@ export type FileSinkOptions = {
   readonly errorHandler?: (error: unknown) => void;
 };
 
+export type FileSink = AsyncFinalizer<LogSink> & { readonly filePath: string };
+
 /**
  * Creates a file log sink that writes logs directly to a file.
  *
@@ -98,7 +101,7 @@ export type FileSinkOptions = {
  * );
  * ```
  */
-export const fileSink = (options: FileSinkOptions | string): LogSink => {
+export const fileSink = (options: FileSinkOptions | string): FileSink => {
   if (typeof options === 'string') {
     options = { filePath: options };
   }
@@ -167,6 +170,8 @@ export const fileSink = (options: FileSinkOptions | string): LogSink => {
       // Queue the write to maintain order, catching errors to prevent unhandled rejections
       writeQueue = writeQueue.then(() => writeMessage(message).catch((error: unknown) => config.errorHandler(error)));
     },
+
+    filePath: resolvedPath,
 
     async flush(): Promise<void> {
       await writeQueue;

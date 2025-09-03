@@ -30,3 +30,21 @@ export const jsonCompactFormatter: LogFormatter = (level, message, args) => stri
 
 export const jsonPrettyFormatter: LogFormatter = (level, message, args) =>
   stringify(asLogEntry(level, message, args), { pretty: true });
+
+export const plainArgAppendingFormatter =
+  (baseFormatter: LogFormatter, delimiter = '\n'): LogFormatter =>
+  (level, message, args) => {
+    const formatted = baseFormatter(level, message, args);
+    if (!args.length) {
+      return formatted;
+    }
+
+    const formattedArgs = args
+      .map((arg, i) => {
+        const formattedArg = stringify(arg, { includeStack: true, pretty: true, maxDepth: 3 });
+        return `[${i}] ${formattedArg}`;
+      })
+      .join('\n');
+
+    return formatted ? `${formatted}${delimiter}${formattedArgs}` : formattedArgs;
+  };

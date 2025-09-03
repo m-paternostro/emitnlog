@@ -1,4 +1,5 @@
 import { debounce } from '../../utils/async/debounce.ts';
+import type { AsyncFinalizer } from '../implementation/types.ts';
 import type { LogEntry, LogSink } from './common.ts';
 import { asLogEntry } from './common.ts';
 
@@ -70,7 +71,7 @@ export type BatchSinkOptions = {
  * @param options Configuration options for batching behavior
  * @returns A log sink that batches log entries
  */
-export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): LogSink => {
+export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFinalizer<LogSink> => {
   const maxBufferSize = options?.maxBufferSize ?? 100;
   const flushDelayMs = options?.flushDelayMs ?? 1000;
   const flushOnExit = options?.flushOnExit ?? true;
@@ -113,7 +114,7 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): LogSink
   }
   /* eslint-enable no-undef */
 
-  const batchedSink: LogSink = {
+  const batchedSink = {
     sink: (level, message, args): void => {
       if (isClosing) {
         logSink.sink(level, message, args);
@@ -154,7 +155,7 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): LogSink
 
       await logSink.close?.();
     },
-  };
+  } as const satisfies LogSink;
 
   return batchedSink;
 };
@@ -171,7 +172,7 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): LogSink
  * );
  * ```
  */
-export const batchSizeSink = (logSink: LogSink, maxBufferSize: number): LogSink =>
+export const batchSizeSink = (logSink: LogSink, maxBufferSize: number): AsyncFinalizer<LogSink> =>
   batchSink(logSink, {
     maxBufferSize,
     flushDelayMs: Number.MAX_SAFE_INTEGER, // Effectively disable time-based flushing
@@ -189,7 +190,7 @@ export const batchSizeSink = (logSink: LogSink, maxBufferSize: number): LogSink 
  * );
  * ```
  */
-export const batchTimeSink = (logSink: LogSink, flushDelayMs: number): LogSink =>
+export const batchTimeSink = (logSink: LogSink, flushDelayMs: number): AsyncFinalizer<LogSink> =>
   batchSink(logSink, {
     maxBufferSize: Number.MAX_SAFE_INTEGER, // Effectively disable size-based flushing
     flushDelayMs,

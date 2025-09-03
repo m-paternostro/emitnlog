@@ -13,12 +13,6 @@ describe('emitnlog.logger.OFF_LOGGER', () => {
     consoleLogSpy.mockRestore();
   });
 
-  test('should not change level', () => {
-    expect(OFF_LOGGER.level).toBe('off');
-    OFF_LOGGER.level = 'debug';
-    expect(OFF_LOGGER.level).toBe('off');
-  });
-
   test('should not log any messages', () => {
     OFF_LOGGER.trace('trace message');
     OFF_LOGGER.t`trace message`;

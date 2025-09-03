@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { ConsoleErrorLogger } from '../../src/logger/index.ts';
+import { createConsoleErrorLogger } from '../../src/logger/index.ts';
 
-describe('emitnlog.logger.ConsoleErrorLogger', () => {
+describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
   // Spy on console.error
   let consoleErrorSpy: jest.Mock;
 
@@ -18,7 +18,7 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
   });
 
   test('should write logs to console.error', () => {
-    const logger = new ConsoleErrorLogger();
+    const logger = createConsoleErrorLogger();
 
     logger.info('Test message');
 
@@ -36,7 +36,7 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
   });
 
   test('should pass additional arguments to console.error', () => {
-    const logger = new ConsoleErrorLogger();
+    const logger = createConsoleErrorLogger();
     const error = new Error('Connection failed');
 
     logger.error('Operation failed', error);
@@ -49,7 +49,7 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
   });
 
   test('should respect log level filtering', () => {
-    const logger = new ConsoleErrorLogger('error');
+    const logger = createConsoleErrorLogger('error');
 
     logger.warning('This should not be logged');
     logger.error('This should be logged');
@@ -61,7 +61,7 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
   });
 
   test('should work with JSON format', () => {
-    const logger = new ConsoleErrorLogger('info', 'json');
+    const logger = createConsoleErrorLogger('info', 'json-pretty');
 
     logger.info('JSON test message');
 
@@ -79,7 +79,7 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
   });
 
   test('should work with unformatted JSON format', () => {
-    const logger = new ConsoleErrorLogger('info', 'unformatted-json');
+    const logger = createConsoleErrorLogger('info', 'json-compact');
 
     logger.info('Unformatted JSON test message');
 
@@ -98,7 +98,7 @@ describe('emitnlog.logger.ConsoleErrorLogger', () => {
   });
 
   test('should pass additional arguments correctly with JSON format', () => {
-    const logger = new ConsoleErrorLogger('info', 'json');
+    const logger = createConsoleErrorLogger('info', 'json-pretty');
     const context = { userId: '123', action: 'login' };
     const error = new Error('Test error');
 

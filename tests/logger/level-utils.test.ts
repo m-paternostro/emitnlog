@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
+import { shouldEmitEntry, toLevelSeverity } from '../../src/logger/implementation/index.ts';
 import type { LogLevel } from '../../src/logger/index.ts';
-import { shouldEmitEntry, toLevelSeverity } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.level-utils', () => {
   describe('toLevelWeight', () => {

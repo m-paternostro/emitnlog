@@ -1,3 +1,4 @@
+import { emptyArray } from '../../utils/common/singleton.ts';
 import type { StringifyOptions } from '../../utils/converter/stringify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
 import type { Logger, LogLevel, LogMessage } from '../definition.ts';
@@ -24,7 +25,7 @@ export abstract class BaseLogger implements Logger {
    * The minimum severity level for log entries to be emitted. Log entries with levels below this threshold will be
    * filtered out. Default is 'info'.
    */
-  private readonly _baseLevel: LogLevel | 'off';
+  private readonly _levelProvider: () => LogLevel | 'off';
 
   /**
    * Additional arguments to include with the next template literal log entry. This is reset after each log operation.
@@ -36,16 +37,16 @@ export abstract class BaseLogger implements Logger {
   /**
    * Creates a new BaseLogger with the specified minimum severity level.
    *
-   * @param level The minimum severity level for log entries (default: 'info')
+   * @param level The minimum severity level for log entries or a function that returns this value
    * @param options Options for how values are stringified in log messages
    */
-  public constructor(level: LogLevel, options?: BaseLoggerOptions) {
-    this._baseLevel = level;
+  public constructor(level: LogLevel | 'off' | (() => LogLevel | 'off'), options?: BaseLoggerOptions) {
+    this._levelProvider = typeof level === 'function' ? level : () => level;
     this._options = options;
   }
 
   public get level(): LogLevel | 'off' {
-    return this._baseLevel;
+    return this._levelProvider();
   }
 
   public args(...args: unknown[]): Logger {
@@ -58,7 +59,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public t(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.trace(() => this.taggedLog(strings, values));
+    this.log('trace', () => this.taggedLog(strings, values));
   }
 
   public debug(message: LogMessage, ...args: readonly unknown[]): void {
@@ -66,7 +67,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public d(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.debug(() => this.taggedLog(strings, values));
+    this.log('debug', () => this.taggedLog(strings, values));
   }
 
   public info(message: LogMessage, ...args: readonly unknown[]): void {
@@ -74,7 +75,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public i(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.info(() => this.taggedLog(strings, values));
+    this.log('info', () => this.taggedLog(strings, values));
   }
 
   public notice(message: LogMessage, ...args: unknown[]): void {
@@ -82,7 +83,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public n(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.notice(() => this.taggedLog(strings, values));
+    this.log('notice', () => this.taggedLog(strings, values));
   }
 
   public warning(message: LogMessage, ...args: readonly unknown[]): void {
@@ -90,7 +91,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public w(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.warning(() => this.taggedLog(strings, values));
+    this.log('warning', () => this.taggedLog(strings, values));
   }
 
   public error(value: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
@@ -109,7 +110,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public e(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.error(() => this.taggedLog(strings, values));
+    this.log('error', () => this.taggedLog(strings, values));
   }
 
   public critical(message: LogMessage, ...args: unknown[]): void {
@@ -117,7 +118,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public c(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.critical(() => this.taggedLog(strings, values));
+    this.log('critical', () => this.taggedLog(strings, values));
   }
 
   public alert(message: LogMessage, ...args: readonly unknown[]): void {
@@ -125,7 +126,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public a(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.alert(() => this.taggedLog(strings, values));
+    this.log('alert', () => this.taggedLog(strings, values));
   }
 
   public emergency(message: LogMessage, ...args: readonly unknown[]): void {
@@ -133,7 +134,7 @@ export abstract class BaseLogger implements Logger {
   }
 
   public em(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
-    this.emergency(() => this.taggedLog(strings, values));
+    this.log('emergency', () => this.taggedLog(strings, values));
   }
 
   public log(level: LogLevel, message: LogMessage, ...args: readonly unknown[]): void {
@@ -143,7 +144,13 @@ export abstract class BaseLogger implements Logger {
         message = message();
       }
 
-      this.emit(level, String(message), pendingArgs ? [...pendingArgs, ...args] : args);
+      if (pendingArgs) {
+        args = args.length ? [...pendingArgs, ...args] : pendingArgs;
+      } else if (!args.length) {
+        args = emptyArray();
+      }
+
+      this.emit(level, String(message), args);
     }
   }
 

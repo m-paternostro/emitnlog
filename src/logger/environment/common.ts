@@ -36,7 +36,10 @@ export type EnvironmentLoggerOptions = {
 type EnvLogger = 'console-log' | 'console-error' | 'console-level' | `file:${string}`;
 
 const isEnvLogger = (value: unknown): value is EnvLogger =>
-  value === 'console' || value === 'console-error' || (typeof value === 'string' && value.startsWith('file:'));
+  value === 'console-log' ||
+  value === 'console-error' ||
+  value === 'console-level' ||
+  (typeof value === 'string' && value.startsWith('file:'));
 
 const isEnvHolder = (value: unknown): value is { readonly env: Record<string, string | undefined> } =>
   !!value && typeof value === 'object' && 'env' in value && !!value.env && typeof value.env === 'object';

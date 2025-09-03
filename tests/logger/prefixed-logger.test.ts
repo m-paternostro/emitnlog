@@ -2,15 +2,15 @@ import { describe, expect, jest, test } from '@jest/globals';
 
 import type { IsEqual } from 'type-fest';
 
+import { createLogger } from '../../src/logger/emitter/index.ts';
+import { shouldEmitEntry } from '../../src/logger/implementation/index.ts';
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
 import {
   appendPrefix,
-  BaseLogger,
   inspectPrefixedLogger,
   isPrefixedLogger,
   OFF_LOGGER,
   resetPrefix,
-  shouldEmitEntry,
   withPrefix,
 } from '../../src/logger/index.ts';
 import { createTestLogger } from '../jester.setup.ts';
@@ -208,17 +208,18 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should maintain level synchronization', () => {
-      const logger = createTestLogger();
+      let level: LogLevel = 'info';
+      const logger = createTestLogger(() => level);
       const dbLogger = withPrefix(logger, 'DB');
       const userLogger = appendPrefix(dbLogger, 'User');
 
       expect(userLogger.level).toBe(logger.level);
 
-      userLogger.level = 'warning';
+      level = 'warning';
       expect(logger.level).toBe('warning');
       expect(dbLogger.level).toBe('warning');
 
-      logger.level = 'error';
+      level = 'error';
       expect(userLogger.level).toBe('error');
       expect(dbLogger.level).toBe('error');
     });
@@ -253,32 +254,6 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       v1Logger.info('Request processed');
       expect(logger).toHaveLoggedWith('info', 'API/v1 >> Request processed');
-    });
-
-    test('should extract root logger correctly', () => {
-      const logger = createTestLogger();
-      const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
-
-      const cacheLogger = resetPrefix(userLogger, 'Cache');
-      const metricsLogger = resetPrefix(userLogger, 'Metrics');
-
-      // Both should use the same root logger
-      cacheLogger.level = 'warning';
-      expect(metricsLogger.level).toBe('warning');
-      expect(logger.level).toBe('warning');
-    });
-
-    test('should maintain level synchronization with reset logger', () => {
-      const logger = createTestLogger();
-      const complexLogger = withPrefix(logger, 'Complex');
-      const resetLogger = resetPrefix(complexLogger, 'Simple');
-
-      expect(resetLogger.level).toBe(logger.level);
-
-      resetLogger.level = 'critical';
-      expect(logger.level).toBe('critical');
-      expect(complexLogger.level).toBe('critical');
     });
   });
 
@@ -429,11 +404,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message functions when using basic methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = createLogger('info', (level, message) => {
+        emittedLines.push(`[${level}] ${message}`);
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
 
@@ -456,11 +429,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message functions when using template methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = createLogger('info', (level, message) => {
+        emittedLines.push(`[${level}] ${message}`);
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
 
@@ -483,11 +454,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message stringification when using template methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = createLogger('info', (level, message) => {
+        emittedLines.push(`[${level}] ${message}`);
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
 
@@ -544,7 +513,6 @@ describe('emitnlog.logger.prefixed-logger', () => {
   describe('level filtering', () => {
     test('should check level before processing template literals', () => {
       const logger = createTestLogger();
-      logger.level = 'info';
       const prefixedLogger = withPrefix(logger, 'test');
 
       // Reset the mock to clearly see if shouldEmitEntry is called
@@ -561,8 +529,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should respect logger level for standard methods', () => {
-      const logger = createTestLogger();
-      logger.level = 'warning';
+      const logger = createTestLogger('warning');
       const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.info('Info message');
@@ -582,12 +549,10 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should allow chaining with args', () => {
       const emittedLines: string[] = [];
       const emittedArgs: (readonly unknown[])[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-          emittedLines.push(`[${level}] ${message}`);
-          emittedArgs.push(args);
-        }
-      })();
+      const logger = createLogger('info', (level, message, args) => {
+        emittedLines.push(`[${level}] ${message}`);
+        emittedArgs.push(args);
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
       prefixedLogger.args({ id: 123 }, 42).info('User logged in');
@@ -596,14 +561,15 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should support nested prefixes with different levels', () => {
-      const logger = createTestLogger();
+      let level: LogLevel | 'off' = 'debug';
+      const logger = createTestLogger(() => level);
       expect(logger.level).toBe('debug');
 
       const appLogger = withPrefix(logger, 'app');
       expect(appLogger).not.toBe(logger);
       expect(appLogger.level).toBe('debug');
 
-      appLogger.level = 'critical';
+      level = 'critical';
       expect(logger.level).toBe('critical');
       expect(appLogger.level).toBe('critical');
 
@@ -612,22 +578,22 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(userLogger).not.toBe(appLogger);
       expect(userLogger.level).toBe('critical');
 
-      userLogger.level = 'notice';
+      level = 'notice';
       expect(logger.level).toBe('notice');
       expect(appLogger.level).toBe('notice');
       expect(userLogger.level).toBe('notice');
 
-      logger.level = 'error';
+      level = 'error';
       expect(logger.level).toBe('error');
       expect(appLogger.level).toBe('error');
       expect(userLogger.level).toBe('error');
 
-      appLogger.level = 'warning';
+      level = 'warning';
       expect(logger.level).toBe('warning');
       expect(appLogger.level).toBe('warning');
       expect(userLogger.level).toBe('warning');
 
-      userLogger.level = 'off';
+      level = 'off';
       expect(logger.level).toBe('off');
       expect(appLogger.level).toBe('off');
       expect(userLogger.level).toBe('off');
@@ -635,11 +601,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with basic methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = createLogger('info', (level, message) => {
+        emittedLines.push(`[${level}] ${message}`);
+      });
 
       const appLogger = withPrefix(logger, 'app');
 
@@ -660,11 +624,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with template methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = createLogger('info', (level, message) => {
+        emittedLines.push(`[${level}] ${message}`);
+      });
 
       const appLogger = withPrefix(logger, 'app');
 
@@ -685,11 +647,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with different separators', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = createLogger('info', (level, message) => {
+        emittedLines.push(`[${level}] ${message}`);
+      });
 
       const appLogger = withPrefix(logger, 'app', { messageSeparator: '--' });
 
@@ -973,7 +933,8 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should handle long prefix chains with type validation', () => {
-      const logger = createTestLogger();
+      let level: LogLevel | 'off' = 'info';
+      const logger = createTestLogger(() => level);
 
       // Helper function to validate types at compile time
       const validateType = <T extends string>(prefixedLogger: PrefixedLogger<T>, expectedPrefix: T): void => {
@@ -1039,7 +1000,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       // Test that all loggers share the same level
       expect(level14.level).toBe(logger.level);
-      level14.level = 'warning';
+      level = 'warning';
       expect(logger.level).toBe('warning');
       expect(level0.level).toBe('warning');
       expect(level7.level).toBe('warning');
@@ -1059,7 +1020,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14: This should also appear',
       );
 
-      level14.level = 'info';
+      level = 'info';
 
       // Test template literals
       const value = 42;

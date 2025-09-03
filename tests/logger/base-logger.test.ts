@@ -1,26 +1,22 @@
 import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import type { LogLevel } from '../../src/logger/index.ts';
-import { BaseLogger } from '../../src/logger/index.ts';
+import { implementation } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.BaseLogger', () => {
-  class TestLogger extends BaseLogger {
-    public readonly emittedLines: {
+  class TestLogger extends implementation.BaseLogger {
+    public readonly emittedLogs: {
       readonly level: LogLevel;
       readonly message: string;
       readonly args: readonly unknown[];
     }[] = [];
 
-    protected emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-      this.emittedLines.push({ level, message, args });
+    protected emit(level: LogLevel, message: string, args: readonly unknown[]): void {
+      this.emittedLogs.push({ level, message, args });
     }
   }
 
   describe('constructor', () => {
-    test('should set the level to info if no level is provided', () => {
-      expect(new TestLogger().level).toBe('info');
-    });
-
     test('should set the level to trace', () => {
       expect(new TestLogger('trace').level).toBe('trace');
     });
@@ -59,106 +55,107 @@ describe('emitnlog.logger.BaseLogger', () => {
   });
 
   let logger: TestLogger;
+  let loggerLevel: LogLevel | 'off' = 'trace';
 
   beforeEach(() => {
-    logger = new TestLogger('trace');
+    logger = new TestLogger(() => loggerLevel);
   });
 
   describe('Basic Logging', () => {
     test('should log trace messages', () => {
       logger.trace('trace message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('trace');
-      expect(logger.emittedLines[0].message).toBe('trace message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('trace');
+      expect(logger.emittedLogs[0].message).toBe('trace message');
     });
 
     test('should log debug messages', () => {
       logger.debug('debug message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('debug');
-      expect(logger.emittedLines[0].message).toBe('debug message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('debug');
+      expect(logger.emittedLogs[0].message).toBe('debug message');
     });
 
     test('should log info messages', () => {
       logger.info('info message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('info');
-      expect(logger.emittedLines[0].message).toBe('info message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('info');
+      expect(logger.emittedLogs[0].message).toBe('info message');
     });
 
     test('should log notice messages', () => {
       logger.notice('notice message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('notice');
-      expect(logger.emittedLines[0].message).toBe('notice message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('notice');
+      expect(logger.emittedLogs[0].message).toBe('notice message');
     });
 
     test('should log warning messages', () => {
       logger.warning('warning message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('warning');
-      expect(logger.emittedLines[0].message).toBe('warning message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('warning');
+      expect(logger.emittedLogs[0].message).toBe('warning message');
     });
 
     test('should log error messages', () => {
       logger.error('error message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('error message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('error message');
     });
 
     test('should log critical messages', () => {
       logger.critical('critical message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('critical');
-      expect(logger.emittedLines[0].message).toBe('critical message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('critical');
+      expect(logger.emittedLogs[0].message).toBe('critical message');
     });
 
     test('should log alert messages', () => {
       logger.alert('alert message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('alert');
-      expect(logger.emittedLines[0].message).toBe('alert message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('alert');
+      expect(logger.emittedLogs[0].message).toBe('alert message');
     });
 
     test('should log emergency messages', () => {
       logger.emergency('emergency message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('emergency');
-      expect(logger.emittedLines[0].message).toBe('emergency message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('emergency');
+      expect(logger.emittedLogs[0].message).toBe('emergency message');
     });
 
     test('should log an error object', () => {
       const error = new Error('error message');
       logger.error(error);
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('error message');
-      expect(logger.emittedLines[0].args).toContain(error);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('error message');
+      expect(logger.emittedLogs[0].args).toContain(error);
     });
 
     test('should log an object with message property', () => {
-      const object = { message: 'error message' };
+      const object = { error: { message: 'error message' } };
       logger.error(object);
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('{"message":"error message"}');
-      expect(logger.emittedLines[0].args).toContain(object);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('{"message":"error message"}');
+      expect(logger.emittedLogs[0].args).toContain(object);
     });
 
     test('should log an object with error property', () => {
       const object = { error: new Error('error message') };
       logger.error(object);
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('error message');
-      expect(logger.emittedLines[0].args).toContain(object);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('error message');
+      expect(logger.emittedLogs[0].args).toContain(object);
     });
   });
 
   describe('Log level filtering', () => {
     test('should not log if level is set to off', () => {
-      logger.level = 'off';
+      loggerLevel = 'off';
       logger.trace('trace message');
       logger.debug('debug message');
       logger.info('info message');
@@ -168,83 +165,83 @@ describe('emitnlog.logger.BaseLogger', () => {
       logger.critical('critical message');
       logger.alert('alert message');
       logger.emergency('emergency message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log trace messages if level is set to debug', () => {
-      logger.level = 'debug';
+      loggerLevel = 'debug';
       logger.trace('trace message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log debug messages if level is set to info', () => {
-      logger.level = 'info';
+      loggerLevel = 'info';
       logger.debug('debug message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log info messages if level is set to notice', () => {
-      logger.level = 'notice';
+      loggerLevel = 'notice';
       logger.info('info message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log notice messages if level is set to warning', () => {
-      logger.level = 'warning';
+      loggerLevel = 'warning';
       logger.notice('notice message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log warning messages if level is set to error', () => {
-      logger.level = 'error';
+      loggerLevel = 'error';
       logger.warning('warning message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log error messages if level is set to critical', () => {
-      logger.level = 'critical';
+      loggerLevel = 'critical';
       logger.error('error message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log critical messages if level is set to alert', () => {
-      logger.level = 'alert';
+      loggerLevel = 'alert';
       logger.critical('critical message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should not log alert messages if level is set to emergency', () => {
-      logger.level = 'emergency';
+      loggerLevel = 'emergency';
       logger.alert('alert message');
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
     });
 
     test('should log emergency messages at all levels except off', () => {
-      logger.level = 'emergency';
+      loggerLevel = 'emergency';
       logger.emergency('emergency message');
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('emergency');
-      expect(logger.emittedLines[0].message).toBe('emergency message');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('emergency');
+      expect(logger.emittedLogs[0].message).toBe('emergency message');
     });
   });
 
   describe('Deferred message execution', () => {
     test('should not execute function message if log level is not applicable', () => {
-      logger.level = 'debug';
+      loggerLevel = 'debug';
       const messageFunction = jest.fn(() => 'expensive trace message');
       logger.trace(messageFunction);
       expect(messageFunction).not.toHaveBeenCalled();
     });
 
     test('should execute function message if log level is applicable', () => {
-      logger.level = 'info';
+      loggerLevel = 'info';
       const messageFunction = jest.fn(() => 'expensive message');
       logger.info(messageFunction);
       expect(messageFunction).toHaveBeenCalled();
     });
 
     test('should handle lazy message functions', () => {
-      logger.level = 'info';
+      loggerLevel = 'info';
 
       let count = 0;
       const expensiveOperation = () => {
@@ -252,17 +249,17 @@ describe('emitnlog.logger.BaseLogger', () => {
         return 'result';
       };
 
-      expect(logger.emittedLines).toEqual([]);
+      expect(logger.emittedLogs).toEqual([]);
       expect(count).toBe(0);
       //
       logger.info(() => `Computed: ${expensiveOperation()}`);
       logger.debug(() => `Computed: ${expensiveOperation()}`);
       logger.warning(() => `Computed: ${expensiveOperation()}`);
       //
-      expect(logger.emittedLines[0].level).toBe('info');
-      expect(logger.emittedLines[0].message).toBe('Computed: result');
-      expect(logger.emittedLines[1].level).toBe('warning');
-      expect(logger.emittedLines[1].message).toBe('Computed: result');
+      expect(logger.emittedLogs[0].level).toBe('info');
+      expect(logger.emittedLogs[0].message).toBe('Computed: result');
+      expect(logger.emittedLogs[1].level).toBe('warning');
+      expect(logger.emittedLogs[1].message).toBe('Computed: result');
       expect(count).toBe(2);
     });
   });
@@ -274,147 +271,147 @@ describe('emitnlog.logger.BaseLogger', () => {
 
     describe('trace', () => {
       test('should log trace messages using template literals', () => {
-        logger.level = 'trace';
+        loggerLevel = 'trace';
         logger.t`test trace message with a number ${42} and a delayed value ${() => 'very detailed'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('trace');
-        expect(logger.emittedLines[0].message).toBe(
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('trace');
+        expect(logger.emittedLogs[0].message).toBe(
           'test trace message with a number 42 and a delayed value very detailed',
         );
       });
 
       test('should not compute the log template if level is set to debug', () => {
-        logger.level = 'debug';
+        loggerLevel = 'debug';
         logger.t`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('debug', () => {
       test('should log debug messages using template literals', () => {
-        logger.level = 'debug';
+        loggerLevel = 'debug';
         logger.d`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('debug');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('debug');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to info', () => {
-        logger.level = 'info';
+        loggerLevel = 'info';
         logger.d`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('info', () => {
       test('should log info messages using template literals', () => {
-        logger.level = 'info';
+        loggerLevel = 'info';
         logger.i`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('info');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('info');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to notice', () => {
-        logger.level = 'notice';
+        loggerLevel = 'notice';
         logger.i`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('notice', () => {
       test('should log notice messages using template literals', () => {
-        logger.level = 'notice';
+        loggerLevel = 'notice';
         logger.n`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('notice');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('notice');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to warning', () => {
-        logger.level = 'warning';
+        loggerLevel = 'warning';
         logger.n`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('warning', () => {
       test('should log warning messages using template literals', () => {
-        logger.level = 'warning';
+        loggerLevel = 'warning';
         logger.w`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('warning');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('warning');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to error', () => {
-        logger.level = 'error';
+        loggerLevel = 'error';
         logger.w`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('error', () => {
       test('should log error messages using template literals', () => {
-        logger.level = 'error';
+        loggerLevel = 'error';
         logger.e`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('error');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('error');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to critical', () => {
-        logger.level = 'critical';
+        loggerLevel = 'critical';
         logger.e`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('critical', () => {
       test('should log critical messages using template literals', () => {
-        logger.level = 'critical';
+        loggerLevel = 'critical';
         logger.c`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('critical');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('critical');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to alert', () => {
-        logger.level = 'alert';
+        loggerLevel = 'alert';
         logger.c`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('alert', () => {
       test('should log alert messages using template literals', () => {
-        logger.level = 'alert';
+        loggerLevel = 'alert';
         logger.a`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('alert');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('alert');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to emergency', () => {
-        logger.level = 'emergency';
+        loggerLevel = 'emergency';
         logger.a`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
     describe('emergency', () => {
       test('should log emergency messages using template literals', () => {
-        logger.level = 'emergency';
+        loggerLevel = 'emergency';
         logger.em`test message with a number ${42} and a delayed value ${() => 'very cool'}`;
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('emergency');
-        expect(logger.emittedLines[0].message).toBe('test message with a number 42 and a delayed value very cool');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('emergency');
+        expect(logger.emittedLogs[0].message).toBe('test message with a number 42 and a delayed value very cool');
       });
 
       test('should not compute the log template if level is set to off', () => {
-        logger.level = 'off';
+        loggerLevel = 'off';
         logger.em`test message with a number ${42} and a delayed value ${() => fail()}`;
-        expect(logger.emittedLines).toHaveLength(0);
+        expect(logger.emittedLogs).toHaveLength(0);
       });
     });
 
@@ -423,18 +420,18 @@ describe('emitnlog.logger.BaseLogger', () => {
         const error = new Error('Connection failed');
         logger.e`Database error: ${error}`;
 
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('error');
-        expect(logger.emittedLines[0].message).toBe('Database error: Connection failed');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('error');
+        expect(logger.emittedLogs[0].message).toBe('Database error: Connection failed');
       });
 
       test('should automatically format objects with message property in template literals', () => {
         const customError = { message: 'Custom error message' };
         logger.e`Application error: ${customError}`;
 
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('error');
-        expect(logger.emittedLines[0].message).toBe('Application error: {"message":"Custom error message"}');
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('error');
+        expect(logger.emittedLogs[0].message).toBe('Application error: {"message":"Custom error message"}');
       });
 
       test('should handle both error objects in templates and as args', () => {
@@ -443,10 +440,10 @@ describe('emitnlog.logger.BaseLogger', () => {
 
         logger.args(error2).e`Primary error: ${error1}, with context`;
 
-        expect(logger.emittedLines).toHaveLength(1);
-        expect(logger.emittedLines[0].level).toBe('error');
-        expect(logger.emittedLines[0].message).toBe('Primary error: First error, with context');
-        expect(logger.emittedLines[0].args).toContain(error2);
+        expect(logger.emittedLogs).toHaveLength(1);
+        expect(logger.emittedLogs[0].level).toBe('error');
+        expect(logger.emittedLogs[0].message).toBe('Primary error: First error, with context');
+        expect(logger.emittedLogs[0].args).toContain(error2);
       });
 
       test('should format errors at all log levels', () => {
@@ -461,28 +458,28 @@ describe('emitnlog.logger.BaseLogger', () => {
         logger.a`Alert with error: ${error}`;
         logger.em`Emergency with error: ${error}`;
 
-        expect(logger.emittedLines).toHaveLength(8);
-        expect(logger.emittedLines[0].level).toBe('debug');
-        expect(logger.emittedLines[0].message).toBe('Debug with error: Test error');
-        expect(logger.emittedLines[1].level).toBe('info');
-        expect(logger.emittedLines[1].message).toBe('Info with error: Test error');
-        expect(logger.emittedLines[2].level).toBe('notice');
-        expect(logger.emittedLines[2].message).toBe('Notice with error: Test error');
-        expect(logger.emittedLines[3].level).toBe('warning');
-        expect(logger.emittedLines[3].message).toBe('Warning with error: Test error');
-        expect(logger.emittedLines[4].level).toBe('error');
-        expect(logger.emittedLines[4].message).toBe('Error with error: Test error');
-        expect(logger.emittedLines[5].level).toBe('critical');
-        expect(logger.emittedLines[5].message).toBe('Critical with error: Test error');
-        expect(logger.emittedLines[6].level).toBe('alert');
-        expect(logger.emittedLines[6].message).toBe('Alert with error: Test error');
-        expect(logger.emittedLines[7].level).toBe('emergency');
-        expect(logger.emittedLines[7].message).toBe('Emergency with error: Test error');
+        expect(logger.emittedLogs).toHaveLength(8);
+        expect(logger.emittedLogs[0].level).toBe('debug');
+        expect(logger.emittedLogs[0].message).toBe('Debug with error: Test error');
+        expect(logger.emittedLogs[1].level).toBe('info');
+        expect(logger.emittedLogs[1].message).toBe('Info with error: Test error');
+        expect(logger.emittedLogs[2].level).toBe('notice');
+        expect(logger.emittedLogs[2].message).toBe('Notice with error: Test error');
+        expect(logger.emittedLogs[3].level).toBe('warning');
+        expect(logger.emittedLogs[3].message).toBe('Warning with error: Test error');
+        expect(logger.emittedLogs[4].level).toBe('error');
+        expect(logger.emittedLogs[4].message).toBe('Error with error: Test error');
+        expect(logger.emittedLogs[5].level).toBe('critical');
+        expect(logger.emittedLogs[5].message).toBe('Critical with error: Test error');
+        expect(logger.emittedLogs[6].level).toBe('alert');
+        expect(logger.emittedLogs[6].message).toBe('Alert with error: Test error');
+        expect(logger.emittedLogs[7].level).toBe('emergency');
+        expect(logger.emittedLogs[7].message).toBe('Emergency with error: Test error');
       });
     });
 
     test('should handle lazy message stringification', () => {
-      logger.level = 'info';
+      loggerLevel = 'info';
 
       let count = 0;
       const expensiveStringification = {
@@ -492,35 +489,35 @@ describe('emitnlog.logger.BaseLogger', () => {
         },
       };
 
-      expect(logger.emittedLines).toEqual([]);
+      expect(logger.emittedLogs).toEqual([]);
       expect(count).toBe(0);
       //
       logger.i`Computed: ${expensiveStringification}`;
       logger.d`Computed: ${expensiveStringification}`;
       logger.w`Computed: ${expensiveStringification}`;
       //
-      expect(logger.emittedLines[0].level).toBe('info');
-      expect(logger.emittedLines[0].message).toBe('Computed: result');
-      expect(logger.emittedLines[1].level).toBe('warning');
-      expect(logger.emittedLines[1].message).toBe('Computed: result');
+      expect(logger.emittedLogs[0].level).toBe('info');
+      expect(logger.emittedLogs[0].message).toBe('Computed: result');
+      expect(logger.emittedLogs[1].level).toBe('warning');
+      expect(logger.emittedLogs[1].message).toBe('Computed: result');
       expect(count).toBe(2);
     });
 
     test('should handle encoded characters in template literals', () => {
-      logger.level = 'info';
+      loggerLevel = 'info';
 
       const value = '\nworld';
       logger.i`hello\n\t${value}`;
 
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('info');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('info');
 
-      const actual = logger.emittedLines[0].message;
+      const actual = logger.emittedLogs[0].message;
       expect(actual).toBe(`hello\n\t\nworld`);
     });
 
     test('should respect raw encoded characters in template literals', () => {
-      logger.level = 'info';
+      loggerLevel = 'info';
 
       const array = ['hello\\n\\t', ''];
       (array as unknown as Record<string, string[]>).raw = ['hello\\n\\t', ''];
@@ -528,10 +525,10 @@ describe('emitnlog.logger.BaseLogger', () => {
       const value = '\\nworld';
       logger.i(array as unknown as TemplateStringsArray, value);
 
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('info');
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('info');
 
-      const actual = logger.emittedLines[0].message;
+      const actual = logger.emittedLogs[0].message;
       expect(actual).toBe(`hello\\n\\t\\nworld`);
     });
   });
@@ -544,21 +541,21 @@ describe('emitnlog.logger.BaseLogger', () => {
     test('should include additional args with template literals', () => {
       const error = new Error('details');
       logger.args(error).e`Failed operation`;
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('Failed operation');
-      expect(logger.emittedLines[0].args).toContain(error);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('Failed operation');
+      expect(logger.emittedLogs[0].args).toContain(error);
     });
 
     test('should include multiple args with template literals', () => {
       const user = { id: 123, name: 'Test User' };
       const requestId = 'req-456';
       logger.args(user, requestId).i`User login`;
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('info');
-      expect(logger.emittedLines[0].message).toBe('User login');
-      expect(logger.emittedLines[0].args).toContain(user);
-      expect(logger.emittedLines[0].args).toContain(requestId);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('info');
+      expect(logger.emittedLogs[0].message).toBe('User login');
+      expect(logger.emittedLogs[0].args).toContain(user);
+      expect(logger.emittedLogs[0].args).toContain(requestId);
     });
 
     test('should include args with traditional (non-template) logging methods', () => {
@@ -566,24 +563,24 @@ describe('emitnlog.logger.BaseLogger', () => {
       const context = { requestId: 'abc-123' };
       logger.args(context).info('Info message with context');
 
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('info');
-      expect(logger.emittedLines[0].message).toBe('Info message with context');
-      expect(logger.emittedLines[0].args).toContainEqual(context);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('info');
+      expect(logger.emittedLogs[0].message).toBe('Info message with context');
+      expect(logger.emittedLogs[0].args).toContainEqual(context);
 
       // Clear for next test
-      logger.emittedLines.length = 0;
+      logger.emittedLogs.length = 0;
 
       // Test with error method which has special handling
       const error = new Error('System failure');
       const metadata = { timestamp: Date.now() };
       logger.args(metadata).error(error);
 
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('System failure');
-      expect(logger.emittedLines[0].args).toContain(error);
-      expect(logger.emittedLines[0].args).toContain(metadata);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('System failure');
+      expect(logger.emittedLogs[0].args).toContain(error);
+      expect(logger.emittedLogs[0].args).toContain(metadata);
     });
 
     test('should clear args after they are used', () => {
@@ -591,26 +588,26 @@ describe('emitnlog.logger.BaseLogger', () => {
       const secondArg = { id: 2 };
 
       logger.args(firstArg).d`First log`;
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('debug');
-      expect(logger.emittedLines[0].message).toBe('First log');
-      expect(logger.emittedLines[0].args).toContain(firstArg);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('debug');
+      expect(logger.emittedLogs[0].message).toBe('First log');
+      expect(logger.emittedLogs[0].args).toContain(firstArg);
 
       logger.d`Second log`;
-      expect(logger.emittedLines).toHaveLength(2);
-      expect(logger.emittedLines[1].level).toBe('debug');
-      expect(logger.emittedLines[1].message).toBe('Second log');
-      expect(logger.emittedLines[1].args).not.toContain(firstArg);
+      expect(logger.emittedLogs).toHaveLength(2);
+      expect(logger.emittedLogs[1].level).toBe('debug');
+      expect(logger.emittedLogs[1].message).toBe('Second log');
+      expect(logger.emittedLogs[1].args).not.toContain(firstArg);
 
       logger.args(secondArg).d`Third log`;
-      expect(logger.emittedLines).toHaveLength(3);
-      expect(logger.emittedLines[2].level).toBe('debug');
-      expect(logger.emittedLines[2].message).toBe('Third log');
-      expect(logger.emittedLines[2].args).toContain(secondArg);
+      expect(logger.emittedLogs).toHaveLength(3);
+      expect(logger.emittedLogs[2].level).toBe('debug');
+      expect(logger.emittedLogs[2].message).toBe('Third log');
+      expect(logger.emittedLogs[2].args).toContain(secondArg);
     });
 
     test('should reset args even when log level is not applicable', () => {
-      logger.level = 'warning'; // Set level to warning (higher than debug/info)
+      loggerLevel = 'warning'; // Set level to warning (higher than debug/info)
 
       const context = { user: 'test-user' };
 
@@ -618,17 +615,17 @@ describe('emitnlog.logger.BaseLogger', () => {
       logger.args(context).info('This should not be logged');
 
       // Args should have been reset even though the log was filtered out
-      expect(logger.emittedLines).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(0);
 
       // Now log something at the appropriate level
       logger.warning('This should be logged');
 
       // Should log but without the previous context
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('warning');
-      expect(logger.emittedLines[0].message).toBe('This should be logged');
-      expect(logger.emittedLines[0].args).not.toContain(context);
-      expect(logger.emittedLines[0].args).toHaveLength(0);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('warning');
+      expect(logger.emittedLogs[0].message).toBe('This should be logged');
+      expect(logger.emittedLogs[0].args).not.toContain(context);
+      expect(logger.emittedLogs[0].args).toHaveLength(0);
     });
 
     test('should work with all log levels', () => {
@@ -643,43 +640,43 @@ describe('emitnlog.logger.BaseLogger', () => {
       logger.args(context).a`Alert log`;
       logger.args(context).em`Emergency log`;
 
-      expect(logger.emittedLines).toHaveLength(8);
+      expect(logger.emittedLogs).toHaveLength(8);
 
-      expect(logger.emittedLines[0].level).toBe('debug');
-      expect(logger.emittedLines[0].message).toBe('Debug log');
-      expect(logger.emittedLines[0].args).toContain(context);
+      expect(logger.emittedLogs[0].level).toBe('debug');
+      expect(logger.emittedLogs[0].message).toBe('Debug log');
+      expect(logger.emittedLogs[0].args).toContain(context);
 
-      expect(logger.emittedLines[1].level).toBe('info');
-      expect(logger.emittedLines[1].message).toBe('Info log');
-      expect(logger.emittedLines[1].args).toContain(context);
+      expect(logger.emittedLogs[1].level).toBe('info');
+      expect(logger.emittedLogs[1].message).toBe('Info log');
+      expect(logger.emittedLogs[1].args).toContain(context);
 
-      expect(logger.emittedLines[2].level).toBe('notice');
-      expect(logger.emittedLines[2].message).toBe('Notice log');
-      expect(logger.emittedLines[2].args).toContain(context);
+      expect(logger.emittedLogs[2].level).toBe('notice');
+      expect(logger.emittedLogs[2].message).toBe('Notice log');
+      expect(logger.emittedLogs[2].args).toContain(context);
 
-      expect(logger.emittedLines[3].level).toBe('warning');
-      expect(logger.emittedLines[3].message).toBe('Warning log');
-      expect(logger.emittedLines[3].args).toContain(context);
+      expect(logger.emittedLogs[3].level).toBe('warning');
+      expect(logger.emittedLogs[3].message).toBe('Warning log');
+      expect(logger.emittedLogs[3].args).toContain(context);
 
-      expect(logger.emittedLines[4].level).toBe('error');
-      expect(logger.emittedLines[4].message).toBe('Error log');
-      expect(logger.emittedLines[4].args).toContain(context);
+      expect(logger.emittedLogs[4].level).toBe('error');
+      expect(logger.emittedLogs[4].message).toBe('Error log');
+      expect(logger.emittedLogs[4].args).toContain(context);
 
-      expect(logger.emittedLines[5].level).toBe('critical');
-      expect(logger.emittedLines[5].message).toBe('Critical log');
-      expect(logger.emittedLines[5].args).toContain(context);
+      expect(logger.emittedLogs[5].level).toBe('critical');
+      expect(logger.emittedLogs[5].message).toBe('Critical log');
+      expect(logger.emittedLogs[5].args).toContain(context);
 
-      expect(logger.emittedLines[6].level).toBe('alert');
-      expect(logger.emittedLines[6].message).toBe('Alert log');
-      expect(logger.emittedLines[6].args).toContain(context);
+      expect(logger.emittedLogs[6].level).toBe('alert');
+      expect(logger.emittedLogs[6].message).toBe('Alert log');
+      expect(logger.emittedLogs[6].args).toContain(context);
 
-      expect(logger.emittedLines[7].level).toBe('emergency');
-      expect(logger.emittedLines[7].message).toBe('Emergency log');
-      expect(logger.emittedLines[7].args).toContain(context);
+      expect(logger.emittedLogs[7].level).toBe('emergency');
+      expect(logger.emittedLogs[7].message).toBe('Emergency log');
+      expect(logger.emittedLogs[7].args).toContain(context);
     });
 
     test('should respect log level filtering', () => {
-      logger.level = 'error';
+      loggerLevel = 'error';
       const context = { context: 'test' };
 
       logger.args(context).d`Debug log`;
@@ -688,10 +685,10 @@ describe('emitnlog.logger.BaseLogger', () => {
       logger.args(context).w`Warning log`;
       logger.args(context).e`Error log`;
 
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toBe('Error log');
-      expect(logger.emittedLines[0].args).toContain(context);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toBe('Error log');
+      expect(logger.emittedLogs[0].args).toContain(context);
     });
 
     test('should handle OFF_LOGGER correctly', () => {
@@ -701,7 +698,7 @@ describe('emitnlog.logger.BaseLogger', () => {
       offLogger.args(context).d`This should not be logged`;
       offLogger.args(context).e`This should not be logged either`;
 
-      expect(offLogger.emittedLines).toHaveLength(0);
+      expect(offLogger.emittedLogs).toHaveLength(0);
     });
 
     test('should handle complex scenarios with error objects', () => {
@@ -710,11 +707,11 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       logger.args(error, requestContext).e`Failed to process request at ${new Date().toISOString()}`;
 
-      expect(logger.emittedLines).toHaveLength(1);
-      expect(logger.emittedLines[0].level).toBe('error');
-      expect(logger.emittedLines[0].message).toMatch(/Failed to process request at/);
-      expect(logger.emittedLines[0].args).toContain(error);
-      expect(logger.emittedLines[0].args).toContain(requestContext);
+      expect(logger.emittedLogs).toHaveLength(1);
+      expect(logger.emittedLogs[0].level).toBe('error');
+      expect(logger.emittedLogs[0].message).toMatch(/Failed to process request at/);
+      expect(logger.emittedLogs[0].args).toContain(error);
+      expect(logger.emittedLogs[0].args).toContain(requestContext);
     });
   });
 });

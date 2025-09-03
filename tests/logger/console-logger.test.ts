@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { ConsoleLogger } from '../../src/logger/index.ts';
+import { createConsoleLogLogger } from '../../src/logger/index.ts';
 
-describe('emitnlog.logger.ConsoleLogger', () => {
+describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeEach(() => {
@@ -14,7 +14,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should write logs to console.log', () => {
-    const logger = new ConsoleLogger();
+    const logger = createConsoleLogLogger();
 
     logger.info('Test message');
 
@@ -32,7 +32,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should pass additional arguments to console.log', () => {
-    const logger = new ConsoleLogger();
+    const logger = createConsoleLogLogger();
     const context = { userId: '123' };
 
     logger.info('User logged in', context);
@@ -45,7 +45,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should respect log level filtering', () => {
-    const logger = new ConsoleLogger('warning');
+    const logger = createConsoleLogLogger('warning');
 
     logger.info('This should not be logged');
     logger.warning('This should be logged');
@@ -57,7 +57,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should work with JSON format', () => {
-    const logger = new ConsoleLogger('info', 'json');
+    const logger = createConsoleLogLogger('info', 'json-pretty');
 
     logger.info('JSON test message');
 
@@ -75,7 +75,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should work with unformatted JSON format', () => {
-    const logger = new ConsoleLogger('info', 'unformatted-json');
+    const logger = createConsoleLogLogger('info', 'json-compact');
 
     logger.info('Unformatted JSON test message');
 
@@ -94,7 +94,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should pass additional arguments correctly with JSON format', () => {
-    const logger = new ConsoleLogger('info', 'json');
+    const logger = createConsoleLogLogger('info', 'json-pretty');
     const context = { userId: '123', action: 'login' };
     const additionalInfo = 'extra data';
 
@@ -116,7 +116,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
   });
 
   test('should pass additional arguments correctly with plain format', () => {
-    const logger = new ConsoleLogger('info', 'plain');
+    const logger = createConsoleLogLogger('info', 'plain');
     const context = { userId: '123', action: 'login' };
     const additionalInfo = 'extra data';
 
@@ -138,7 +138,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
 
   describe('stringify options', () => {
     test('should use default stringify options', () => {
-      const logger = new ConsoleLogger();
+      const logger = createConsoleLogLogger();
       const largeArray = Array.from({ length: 150 }, (_, i) => i);
 
       logger.i`Large array: ${largeArray}`;
@@ -148,7 +148,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
     });
 
     test('should respect custom stringify options for array truncation', () => {
-      const logger = new ConsoleLogger('info', 'colorful', { stringifyOptions: { maxArrayElements: 5 } });
+      const logger = createConsoleLogLogger('info', 'colorful', { stringifyOptions: { maxArrayElements: 5 } });
       const array = Array.from({ length: 20 }, (_, i) => i);
 
       logger.i`Array: ${array}`;
@@ -158,7 +158,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
     });
 
     test('should respect custom stringify options for object truncation', () => {
-      const logger = new ConsoleLogger('info', 'colorful', { stringifyOptions: { maxProperties: 3 } });
+      const logger = createConsoleLogLogger('info', 'colorful', { stringifyOptions: { maxProperties: 3 } });
       const obj = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`prop${i}`, i]));
 
       logger.i`Object: ${obj}`;
@@ -168,7 +168,7 @@ describe('emitnlog.logger.ConsoleLogger', () => {
     });
 
     test('should disable truncation when options set to negative', () => {
-      const logger = new ConsoleLogger('info', 'colorful', {
+      const logger = createConsoleLogLogger('info', 'colorful', {
         stringifyOptions: { maxArrayElements: -1, maxProperties: -1 },
       });
       const largeArray = Array.from({ length: 150 }, (_, i) => i);

@@ -1,7 +1,7 @@
 import { expect, jest } from '@jest/globals';
 
 import type { Logger, LogLevel } from '../src/logger/index.ts';
-import { BaseLogger } from '../src/logger/index.ts';
+import { asExtendedLogger, emitter, implementation } from '../src/logger/index.ts';
 
 /*
  * Utilities to make using Jester easier.
@@ -17,6 +17,36 @@ export const flushFakeTimePromises = () =>
     const timers: { setImmediate: (fn: (cb: () => void) => void) => void } = jest.requireActual('timers');
     timers.setImmediate(resolve);
   });
+
+/**
+ * A logger that exposes the emitted log entries.
+ *
+ * @see {@link createMemoryLogger}
+ */
+export type MemoryLogger = Logger & emitter.MemoryStore;
+
+/**
+ * Creates a logger that accumulates the log entries.
+ *
+ * @example
+ *
+ * ```ts
+ * const logger = createMemoryLogger();
+ * logger.log('info', 'Hello, world!');
+ * expect(logger.entries).toEqual([{ level: 'info', message: 'Hello, world!' }]);
+ * logger.clear();
+ * ```
+ *
+ * @param level
+ * @returns
+ */
+export const createMemoryLogger = (
+  level: LogLevel | 'off' | (() => LogLevel | 'off') = 'info',
+): Logger & emitter.MemoryStore => {
+  const sink = emitter.memorySink();
+  const logger = emitter.createLogger(level, sink);
+  return asExtendedLogger(logger, { entries: sink.entries, clear: () => sink.clear() });
+};
 
 /**
  * The type of the logger returned by `createTestLogger`.
@@ -36,15 +66,15 @@ export type TestLogger = ReturnType<typeof createTestLogger>;
  *
  * @returns A logger that can be used to test log messages.
  */
-export const createTestLogger = (level: LogLevel = 'debug'): jest.Mocked<Logger> => {
-  const logger = new (class extends BaseLogger {
-    protected emitLine(): void {
+export const createTestLogger = (level: LogLevel | 'off' | (() => LogLevel | 'off') = 'debug'): jest.Mocked<Logger> => {
+  const logger = new (class extends implementation.BaseLogger {
+    protected emit(): void {
       return;
     }
   })(level);
 
   jest.spyOn(logger, 'log');
-  jest.spyOn(logger as unknown as { emitLine: jest.Mock }, 'emitLine');
+  jest.spyOn(logger as unknown as { emit: jest.Mock }, 'emit');
   return logger as unknown as jest.Mocked<Logger>;
 };
 

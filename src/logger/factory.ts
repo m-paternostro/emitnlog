@@ -1,5 +1,8 @@
+import type { Simplify } from 'type-fest';
+
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
 import type { Logger, LogLevel } from './definition.ts';
+import { asDelegatedSink } from './emitter/common.ts';
 import { consoleByLevelSink, consoleErrorSink, consoleLogSink } from './emitter/console-sink.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
 import type { LogFormatter } from './emitter/formatter.ts';
@@ -53,7 +56,7 @@ export const createConsoleLogLogger = (
   level: LogLevel = 'info',
   format: LogFormat = 'colorful',
   options?: BaseLoggerOptions,
-): Logger => createLogger(level, consoleLogSink(toLogSink(format)), options);
+): Logger => createLogger(level, consoleLogSink(toLogFormatter(format)), options);
 
 /**
  * Creates a logger that matches the behavior of ConsoleErrorLogger. Emits log messages to standard error
@@ -95,7 +98,7 @@ export const createConsoleErrorLogger = (
   level: LogLevel = 'info',
   format: LogFormat = 'colorful',
   options?: BaseLoggerOptions,
-): Logger => createLogger(level, consoleErrorSink(toLogSink(format)), options);
+): Logger => createLogger(level, consoleErrorSink(toLogFormatter(format)), options);
 
 /**
  * Creates a standard application logger with sensible defaults. Routes messages based on severity:
@@ -129,9 +132,9 @@ export const createConsoleByLevelLogger = (
   level: LogLevel = 'info',
   format: LogFormat = 'colorful',
   options?: BaseLoggerOptions,
-): Logger => createLogger(level, consoleByLevelSink(toLogSink(format)), options);
+): Logger => createLogger(level, consoleByLevelSink(toLogFormatter(format)), options);
 
-export const toLogSink = (format: LogFormat): LogFormatter => {
+export const toLogFormatter = (format: LogFormat): LogFormatter => {
   switch (format) {
     case 'colorful':
       return colorfulFormatter;
@@ -149,4 +152,17 @@ export const toLogSink = (format: LogFormat): LogFormatter => {
       exhaustiveCheck(format);
       return plainFormatter;
   }
+};
+
+type UnionToIntersection<U> = (U extends unknown ? (x: U) => void : never) extends (x: infer I) => void ? I : never;
+type ExtendedShape<Ms extends readonly object[]> = UnionToIntersection<Ms[number]>;
+type ExtendedLogger<L extends Logger, Ms extends readonly object[]> = Simplify<L & ExtendedShape<Ms>>;
+
+export const asExtendedLogger = <L extends Logger, Ms extends readonly object[]>(
+  logger: L,
+  ...extensions: Ms
+): ExtendedLogger<L, Ms> => {
+  const extendedLogger = createLogger(() => logger.level, asDelegatedSink(logger));
+  for (const m of extensions) Object.assign(extendedLogger, m);
+  return extendedLogger as ExtendedLogger<L, Ms>;
 };
