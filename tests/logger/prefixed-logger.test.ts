@@ -16,7 +16,7 @@ import {
 import { createTestLogger } from '../jester.setup.ts';
 
 // Mock the shouldEmitEntry to track calls
-jest.mock('../../src/logger/level-utils.ts', () => ({
+jest.mock('../../src/logger/implementation/level-utils.ts', () => ({
   shouldEmitEntry: jest.fn().mockImplementation((level, messageLevel) => {
     // Default implementation to allow testing level filtering
     const levels = ['trace', 'debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
@@ -512,7 +512,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
   describe('level filtering', () => {
     test('should check level before processing template literals', () => {
-      const logger = createTestLogger();
+      const logger = createTestLogger('info');
       const prefixedLogger = withPrefix(logger, 'test');
 
       // Reset the mock to clearly see if shouldEmitEntry is called

@@ -55,9 +55,10 @@ describe('emitnlog.logger.BaseLogger', () => {
   });
 
   let logger: TestLogger;
-  let loggerLevel: LogLevel | 'off' = 'trace';
+  let loggerLevel: LogLevel | 'off';
 
   beforeEach(() => {
+    loggerLevel = 'trace';
     logger = new TestLogger(() => loggerLevel);
   });
 
@@ -535,7 +536,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
   describe('args() method', () => {
     beforeEach(() => {
-      logger = new TestLogger('debug');
+      loggerLevel = 'debug';
     });
 
     test('should include additional args with template literals', () => {

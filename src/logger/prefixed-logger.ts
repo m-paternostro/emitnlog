@@ -1,6 +1,6 @@
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { Logger } from './definition.ts';
-import { createLogger } from './emitter/emitter-logger.ts';
+import type { Logger, LogLevel } from './definition.ts';
+import { BaseLogger } from './implementation/base-logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
@@ -205,29 +205,42 @@ export const withPrefix = <
     }
   }
 
-  const prefixedLogger: PrefixedLogger<TPrefix, TSeparator> = {
-    [prefixSymbol]: prefix,
-    [separatorSymbol]: prefixSeparator,
-    [dataSymbol]: { rootLogger: logger, messageSeparator },
-
-    ...createLogger(() => logger.level, {
-      sink: (level, message, args) => {
-        const prefixedMessage = (): string => {
-          const loggerPrefix = prefixedLogger[prefixSymbol]!;
-          const loggerMessageSeparator = prefixedLogger[dataSymbol]!.messageSeparator;
-          return `${loggerPrefix}${loggerMessageSeparator}${message}`;
-        };
-
-        logger.log(level, prefixedMessage, ...args);
-      },
-
-      flush: logger.flush,
-      close: logger.close,
-    }),
-  };
-
+  const prefixedLogger = new PrefixedLoggerImpl(logger, prefix, prefixSeparator, messageSeparator);
   return prefixedLogger as unknown as WithPrefixResult<TLogger, TPrefix, TSeparator, TFallbackPrefix>;
 };
+
+class PrefixedLoggerImpl<TPrefix extends string = string, TSeparator extends string = string>
+  extends BaseLogger
+  implements PrefixedLogger<TPrefix, TSeparator>
+{
+  public readonly [prefixSymbol]: TPrefix | undefined;
+  public readonly [separatorSymbol]: TSeparator | undefined;
+  public readonly [dataSymbol]: { readonly rootLogger: Logger; readonly messageSeparator: string };
+
+  public readonly flush: (() => void | Promise<void>) | undefined;
+  public readonly close: (() => void | Promise<void>) | undefined;
+
+  public constructor(rootLogger: Logger, prefix: TPrefix, prefixSeparator: TSeparator, messageSeparator: string) {
+    super(() => rootLogger.level);
+
+    this[prefixSymbol] = prefix;
+    this[separatorSymbol] = prefixSeparator;
+    this[dataSymbol] = { rootLogger, messageSeparator };
+
+    this.flush = rootLogger.flush ? () => rootLogger.flush?.() : undefined;
+    this.close = rootLogger.close ? () => rootLogger.close?.() : undefined;
+  }
+
+  protected override emit(level: LogLevel, message: string, args: readonly unknown[]): void {
+    const prefixedMessage = (): string => {
+      const loggerPrefix = this[prefixSymbol];
+      const loggerMessageSeparator = this[dataSymbol].messageSeparator;
+      return `${loggerPrefix}${loggerMessageSeparator}${message}`;
+    };
+
+    this[dataSymbol].rootLogger.log(level, prefixedMessage, ...args);
+  }
+}
 
 /**
  * Appends a prefix to an existing prefixed logger, creating a hierarchical prefix structure.
@@ -407,7 +420,13 @@ export const resetPrefix = <const TPrefix extends string, const TSeparator exten
 };
 
 export const isPrefixedLogger = (logger: Logger | undefined | null): logger is PrefixedLogger =>
-  isNotNullable(logger) && prefixSymbol in logger && typeof logger[prefixSymbol] === 'string' && dataSymbol in logger;
+  isNotNullable(logger) &&
+  prefixSymbol in logger &&
+  typeof logger[prefixSymbol] === 'string' &&
+  separatorSymbol in logger &&
+  typeof logger[separatorSymbol] === 'string' &&
+  dataSymbol in logger &&
+  logger[dataSymbol] !== undefined;
 
 export const inspectPrefixedLogger = (
   logger: Logger,

@@ -20,6 +20,11 @@
 export type LogLevel = 'trace' | 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
 
 /**
+ * Type representing the content of a log entry. Can be a primitive value or a function that returns a primitive value.
+ */
+export type LogMessage = string | number | boolean | (() => string | number | boolean);
+
+/**
  * Generic logger interface that provides methods for logging entries at different severity levels.
  *
  * The logger supports a filtering mechanism based on severity levels:
@@ -275,17 +280,27 @@ export interface Logger {
    * when the message is expensive to construct, as the function will only be invoked if the entry will actually be
    * emitted based on the current logger level.
    *
+   * The warning entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.warning('Feature X is deprecated and will be removed in version 2.0');
    * logger.warning(() => `Slow operation detected: ${operation} took ${duration}ms`);
+   * logger.warning(new Error('Connection timeout... Retrying...'), error);
+   * logger.warning({ error: ['Connection timeout... Retrying...', errorCode] });
    * ```
    *
    * @param message The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly warning: (message: LogMessage, ...args: unknown[]) => void;
+  readonly warning: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs a warning-level entry using a template string, which is only computed if the current log level
@@ -325,10 +340,11 @@ export interface Logger {
    *
    * The error entry content can be:
    *
-   * - A direct value that is logged as is
-   * - A function that returns a value, useful for messages that are expensive to compute
-   * - An Error object, which is automatically stringified and added as an additional argument
-   * - An object with an `error` property that is logged as a string and added as an additional argument
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
    *
    * @example
    *
@@ -383,17 +399,27 @@ export interface Logger {
    * Critical entries are only emitted if the logger's level is set to `critical`, `error`, `warning`, `notice`, `info`,
    * , `debug`, or `trace`.
    *
+   * The critical entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.critical('Database connection pool exhausted');
    * logger.critical(() => `System memory usage critical: ${memoryUsage}%`);
+   * logger.critical(new Error('Connection timeout'), error);
+   * logger.critical({ error: ['Database connection failed', errorCode] });
    * ```
    *
    * @param message The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly critical: (message: LogMessage, ...args: unknown[]) => void;
+  readonly critical: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs a critical-level entry using a template string, which is only computed if the current log level
@@ -431,17 +457,27 @@ export interface Logger {
    * Alert entries are only emitted if the logger's level is set to `alert`, `critical`, `error`, `warning`, `notice`,
    * `info`, `debug`, or `trace`.
    *
+   * The alert entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.alert('Data corruption detected in customer database');
    * logger.alert(() => `Security breach detected from IP ${ipAddress}`);
+   * logger.alert(new Error('Connection timeout'), error);
+   * logger.alert({ error: ['Database connection failed', errorCode] });
    * ```
    *
    * @param message The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly alert: (message: LogMessage, ...args: unknown[]) => void;
+  readonly alert: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an alert-level entry using a template string, which is only computed if the current log level (`logger.level`)
@@ -478,17 +514,27 @@ export interface Logger {
    *
    * Emergency entries are emitted at all logger levels except when the logger level is set to 'off'.
    *
+   * The emergency entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.emergency('System is shutting down due to critical failure');
    * logger.emergency(() => `Fatal error in primary system: ${errorDetails}`);
+   * logger.emergency(new Error('Connection timeout'), error);
+   * logger.emergency({ error: ['Database connection failed', errorCode] });
    * ```
    *
    * @param message The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly emergency: (message: LogMessage, ...args: unknown[]) => void;
+  readonly emergency: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an emergency-level entry using a template string, which is computed at all logger levels except 'off'.
@@ -543,8 +589,3 @@ export interface Logger {
   readonly flush?: () => void | Promise<void>;
   readonly close?: () => void | Promise<void>;
 }
-
-/**
- * Type representing the content of a log entry. Can be a primitive value or a function that returns a primitive value.
- */
-export type LogMessage = string | number | boolean | (() => string | number | boolean);

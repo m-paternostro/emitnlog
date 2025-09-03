@@ -52,7 +52,7 @@ export const asSingleSink = (...logSinks: LogSink[]): LogSink => {
 
 export const asDelegatedSink = (logger: Logger): LogSink =>
   asLogSink((level, message, args) => {
-    logger.log(level, message, args);
+    logger.log(level, message, ...args);
   }, logger);
 
 export type LogEntry = {
