@@ -1,9 +1,8 @@
-import { describe, expect, jest, test } from '@jest/globals';
+import { describe, expect, test } from '@jest/globals';
 
 import type { IsEqual } from 'type-fest';
 
 import { createLogger } from '../../src/logger/emitter/index.ts';
-import { shouldEmitEntry } from '../../src/logger/implementation/index.ts';
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
 import {
   appendPrefix,
@@ -13,18 +12,7 @@ import {
   resetPrefix,
   withPrefix,
 } from '../../src/logger/index.ts';
-import { createTestLogger } from '../jester.setup.ts';
-
-// Mock the shouldEmitEntry to track calls
-jest.mock('../../src/logger/implementation/level-utils.ts', () => ({
-  shouldEmitEntry: jest.fn().mockImplementation((level, messageLevel) => {
-    // Default implementation to allow testing level filtering
-    const levels = ['trace', 'debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
-    const levelIndex = levels.indexOf(String(level));
-    const messageLevelIndex = levels.indexOf(String(messageLevel));
-    return levelIndex <= messageLevelIndex;
-  }),
-}));
+import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
 
 describe('emitnlog.logger.prefixed-logger', () => {
   test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
@@ -434,6 +422,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       });
 
       const prefixedLogger = withPrefix(logger, 'test');
+      expect(prefixedLogger.level).toBe('info');
 
       let count = 0;
       const expensiveOperation = () => {
@@ -512,20 +501,20 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
   describe('level filtering', () => {
     test('should check level before processing template literals', () => {
-      const logger = createTestLogger('info');
+      const logger = createMemoryLogger('info');
       const prefixedLogger = withPrefix(logger, 'test');
 
-      // Reset the mock to clearly see if shouldEmitEntry is called
-      (shouldEmitEntry as jest.Mock).mockClear();
+      let executed = false;
+      const value = () => {
+        executed = true;
+        return 'a value';
+      };
 
       // This should be filtered out at the 'debug' level
-      prefixedLogger.d`Debug message`;
+      prefixedLogger.d`Debug message: ${value}`;
 
-      // Should check level before trying to process template
-      expect(shouldEmitEntry).toHaveBeenCalledWith('info', 'debug');
-
-      // The log method should not be called since level is above debug
-      expect(logger.log).not.toHaveBeenCalledWith('debug', expect.anything());
+      expect(executed).toBe(false);
+      expect(logger.entries).toHaveLength(0);
     });
 
     test('should respect logger level for standard methods', () => {

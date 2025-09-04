@@ -1,7 +1,7 @@
 import { emptyArray } from '../../utils/common/singleton.ts';
 import type { StringifyOptions } from '../../utils/converter/stringify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
-import type { Logger, LogLevel, LogMessage } from '../definition.ts';
+import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from '../definition.ts';
 import { shouldEmitEntry } from './level-utils.ts';
 
 /**
@@ -21,6 +21,35 @@ export type BaseLoggerOptions = {
  * breaking current code.
  */
 export abstract class BaseLogger implements Logger {
+  /**
+   * Converts an error input to a log message and arguments.
+   *
+   * @param logger The logger to use for stringification
+   * @param input The input to convert
+   * @param args The arguments to convert
+   */
+  public static convertErrorInput(
+    logger: Logger,
+    input: LogMessage | Error | { error: unknown },
+    args: readonly unknown[],
+  ): { readonly convertedMessage: LogMessage; readonly convertedArgs: readonly unknown[] } {
+    const stringifyValue =
+      logger instanceof BaseLogger
+        ? (value: unknown) => logger.stringifyValue(value)
+        : (value: unknown) => stringify(value);
+
+    const convertedMessage: LogMessage = () =>
+      typeof input === 'function'
+        ? input()
+        : input && typeof input === 'object' && 'error' in input
+          ? stringifyValue(input.error)
+          : stringifyValue(input);
+
+    const convertedArgs = typeof input === 'object' ? (args.length ? [input, ...args] : [input]) : args;
+
+    return { convertedMessage, convertedArgs };
+  }
+
   /**
    * The minimum severity level for log entries to be emitted. Log entries with levels below this threshold will be
    * filtered out. Default is 'info'.
@@ -58,7 +87,7 @@ export abstract class BaseLogger implements Logger {
     this.log('trace', message, ...args);
   }
 
-  public t(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public t(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('trace', () => this.taggedLog(strings, values));
   }
 
@@ -66,7 +95,7 @@ export abstract class BaseLogger implements Logger {
     this.log('debug', message, ...args);
   }
 
-  public d(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public d(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('debug', () => this.taggedLog(strings, values));
   }
 
@@ -74,7 +103,7 @@ export abstract class BaseLogger implements Logger {
     this.log('info', message, ...args);
   }
 
-  public i(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public i(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('info', () => this.taggedLog(strings, values));
   }
 
@@ -82,58 +111,58 @@ export abstract class BaseLogger implements Logger {
     this.log('notice', message, ...args);
   }
 
-  public n(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public n(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('notice', () => this.taggedLog(strings, values));
   }
 
   public warning(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = this.convertErrorInput(input, args);
+    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
     this.log('warning', convertedMessage, ...convertedArgs);
   }
 
-  public w(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public w(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('warning', () => this.taggedLog(strings, values));
   }
 
   public error(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = this.convertErrorInput(input, args);
+    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
     this.log('error', convertedMessage, ...convertedArgs);
   }
 
-  public e(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public e(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('error', () => this.taggedLog(strings, values));
   }
 
   public critical(input: LogMessage | Error | { error: unknown }, ...args: unknown[]): void {
-    const { convertedMessage, convertedArgs } = this.convertErrorInput(input, args);
+    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
     this.log('critical', convertedMessage, ...convertedArgs);
   }
 
-  public c(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public c(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('critical', () => this.taggedLog(strings, values));
   }
 
   public alert(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = this.convertErrorInput(input, args);
+    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
     this.log('alert', convertedMessage, ...convertedArgs);
   }
 
-  public a(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public a(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('alert', () => this.taggedLog(strings, values));
   }
 
   public emergency(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = this.convertErrorInput(input, args);
+    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
     this.log('emergency', convertedMessage, ...convertedArgs);
   }
 
-  public em(strings: TemplateStringsArray, ...values: readonly unknown[]): void {
+  public em(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
     this.log('emergency', () => this.taggedLog(strings, values));
   }
 
   public log(level: LogLevel, message: LogMessage, ...args: readonly unknown[]): void {
     const pendingArgs = this.consumePendingArgs();
-    if (this.shouldEmitEntry(level)) {
+    if (shouldEmitEntry(this, level)) {
       if (typeof message === 'function') {
         message = message();
       }
@@ -146,32 +175,6 @@ export abstract class BaseLogger implements Logger {
 
       this.emit(level, String(message), args);
     }
-  }
-
-  protected convertErrorInput(
-    input: LogMessage | Error | { error: unknown },
-    args: readonly unknown[],
-  ): { readonly convertedMessage: LogMessage; readonly convertedArgs: readonly unknown[] } {
-    const convertedMessage: LogMessage = () =>
-      typeof input === 'function'
-        ? input()
-        : input && typeof input === 'object' && 'error' in input
-          ? this.stringifyValue(input.error)
-          : this.stringifyValue(input);
-
-    const convertedArgs = typeof input === 'object' ? (args.length ? [input, ...args] : [input]) : args;
-
-    return { convertedMessage, convertedArgs };
-  }
-
-  /**
-   * Returns true if a log with the specified level is written.
-   *
-   * @param level The log level to check
-   * @returns True if the log level is applicable, false otherwise
-   */
-  protected shouldEmitEntry(level: LogLevel): boolean {
-    return shouldEmitEntry(this.level, level);
   }
 
   /**
@@ -187,7 +190,10 @@ export abstract class BaseLogger implements Logger {
     return args;
   }
 
-  protected taggedLog(strings: TemplateStringsArray, values: readonly unknown[]): string {
+  protected taggedLog(strings: LogTemplateStringsArray, values: readonly unknown[]): string {
+    if (typeof strings === 'function') {
+      strings = strings();
+    }
     return String.raw({ raw: strings }, ...values.map((arg) => this.stringifyValue(arg)));
   }
 

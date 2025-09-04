@@ -1,9 +1,9 @@
-import type { Finalizer } from '../implementation/types.ts';
+import type { SyncFinalizer } from '../implementation/finalizer.ts';
 import type { LogEntry, LogSink } from './common.ts';
 import { asLogEntry } from './common.ts';
 
 export type MemoryStore = { readonly entries: readonly LogEntry[]; readonly clear: () => void };
-export type MemorySink = Finalizer<LogSink> & MemoryStore;
+export type MemorySink = SyncFinalizer<LogSink> & MemoryStore;
 
 export const memorySink = (entries: LogEntry[] = []): MemorySink => {
   const clear = () => {

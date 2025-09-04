@@ -93,7 +93,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should accept options object in constructor', async () => {
-    const logger = createFileLogger(testLogFile, { level: 'warning', format: 'colorful', ...TEST_FLUSH_DELAY });
+    const logger = createFileLogger(testLogFile, { ...TEST_FLUSH_DELAY, level: 'warning', format: 'colorful' });
     expect(logger.level).toBe('warning');
 
     // Check that level setting is respected
@@ -321,7 +321,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should keep ANSI color codes when format is colorful', async () => {
-    const logger = createFileLogger(testLogFile + '.colors', { format: 'colorful', ...TEST_FLUSH_DELAY });
+    const logger = createFileLogger(testLogFile + '.colors', { ...TEST_FLUSH_DELAY, format: 'colorful' });
 
     // Create a string with ANSI color codes (simulate what FormattedLogger might produce)
     const coloredText = '\x1B[32mThis is colored green\x1B[0m';
@@ -411,7 +411,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should not include args when omitArgs is true', async () => {
-    const logger = createFileLogger(testLogFile, { omitArgs: true, ...TEST_FLUSH_DELAY });
+    const logger = createFileLogger(testLogFile, { ...TEST_FLUSH_DELAY, omitArgs: true });
 
     // Log with additional arguments
     logger.info('Message with args', { should: 'not appear' });

@@ -1,6 +1,5 @@
 import type { Logger, LogLevel } from './definition.ts';
-import { asDelegatedSink, asSingleSink } from './emitter/common.ts';
-import { createLogger } from './emitter/emitter-logger.ts';
+import { asSingleFinalizer, type ForgeFinalizer, type MergeFinalizer } from './implementation/finalizer.ts';
 import { LOWEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
@@ -32,13 +31,15 @@ import { OFF_LOGGER } from './off-logger.ts';
  * @returns A new logger that fans out logs to the provided loggers. Returns the 'off logger' if loggers is empty or the
  *   specified logger is loggers length is one.
  */
-export const tee = (...loggers: readonly Logger[]): Logger => {
+export const tee = <T extends readonly Logger[]>(...loggers: T): TeeLogger<T> => {
+  loggers = loggers.filter((logger) => logger !== OFF_LOGGER) as unknown as T;
+
   if (!loggers.length) {
-    return OFF_LOGGER;
+    return OFF_LOGGER as TeeLogger<T>;
   }
 
   if (loggers.length === 1) {
-    return loggers[0];
+    return loggers[0] as TeeLogger<T>;
   }
 
   const computeLevel = (): LogLevel | 'off' => {
@@ -58,6 +59,64 @@ export const tee = (...loggers: readonly Logger[]): Logger => {
     return level;
   };
 
-  const emitter = asSingleSink(...loggers.map(asDelegatedSink));
-  return createLogger(computeLevel, emitter);
+  let pendingArgs: unknown[] = [];
+
+  const consumePendingArgs = (): readonly unknown[] | undefined => {
+    if (!pendingArgs.length) {
+      return undefined;
+    }
+
+    const args = pendingArgs;
+    pendingArgs = [];
+    return args;
+  };
+
+  const runLogOperation = (operation: (logger: Logger) => void) => {
+    const currentArgs = consumePendingArgs();
+    loggers.forEach((logger) => {
+      if (currentArgs) {
+        logger.args(...currentArgs);
+      }
+      operation(logger);
+    });
+  };
+
+  const finalizer = asSingleFinalizer(...loggers);
+
+  const teeLogger: Logger = {
+    get level() {
+      return computeLevel();
+    },
+
+    args: (...args) => {
+      pendingArgs.push(...args);
+      return teeLogger;
+    },
+
+    trace: (message, ...args) => runLogOperation((logger) => logger.trace(message, ...args)),
+    t: (strings, ...values) => runLogOperation((logger) => logger.t(strings, ...values)),
+    debug: (message, ...args) => runLogOperation((logger) => logger.debug(message, ...args)),
+    d: (strings, ...values) => runLogOperation((logger) => logger.d(strings, ...values)),
+    info: (message, ...args) => runLogOperation((logger) => logger.info(message, ...args)),
+    i: (strings, ...values) => runLogOperation((logger) => logger.i(strings, ...values)),
+    notice: (message, ...args) => runLogOperation((logger) => logger.notice(message, ...args)),
+    n: (strings, ...values) => runLogOperation((logger) => logger.n(strings, ...values)),
+    warning: (input, ...args) => runLogOperation((logger) => logger.warning(input, ...args)),
+    w: (strings, ...values) => runLogOperation((logger) => logger.w(strings, ...values)),
+    error: (input, ...args) => runLogOperation((logger) => logger.error(input, ...args)),
+    e: (strings, ...values) => runLogOperation((logger) => logger.e(strings, ...values)),
+    critical: (input, ...args) => runLogOperation((logger) => logger.critical(input, ...args)),
+    c: (strings, ...values) => runLogOperation((logger) => logger.c(strings, ...values)),
+    alert: (input, ...args) => runLogOperation((logger) => logger.alert(input, ...args)),
+    a: (strings, ...values) => runLogOperation((logger) => logger.a(strings, ...values)),
+    emergency: (input, ...args) => runLogOperation((logger) => logger.emergency(input, ...args)),
+    em: (strings, ...values) => runLogOperation((logger) => logger.em(strings, ...values)),
+    log: (level, message, ...args) => runLogOperation((logger) => logger.log(level, message, ...args)),
+
+    ...finalizer,
+  };
+
+  return teeLogger as TeeLogger<T>;
 };
+
+type TeeLogger<Ls extends readonly Logger[]> = MergeFinalizer<Logger, ForgeFinalizer<Ls>>;

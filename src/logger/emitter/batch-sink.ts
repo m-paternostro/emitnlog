@@ -1,5 +1,5 @@
 import { debounce } from '../../utils/async/debounce.ts';
-import type { AsyncFinalizer } from '../implementation/types.ts';
+import type { AsyncFinalizer } from '../implementation/finalizer.ts';
 import type { LogEntry, LogSink } from './common.ts';
 import { asLogEntry, asLogSink } from './common.ts';
 

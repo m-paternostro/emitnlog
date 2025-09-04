@@ -2,7 +2,6 @@ import type { Simplify } from 'type-fest';
 
 import { exhaustiveCheck } from '../utils/common/exhaustive-check.ts';
 import type { Logger, LogLevel } from './definition.ts';
-import { asDelegatedSink } from './emitter/common.ts';
 import { consoleByLevelSink, consoleErrorSink, consoleLogSink } from './emitter/console-sink.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
 import type { LogFormatter } from './emitter/formatter.ts';
@@ -168,7 +167,63 @@ export const asExtendedLogger = <L extends Logger, Ms extends readonly object[]>
   logger: L,
   ...extensions: Ms
 ): ExtendedLogger<L, Ms> => {
-  const extendedLogger = createLogger(() => logger.level, asDelegatedSink(logger));
-  for (const m of extensions) Object.assign(extendedLogger, m);
+  let pendingArgs: unknown[] = [];
+
+  const consumePendingArgs = (): readonly unknown[] | undefined => {
+    if (!pendingArgs.length) {
+      return undefined;
+    }
+
+    const args = pendingArgs;
+    pendingArgs = [];
+    return args;
+  };
+
+  const runLogOperation = (operation: () => void) => {
+    const currentArgs = consumePendingArgs();
+    if (currentArgs) {
+      logger.args(...currentArgs);
+    }
+    operation();
+  };
+
+  const extendedLogger: Logger = {
+    get level() {
+      return logger.level;
+    },
+
+    args: (...args) => {
+      pendingArgs.push(...args);
+      return extendedLogger;
+    },
+
+    trace: (message, ...args) => runLogOperation(() => logger.trace(message, ...args)),
+    t: (strings, ...values) => runLogOperation(() => logger.t(strings, ...values)),
+    debug: (message, ...args) => runLogOperation(() => logger.debug(message, ...args)),
+    d: (strings, ...values) => runLogOperation(() => logger.d(strings, ...values)),
+    info: (message, ...args) => runLogOperation(() => logger.info(message, ...args)),
+    i: (strings, ...values) => runLogOperation(() => logger.i(strings, ...values)),
+    notice: (message, ...args) => runLogOperation(() => logger.notice(message, ...args)),
+    n: (strings, ...values) => runLogOperation(() => logger.n(strings, ...values)),
+    warning: (input, ...args) => runLogOperation(() => logger.warning(input, ...args)),
+    w: (strings, ...values) => runLogOperation(() => logger.w(strings, ...values)),
+    error: (input, ...args) => runLogOperation(() => logger.error(input, ...args)),
+    e: (strings, ...values) => runLogOperation(() => logger.e(strings, ...values)),
+    critical: (input, ...args) => runLogOperation(() => logger.critical(input, ...args)),
+    c: (strings, ...values) => runLogOperation(() => logger.c(strings, ...values)),
+    alert: (input, ...args) => runLogOperation(() => logger.alert(input, ...args)),
+    a: (strings, ...values) => runLogOperation(() => logger.a(strings, ...values)),
+    emergency: (input, ...args) => runLogOperation(() => logger.emergency(input, ...args)),
+    em: (strings, ...values) => runLogOperation(() => logger.em(strings, ...values)),
+    log: (level, message, ...args) => runLogOperation(() => logger.log(level, message, ...args)),
+
+    flush: logger.flush ? () => logger.flush?.() : undefined,
+    close: logger.close ? () => logger.close?.() : undefined,
+  };
+
+  for (const m of extensions) {
+    Object.assign(extendedLogger, m);
+  }
+
   return extendedLogger as ExtendedLogger<L, Ms>;
 };

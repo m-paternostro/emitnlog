@@ -53,6 +53,8 @@ export const createMemoryLogger = (
  */
 export type TestLogger = ReturnType<typeof createTestLogger>;
 
+type InternalTestLogger = Logger & { emit: jest.Mock };
+
 /**
  * Creates a logger that can be used to test log messages.
  *
@@ -74,7 +76,7 @@ export const createTestLogger = (level: LogLevel | 'off' | (() => LogLevel | 'of
   })(level);
 
   jest.spyOn(logger, 'log');
-  jest.spyOn(logger as unknown as { emit: jest.Mock }, 'emit');
+  jest.spyOn(logger as unknown as InternalTestLogger, 'emit');
   return logger as unknown as jest.Mocked<Logger>;
 };
 
@@ -101,7 +103,7 @@ const toHaveLoggedWith = (
   level: LogLevel,
   expected: string | RegExp,
 ): CustomMatcherResult => {
-  const calls = logger.log.mock.calls;
+  const calls = (logger as unknown as InternalTestLogger).emit.mock.calls;
   if (!calls.length) {
     return {
       pass: false,
@@ -111,7 +113,7 @@ const toHaveLoggedWith = (
   }
 
   const matchingCall = calls.find(([callLevel, message]) => {
-    const messageString = String(typeof message === 'function' ? message() : message);
+    const messageString = String(message);
     return (
       callLevel === level &&
       (typeof expected === 'string' ? messageString.includes(expected) : expected.test(messageString))
@@ -125,10 +127,9 @@ const toHaveLoggedWith = (
     };
   }
 
-  const actualCalls = calls.map(([callLevel, message], index) => {
-    const messageString = String(typeof message === 'function' ? message() : message);
-    return `${index + 1}: [${callLevel}] ${messageString}`;
-  });
+  const actualCalls = calls.map(
+    ([callLevel, message], index) => `${index + 1}: [${String(callLevel)}] ${String(message)}`,
+  );
 
   return {
     pass: false,

@@ -2,11 +2,13 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import type { Simplify } from 'type-fest';
+
 import { errorify } from '../../utils/converter/errorify.ts';
 import type { LogSink } from '../emitter/common.ts';
 import type { LogFormatter } from '../emitter/formatter.ts';
 import { plainFormatter } from '../emitter/formatter.ts';
-import type { AsyncFinalizer } from '../implementation/types.ts';
+import type { AsyncFinalizer } from '../implementation/finalizer.ts';
 
 /**
  * Configuration options for the file sink.
@@ -46,7 +48,7 @@ export type FileSinkOptions = {
   readonly errorHandler?: (error: unknown) => void;
 };
 
-export type FileSink = AsyncFinalizer<LogSink> & { readonly filePath: string };
+export type FileSink = Simplify<AsyncFinalizer<LogSink> & { readonly filePath: string }>;
 
 /**
  * Creates a file log sink that writes logs directly to a file.

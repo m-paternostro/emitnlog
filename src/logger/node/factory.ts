@@ -9,8 +9,8 @@ import { plainArgAppendingFormatter } from '../emitter/formatter.ts';
 import type { LogFormat } from '../factory.ts';
 import { asExtendedLogger, toLogFormatter } from '../factory.ts';
 import type { BaseLoggerOptions } from '../implementation/base-logger.ts';
+import type { AsyncFinalizer } from '../implementation/finalizer.ts';
 import { isLogLevel } from '../implementation/level-utils.ts';
-import type { AsyncFinalizer } from '../implementation/types.ts';
 import type { FileSink, FileSinkOptions } from './file-sink.ts';
 import { fileSink } from './file-sink.ts';
 

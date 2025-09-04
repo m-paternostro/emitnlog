@@ -25,6 +25,12 @@ export type LogLevel = 'trace' | 'debug' | 'info' | 'notice' | 'warning' | 'erro
 export type LogMessage = string | number | boolean | (() => string | number | boolean);
 
 /**
+ * Type representing the template strings of a log entry. Can be a TemplateStringsArray or a function that returns a
+ * TemplateStringsArray.
+ */
+export type LogTemplateStringsArray = TemplateStringsArray | (() => TemplateStringsArray);
+
+/**
  * Generic logger interface that provides methods for logging entries at different severity levels.
  *
  * The logger supports a filtering mechanism based on severity levels:
@@ -116,7 +122,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly t: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly t: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a debug-level entry for detailed debugging information (e.g., function entry/exit points).
@@ -167,7 +173,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly d: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly d: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an info-level entry for general informational messages (e.g., operation progress updates).
@@ -218,7 +224,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly i: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly i: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a notice-level entry for normal but significant events (e.g., configuration changes).
@@ -269,7 +275,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly n: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly n: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a warning-level entry for warning conditions (e.g., deprecated feature usage).
@@ -297,10 +303,10 @@ export interface Logger {
    * logger.warning({ error: ['Connection timeout... Retrying...', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly warning: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
+  readonly warning: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs a warning-level entry using a template string, which is only computed if the current log level
@@ -330,7 +336,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly w: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly w: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an error-level entry for error conditions (e.g., operation failures).
@@ -355,10 +361,10 @@ export interface Logger {
    * logger.error({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param error The error content, Error object, or function that returns content
+   * @param input The error content, Error object, or function that returns content
    * @param args Additional arguments to include in the log entry
    */
-  readonly error: (error: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
+  readonly error: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an error-level entry using a template string, which is only computed if the current log level (`logger.level`)
@@ -391,7 +397,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly e: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly e: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a critical-level entry for critical conditions (e.g., system component failures).
@@ -416,10 +422,10 @@ export interface Logger {
    * logger.critical({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly critical: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
+  readonly critical: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs a critical-level entry using a template string, which is only computed if the current log level
@@ -449,7 +455,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly c: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly c: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an alert-level entry for conditions where action must be taken immediately (e.g., data corruption detected).
@@ -474,10 +480,10 @@ export interface Logger {
    * logger.alert({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly alert: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
+  readonly alert: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an alert-level entry using a template string, which is only computed if the current log level (`logger.level`)
@@ -507,7 +513,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly a: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly a: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an emergency-level entry for when the system is unusable (e.g., complete system failure).
@@ -531,10 +537,10 @@ export interface Logger {
    * logger.emergency({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly emergency: (message: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
+  readonly emergency: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an emergency-level entry using a template string, which is computed at all logger levels except 'off'.
@@ -563,7 +569,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly em: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly em: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an entry at a specific severity level. This method is useful for dynamically setting the level without having
