@@ -3,7 +3,7 @@ import { expect, test, describe } from '@jest/globals';
 
 describe('ESM Flat imports', () => {
   test('Logger exports are available', () => {
-    expect(typeof emitnlog.ConsoleLogger).toBe('function');
+    expect(typeof emitnlog.createConsoleLogLogger).toBe('function');
     expect(typeof emitnlog.fromEnv).toBe('function');
 
     process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
@@ -11,11 +11,11 @@ describe('ESM Flat imports', () => {
       const logger = emitnlog.fromEnv();
       expect(logger).toBe(emitnlog.OFF_LOGGER);
     }
-    process.env.EMITNLOG_LOGGER = 'console';
+    process.env.EMITNLOG_LOGGER = 'console-log';
     {
       const logger = emitnlog.fromEnv();
       expect(logger).toBeDefined();
-      expect(logger.constructor.name).toBe('ConsoleLogger');
+      expect(logger.level).toBe('info');
     }
   });
 

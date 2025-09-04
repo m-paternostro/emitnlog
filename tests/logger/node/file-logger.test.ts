@@ -93,7 +93,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should accept options object in constructor', async () => {
-    const logger = createFileLogger(testLogFile, { ...TEST_FLUSH_DELAY, level: 'warning', format: 'colorful' });
+    const logger = createFileLogger(testLogFile, { level: 'warning', format: 'colorful' });
     expect(logger.level).toBe('warning');
 
     // Check that level setting is respected
@@ -101,7 +101,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     logger.warning('This should appear');
 
     // Wait for async operations
-    await delay(TEST_FLUSH_WAIT);
+    await logger.flush();
 
     const content = await readLogFile();
     expect(content).not.toContain('This should be filtered out');
