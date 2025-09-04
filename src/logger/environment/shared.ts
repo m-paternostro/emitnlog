@@ -168,7 +168,7 @@ export const createLoggerFromEnv = (
  * @param value The string to check
  * @returns True if the string is a valid LogFormat, false otherwise
  */
-export const isLogFormat = (value: unknown): value is LogFormat => {
+const isLogFormat = (value: unknown): value is LogFormat => {
   const format = value as LogFormat;
   switch (format) {
     case 'plain':

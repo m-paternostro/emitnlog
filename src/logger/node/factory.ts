@@ -1,3 +1,5 @@
+import type { Writable } from 'type-fest';
+
 import { exhaustiveCheck } from '../../utils/common/exhaustive-check.ts';
 import type { Logger, LogLevel } from '../definition.ts';
 import type { BatchSinkOptions } from '../emitter/batch-sink.ts';
@@ -7,11 +9,12 @@ import { plainArgAppendingFormatter } from '../emitter/formatter.ts';
 import type { LogFormat } from '../factory.ts';
 import { asExtendedLogger, toLogFormatter } from '../factory.ts';
 import type { BaseLoggerOptions } from '../implementation/base-logger.ts';
+import { isLogLevel } from '../implementation/level-utils.ts';
 import type { AsyncFinalizer } from '../implementation/types.ts';
 import type { FileSink, FileSinkOptions } from './file-sink.ts';
 import { fileSink } from './file-sink.ts';
 
-export type FileLoggerOptions = Omit<FileSinkOptions, 'formatter'> &
+export type FileLoggerOptions = Omit<FileSinkOptions, 'filePath' | 'formatter'> &
   BatchSinkOptions &
   BaseLoggerOptions & {
     /**
@@ -37,25 +40,32 @@ export type FileLoggerOptions = Omit<FileSinkOptions, 'formatter'> &
 
 export type FileLogger = AsyncFinalizer<Logger> & Pick<FileSink, 'filePath'>;
 
-export const createFileLogger = (
-  input: string | FileLoggerOptions,
-  level?: LogLevel,
-  format?: LogFormat,
-): FileLogger => {
-  if (typeof input === 'string') {
-    input = { filePath: input };
+export function createFileLogger(filePath: string, level?: LogLevel, format?: LogFormat): FileLogger;
+export function createFileLogger(filePath: string, options?: FileLoggerOptions): FileLogger;
+export function createFileLogger(
+  filePath: string,
+  option1?: LogLevel | FileLoggerOptions,
+  option2?: LogFormat,
+): FileLogger {
+  let options: Writable<FileLoggerOptions>;
+  if (isLogLevel(option1)) {
+    options = {};
+    options.level = option1;
+    options.format = option2;
+  } else {
+    options = option1 ?? {};
   }
 
-  if (level === undefined) {
-    level = input.level || 'info';
+  if (!options.level) {
+    options.level = 'info';
   }
-  if (format === undefined) {
-    format = input.format || 'plain';
+  if (!options.format) {
+    options.format = 'plain';
   }
 
-  let formatter = toLogFormatter(format);
-  if (!input.omitArgs) {
-    switch (format) {
+  let formatter = toLogFormatter(options.format);
+  if (!options.omitArgs) {
+    switch (options.format) {
       case 'plain':
       case 'colorful':
         formatter = plainArgAppendingFormatter(formatter);
@@ -66,10 +76,10 @@ export const createFileLogger = (
         break;
 
       default:
-        exhaustiveCheck(format);
+        exhaustiveCheck(options.format);
     }
   }
 
-  const fs = fileSink({ ...input, formatter });
-  return asExtendedLogger(createLogger(level, batchSink(fs, input), input), { filePath: fs.filePath });
-};
+  const fs = fileSink(filePath, formatter, options);
+  return asExtendedLogger(createLogger(options.level, batchSink(fs, options), options), { filePath: fs.filePath });
+}

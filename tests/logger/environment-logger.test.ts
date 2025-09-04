@@ -65,9 +65,8 @@ describe('emitnlog.logger.environment-logger', () => {
     ).mockImplementation((level?: LogLevel) => createTestLogger(level ?? 'info'));
 
     (nodeFactory.createFileLogger as jest.MockedFunction<typeof nodeFactory.createFileLogger>).mockImplementation(
-      (input: string | FileLoggerOptions, level?: LogLevel) => {
-        const logger = createTestLogger(level ?? 'info');
-        const filePath = typeof input === 'string' ? input : input.filePath || 'mocked-file-path';
+      (filePath: string, options?: FileLoggerOptions | LogLevel) => {
+        const logger = createTestLogger(typeof options === 'string' ? options : (options?.level ?? 'info'));
         return Object.assign(logger, { filePath }) as unknown as ReturnType<typeof nodeFactory.createFileLogger>;
       },
     );
@@ -159,11 +158,7 @@ describe('emitnlog.logger.environment-logger', () => {
       test('should create FileLogger when EMITNLOG_LOGGER starts with "file:"', () => {
         process.env.EMITNLOG_LOGGER = 'file:/path/to/log.txt';
         fromEnv();
-        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-          { filePath: '/path/to/log.txt', datePrefix: undefined },
-          undefined,
-          undefined,
-        );
+        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('/path/to/log.txt', { datePrefix: undefined });
         expect(factory.createConsoleLogLogger).not.toHaveBeenCalled();
         expect(factory.createConsoleErrorLogger).not.toHaveBeenCalled();
       });
@@ -171,11 +166,7 @@ describe('emitnlog.logger.environment-logger', () => {
       test('should create FileLogger with relative path', () => {
         process.env.EMITNLOG_LOGGER = 'file:logs/app.log';
         fromEnv();
-        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-          { filePath: 'logs/app.log', datePrefix: undefined },
-          undefined,
-          undefined,
-        );
+        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('logs/app.log', { datePrefix: undefined });
         expect(factory.createConsoleLogLogger).not.toHaveBeenCalled();
         expect(factory.createConsoleErrorLogger).not.toHaveBeenCalled();
       });
@@ -183,11 +174,7 @@ describe('emitnlog.logger.environment-logger', () => {
       test('should create FileLogger with date prefix when EMITNLOG_LOGGER starts with "file:date:"', () => {
         process.env.EMITNLOG_LOGGER = 'file:date:/path/to/log.txt';
         fromEnv();
-        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-          { filePath: '/path/to/log.txt', datePrefix: true },
-          undefined,
-          undefined,
-        );
+        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('/path/to/log.txt', { datePrefix: true });
         expect(factory.createConsoleLogLogger).not.toHaveBeenCalled();
         expect(factory.createConsoleErrorLogger).not.toHaveBeenCalled();
       });
@@ -367,11 +354,11 @@ describe('emitnlog.logger.environment-logger', () => {
 
         fromEnv();
 
-        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-          { filePath: 'test.log', datePrefix: undefined },
-          'warning',
-          'json-compact',
-        );
+        expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('test.log', {
+          datePrefix: undefined,
+          level: 'warning',
+          format: 'json-compact',
+        });
       });
 
       test('should handle mix of valid and invalid environment variables', () => {
@@ -464,11 +451,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
           fromEnv();
 
-          expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-            { filePath: expectedPath, datePrefix: undefined },
-            undefined,
-            undefined,
-          );
+          expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(expectedPath, { datePrefix: undefined });
 
           // Clean up for next iteration
           jest.clearAllMocks();
@@ -539,11 +522,11 @@ describe('emitnlog.logger.environment-logger', () => {
 
       const logger = fromEnv();
 
-      expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-        { filePath: 'test.log', datePrefix: undefined },
-        'debug',
-        'json-compact',
-      );
+      expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('test.log', {
+        datePrefix: undefined,
+        level: 'debug',
+        format: 'json-compact',
+      });
 
       expect(() => {
         logger.debug('Debug message');
@@ -582,11 +565,11 @@ describe('emitnlog.logger.environment-logger', () => {
         fallbackLogger: () => fallbackLogger, // Should not be used
       });
 
-      expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(
-        { filePath: 'logs/application.log', datePrefix: undefined },
-        'info',
-        'json-compact',
-      );
+      expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('logs/application.log', {
+        datePrefix: undefined,
+        level: 'info',
+        format: 'json-compact',
+      });
 
       expect(logger).not.toBe(fallbackLogger);
       expect(logger).not.toBe(OFF_LOGGER);

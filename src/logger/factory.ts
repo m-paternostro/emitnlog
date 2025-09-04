@@ -6,7 +6,13 @@ import { asDelegatedSink } from './emitter/common.ts';
 import { consoleByLevelSink, consoleErrorSink, consoleLogSink } from './emitter/console-sink.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
 import type { LogFormatter } from './emitter/formatter.ts';
-import { colorfulFormatter, jsonCompactFormatter, jsonPrettyFormatter, plainFormatter } from './emitter/formatter.ts';
+import {
+  basicFormatter,
+  colorfulFormatter,
+  jsonCompactFormatter,
+  jsonPrettyFormatter,
+  plainFormatter,
+} from './emitter/formatter.ts';
 import type { BaseLoggerOptions } from './implementation/base-logger.ts';
 
 /**
@@ -150,7 +156,7 @@ export const toLogFormatter = (format: LogFormat): LogFormatter => {
 
     default:
       exhaustiveCheck(format);
-      return plainFormatter;
+      return basicFormatter;
   }
 };
 

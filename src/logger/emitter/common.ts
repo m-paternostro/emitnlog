@@ -1,3 +1,5 @@
+import type { Writable } from 'type-fest';
+
 import type { Logger, LogLevel } from '../definition.ts';
 
 export type LogSink = {
@@ -6,22 +8,36 @@ export type LogSink = {
   readonly close?: () => void | Promise<void>;
 };
 
-export const asLogSink = (
+export function asLogSink(sink: LogSink['sink']): LogSink;
+export function asLogSink<F extends LogSink['flush'], C extends LogSink['close']>(
   sink: LogSink['sink'],
-  options?: { flush?: () => void | Promise<void>; close?: () => void | Promise<void> },
-): LogSink => ({ sink, flush: options?.flush, close: options?.close });
+  options: { flush?: F; close?: C },
+): LogSink & { flush: F; close: C };
+export function asLogSink(
+  sink: LogSink['sink'],
+  options?: { flush?: LogSink['flush']; close?: LogSink['close'] },
+): LogSink {
+  const logSink: Writable<LogSink> = { sink };
+  if (options?.flush) {
+    logSink.flush = options.flush;
+  }
+  if (options?.close) {
+    logSink.close = options.close;
+  }
+  return logSink;
+}
 
-export const asConditionalSink = (
-  logSink: LogSink,
+export const asConditionalSink = <S extends LogSink>(
+  logSink: S,
   predicate: (level: LogLevel, message: string, args: readonly unknown[]) => boolean,
-): LogSink =>
+): S =>
   asLogSink((level, message, args) => {
     if (predicate(level, message, args)) {
       logSink.sink(level, message, args);
     }
-  }, logSink);
+  }, logSink) as S;
 
-export const asSingleSink = (...logSinks: LogSink[]): LogSink => {
+export const asSingleSink = (...logSinks: readonly LogSink[]): LogSink => {
   const flushables = logSinks.filter((logSink) => logSink.flush);
   let flush: (() => void | Promise<void>) | undefined;
   if (flushables.length) {

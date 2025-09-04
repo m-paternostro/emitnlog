@@ -6,6 +6,8 @@ import { asLogEntry } from './common.ts';
 
 export type LogFormatter = (level: LogLevel, message: string, args: readonly unknown[]) => string;
 
+export const basicFormatter: LogFormatter = (level, message) => `${level} - ${message}`;
+
 export const plainFormatter: LogFormatter = (level, message) => {
   const timestamp = stringify(new Date());
 
@@ -39,10 +41,11 @@ export const plainArgAppendingFormatter =
       return formatted;
     }
 
+    const indexPadding = String(args.length).length;
     const formattedArgs = args
       .map((arg, i) => {
         const formattedArg = stringify(arg, { includeStack: true, pretty: true, maxDepth: 3 });
-        return `[${i}] ${formattedArg}`;
+        return `[arg${String(i).padStart(indexPadding, '0')}] ${formattedArg}`;
       })
       .join('\n');
 

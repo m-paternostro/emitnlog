@@ -1,7 +1,7 @@
 import { debounce } from '../../utils/async/debounce.ts';
 import type { AsyncFinalizer } from '../implementation/types.ts';
 import type { LogEntry, LogSink } from './common.ts';
-import { asLogEntry } from './common.ts';
+import { asLogEntry, asLogSink } from './common.ts';
 
 /**
  * Options for configuring the batch sink wrapper.
@@ -75,6 +75,13 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
   const maxBufferSize = options?.maxBufferSize ?? 100;
   const flushDelayMs = options?.flushDelayMs ?? 1000;
   const flushOnExit = options?.flushOnExit ?? true;
+
+  if (!flushDelayMs) {
+    return asLogSink((level, message, args) => logSink.sink(level, message, args), {
+      flush: async () => logSink.flush?.(),
+      close: async () => logSink.close?.(),
+    });
+  }
 
   let buffer: LogEntry[] = [];
   let isClosing = false;

@@ -3,24 +3,15 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { errorify } from '../../utils/converter/errorify.ts';
-import type { LogLevel } from '../definition';
-import { type LogFormatter, type LogSink, plainFormatter } from '../emitter';
+import type { LogSink } from '../emitter/common.ts';
+import type { LogFormatter } from '../emitter/formatter.ts';
+import { plainFormatter } from '../emitter/formatter.ts';
 import type { AsyncFinalizer } from '../implementation/types.ts';
 
 /**
  * Configuration options for the file sink.
  */
 export type FileSinkOptions = {
-  /**
-   * The path to the log file.
-   *
-   * - Absolute paths are used as-is
-   * - Relative paths are resolved from current working directory
-   * - Paths starting with ~ are expanded to home directory
-   * - Simple filenames without path separators are placed in OS temp directory
-   */
-  readonly filePath: string;
-
   /**
    * Whether to prepend a local date (yyyyMMdd-hhmmss_) to the file name.
    *
@@ -50,13 +41,6 @@ export type FileSinkOptions = {
   readonly mode?: number;
 
   /**
-   * The formatter to use for the log entries. Defaults to 'plainFormatter'.
-   *
-   * @default plainFormatter
-   */
-  readonly formatter?: LogFormatter;
-
-  /**
    * Error handler callback for file operations If not provided, errors will be thrown
    */
   readonly errorHandler?: (error: unknown) => void;
@@ -77,8 +61,12 @@ export type FileSink = AsyncFinalizer<LogSink> & { readonly filePath: string };
  * - Home directory expansion
  * - Graceful error handling
  *
- * Note: This sink only writes the formatted message to the file. Use formatters like plainFormatter() and
- * jsonCompactFormatter() to include timestamps and log levels in your output.
+ * Regarding the `filePath` argument:
+ *
+ * - Absolute paths are used as-is
+ * - Relative paths are resolved from current working directory
+ * - Paths starting with ~ are expanded to home directory
+ * - Simple filenames without path separators are placed in OS temp directory
  *
  * @example Basic usage
  *
@@ -100,37 +88,41 @@ export type FileSink = AsyncFinalizer<LogSink> & { readonly filePath: string };
  *   emitter.batchSink(fileSink('/logs/app.log'), { maxBufferSize: 100, flushDelayMs: 1000 }),
  * );
  * ```
+ *
+ * @param filePath The path to the log file.
  */
-export const fileSink = (options: FileSinkOptions | string): FileSink => {
-  if (typeof options === 'string') {
-    options = { filePath: options };
+export const fileSink = (
+  filePath: string,
+  formatter: LogFormatter = plainFormatter,
+  options?: FileSinkOptions,
+): FileSink => {
+  if (!filePath) {
+    throw new Error('InvalidArgument: file path is required');
   }
 
   const config = {
-    filePath: options.filePath,
-    datePrefix: options.datePrefix ?? false,
-    append: options.append ?? true,
-    encoding: options.encoding ?? 'utf8',
-    mode: options.mode ?? 0o666,
-    formatter: options.formatter ?? plainFormatter,
+    datePrefix: options?.datePrefix ?? false,
+    append: options?.append ?? true,
+    encoding: options?.encoding ?? 'utf8',
+    mode: options?.mode ?? 0o666,
     errorHandler:
-      options.errorHandler ??
+      options?.errorHandler ??
       ((error) => {
         throw errorify(error);
       }),
   } as const satisfies FileSinkOptions;
 
   let resolvedPath: string;
-  if (config.filePath.includes(path.sep)) {
-    if (config.filePath.startsWith('~')) {
-      resolvedPath = path.join(os.homedir(), config.filePath.substring(1));
-    } else if (path.isAbsolute(config.filePath)) {
-      resolvedPath = config.filePath;
+  if (filePath.includes(path.sep)) {
+    if (filePath.startsWith('~')) {
+      resolvedPath = path.join(os.homedir(), filePath.substring(1));
+    } else if (path.isAbsolute(filePath)) {
+      resolvedPath = filePath;
     } else {
-      resolvedPath = path.resolve(config.filePath);
+      resolvedPath = path.resolve(filePath);
     }
   } else {
-    resolvedPath = path.join(os.tmpdir(), config.filePath);
+    resolvedPath = path.join(os.tmpdir(), filePath);
   }
 
   if (config.datePrefix) {
@@ -140,6 +132,7 @@ export const fileSink = (options: FileSinkOptions | string): FileSink => {
   }
 
   let initialized = false;
+  let closed = false;
   let isAppending = config.append;
   let writeQueue = Promise.resolve();
 
@@ -166,9 +159,18 @@ export const fileSink = (options: FileSinkOptions | string): FileSink => {
   };
 
   return {
-    sink: (_level: LogLevel, message: string): void => {
+    sink: (level, message, args): void => {
+      if (closed) {
+        return;
+      }
+
+      // Format the message immediately to ensure correct timestamp
+      const formattedMessage = formatter(level, message, args);
+
       // Queue the write to maintain order, catching errors to prevent unhandled rejections
-      writeQueue = writeQueue.then(() => writeMessage(message).catch((error: unknown) => config.errorHandler(error)));
+      writeQueue = writeQueue.then(() =>
+        writeMessage(formattedMessage).catch((error: unknown) => config.errorHandler(error)),
+      );
     },
 
     filePath: resolvedPath,
@@ -178,6 +180,7 @@ export const fileSink = (options: FileSinkOptions | string): FileSink => {
     },
 
     async close(): Promise<void> {
+      closed = true;
       await writeQueue;
     },
   };
