@@ -21,10 +21,13 @@ import { OFF_LOGGER } from './off-logger.ts';
  * @example
  *
  * ```ts
- * import { tee } from 'emitnlog/logger';
+ * import { createConsoleErrorLogger, tee } from 'emitnlog/logger';
+ * import { createFileLogger } from 'emitnlog/logger/node';
  *
+ * const consoleLogger = createConsoleErrorLogger('info');
+ * const fileLogger = createFileLogger('~/tmp/entries.log');
  * const logger = tee(consoleLogger, fileLogger);
- * logger.info('This will be logged to both console and file');
+ * logger.i`This will be logged to both console error and file`;
  * ```
  *
  * @param loggers One or more loggers to combine.

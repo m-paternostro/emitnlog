@@ -25,37 +25,32 @@ import type { BaseLoggerOptions } from './implementation/base-logger.ts';
 export type LogFormat = 'plain' | 'colorful' | 'json-compact' | 'json-pretty';
 
 /**
- * Creates a logger that matches the behavior of ConsoleLogger. Emits log messages to standard output (console.log) with
- * optional formatting.
+ * Creates a logger that emits log messages to standard output (console.log) with optional formatting.
+ *
+ * All log entries, regardless of severity level, are sent to console.log. For routing based on severity, use
+ * {@link createConsoleByLevelLogger} instead.
  *
  * @example Basic usage
  *
  * ```ts
- * import { createConsoleLogger } from 'emitnlog/logger/plugin';
+ * import { createConsoleLogLogger } from 'emitnlog/logger';
  *
- * const logger = createConsoleLogger();
+ * const logger = createConsoleLogLogger();
  * logger.info('Application started');
+ * logger.error('This also goes to console.log');
  * ```
  *
  * @example With custom level and format
  *
  * ```ts
- * const logger = createConsoleLogger('debug', 'json');
+ * const logger = createConsoleLogLogger('debug', 'json-compact');
  * logger.debug('Debug information', { userId: 123 });
  * ```
  *
- * @example Building upon the created logger
- *
- * ```ts
- * import { PluggableLoggerBuilder } from 'emitnlog/logger/plugin';
- *
- * const baseLogger = createConsoleLogger();
- * const enhancedLogger = PluggableLoggerBuilder.from(baseLogger).filter(rateLimit(100)).build();
- * ```
- *
- * @param level - The minimum log level (default: 'info')
- * @param format - The output format: 'colorful', 'plain', 'json', or 'unformatted-json' (default: 'colorful')
- * @returns A PluggableLogger configured to match ConsoleLogger behavior
+ * @param level The minimum log level (default: 'info')
+ * @param format The output format (default: 'colorful')
+ * @param options Additional logger configuration options
+ * @returns A logger that writes all entries to console.log
  */
 export const createConsoleLogLogger = (
   level: LogLevel = 'info',
@@ -64,40 +59,33 @@ export const createConsoleLogLogger = (
 ): Logger => createLogger(level, consoleLogSink(toLogFormatter(format)), options);
 
 /**
- * Creates a logger that matches the behavior of ConsoleErrorLogger. Emits log messages to standard error
- * (console.error) with optional formatting.
+ * Creates a logger that emits log messages to standard error (console.error) with optional formatting.
+ *
+ * All log entries, regardless of severity level, are sent to console.error. This is useful when you want all logs to go
+ * to stderr for proper shell redirection or when building CLI tools.
  *
  * @example Basic usage
  *
  * ```ts
- * import { createConsoleErrorLogger } from 'emitnlog/logger/plugin';
+ * import { createConsoleErrorLogger } from 'emitnlog/logger';
  *
  * const logger = createConsoleErrorLogger();
  * logger.error('Critical error occurred');
+ * logger.info('This info message also goes to stderr');
  * ```
  *
  * @example Production configuration
  *
  * ```ts
- * const logger = createConsoleErrorLogger('error', 'json');
- * logger.info('This won't be logged');
+ * const logger = createConsoleErrorLogger('error', 'json-compact');
+ * logger.info("This won't be logged (below error level)");
  * logger.error('This will be logged as JSON to stderr');
  * ```
  *
- * @example Combining with other transports
- *
- * ```ts
- * import { PluggableLoggerBuilder, fileTransport } from 'emitnlog/logger/plugin';
- *
- * const errorLogger = createConsoleErrorLogger('warning');
- * const combinedLogger = PluggableLoggerBuilder.from(errorLogger)
- *   .transport(fileTransport('/var/log/errors.log'))
- *   .build();
- * ```
- *
- * @param level - The minimum log level (default: 'info')
- * @param format - The output format: 'colorful', 'plain', 'json', or 'unformatted-json' (default: 'plain')
- * @returns A PluggableLogger configured to match ConsoleErrorLogger behavior
+ * @param level The minimum log level (default: 'info')
+ * @param format The output format (default: 'colorful')
+ * @param options Additional logger configuration options
+ * @returns A logger that writes all entries to console.error
  */
 export const createConsoleErrorLogger = (
   level: LogLevel = 'info',
@@ -106,17 +94,19 @@ export const createConsoleErrorLogger = (
 ): Logger => createLogger(level, consoleErrorSink(toLogFormatter(format)), options);
 
 /**
- * Creates a standard application logger with sensible defaults. Routes messages based on severity:
+ * Creates a logger with intelligent console routing based on message severity.
  *
- * - Trace, debug, info, notice → console.log
- * - Warning, error, critical, alert, emergency → console.error
+ * This provides the most sensible console behavior for most applications:
+ *
+ * - Lower severity (trace, debug, info, notice) → console.log
+ * - Higher severity (warning, error, critical, alert, emergency) → console.error
  *
  * @example Basic usage
  *
  * ```ts
- * import { createStandardLogger } from 'emitnlog/logger/plugin';
+ * import { createConsoleByLevelLogger } from 'emitnlog/logger';
  *
- * const logger = createStandardLogger();
+ * const logger = createConsoleByLevelLogger();
  * logger.info('Normal operation'); // Goes to console.log
  * logger.error('Error occurred'); // Goes to console.error
  * logger.warning('Be careful'); // Goes to console.error
@@ -125,13 +115,14 @@ export const createConsoleErrorLogger = (
  * @example Production configuration
  *
  * ```ts
- * const logger = createStandardLogger('warning', 'json');
- * // Only warnings and above are logged, all as JSON to console.error
+ * const logger = createConsoleByLevelLogger('warning', 'json-compact');
+ * // Only warnings and above are logged, all to console.error as JSON
  * ```
  *
- * @param level - The minimum log level (default: 'info')
- * @param format - The output format (default: 'colorful')
- * @returns A PluggableLogger with automatic console routing based on severity
+ * @param level The minimum log level (default: 'info')
+ * @param format The output format (default: 'colorful')
+ * @param options Additional logger configuration options
+ * @returns A logger with automatic console routing based on severity
  */
 export const createConsoleByLevelLogger = (
   level: LogLevel = 'info',
@@ -139,6 +130,25 @@ export const createConsoleByLevelLogger = (
   options?: BaseLoggerOptions,
 ): Logger => createLogger(level, consoleByLevelSink(toLogFormatter(format)), options);
 
+/**
+ * Converts a format string into a corresponding log formatter function.
+ *
+ * This utility function maps the string-based format options to their corresponding formatter implementations. Used
+ * internally by the factory functions but exported for custom logger implementations.
+ *
+ * @example
+ *
+ * ```ts
+ * import { toLogFormatter } from 'emitnlog/logger';
+ *
+ * const formatter = toLogFormatter('json-compact');
+ * const formatted = formatter('info', 'Hello world', []);
+ * // formatted is a JSON string
+ * ```
+ *
+ * @param format The format type to convert
+ * @returns A LogFormatter function that formats entries according to the specified format
+ */
 export const toLogFormatter = (format: LogFormat): LogFormatter => {
   switch (format) {
     case 'colorful':
@@ -163,6 +173,32 @@ type UnionToIntersection<U> = (U extends unknown ? (x: U) => void : never) exten
 type ExtendedShape<Ms extends readonly object[]> = UnionToIntersection<Ms[number]>;
 type ExtendedLogger<L extends Logger, Ms extends readonly object[]> = Simplify<L & ExtendedShape<Ms>>;
 
+/**
+ * Extends a logger with additional methods and properties while preserving pending arguments functionality.
+ *
+ * This function allows you to add custom methods to any logger instance. The extended logger maintains the ability to
+ * chain arguments using the `args()` method, ensuring that pending arguments are properly forwarded with each log
+ * operation.
+ *
+ * @example Basic extension
+ *
+ * ```ts
+ * import { asExtendedLogger, createConsoleLogLogger } from 'emitnlog/logger';
+ *
+ * const baseLogger = createConsoleLogLogger();
+ * const extended = asExtendedLogger(baseLogger, {
+ *   logWithTimestamp: (message: string) => {
+ *     baseLogger.info(`[${new Date().toISOString()}] ${message}`);
+ *   },
+ * });
+ *
+ * extended.logWithTimestamp('Custom log message');
+ * ```
+ *
+ * @param logger The base logger to extend
+ * @param extensions Objects containing additional methods and properties to add to the logger
+ * @returns A new logger with all the original methods plus the provided extensions
+ */
 export const asExtendedLogger = <L extends Logger, Ms extends readonly object[]>(
   logger: L,
   ...extensions: Ms

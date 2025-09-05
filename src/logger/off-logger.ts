@@ -3,6 +3,19 @@ import type { Logger } from './definition.ts';
 /**
  * A logger implementation that does not emit any log entries regardless of level. Useful for completely disabling
  * logging in specific contexts.
+ *
+ * @example
+ *
+ * ```ts
+ * import type { Logger } from 'emitnlog/logger';
+ * import { OFF_LOGGER, withPrefix } from 'emitnlog/logger';
+ *
+ * const calculate = (logger?: Logger) => {
+ *   const calculateLogger = withPrefix(logger ?? OFF_LOGGER, 'calculate');
+ *   calculateLogger.i`starting calculation`;
+ *   ...
+ * };
+ * ```
  */
 export const OFF_LOGGER: Logger = Object.freeze({
   level: 'off',

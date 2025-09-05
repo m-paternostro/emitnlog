@@ -84,7 +84,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
  * process.env.EMITNLOG_LEVEL = 'info';
  * process.env.EMITNLOG_FORMAT = 'colorful';
  * const logger = fromEnv();
- * logger.info('Hello, world!'); // Will output with colors to console
+ * logger.i`Hello, world!`; // Will output with colors to console
  * ```
  *
  * @param options The options to use.

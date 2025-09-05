@@ -14,12 +14,20 @@ import { isLogLevel } from '../implementation/level-utils.ts';
 import type { FileSink, FileSinkOptions } from './file-sink.ts';
 import { fileSink } from './file-sink.ts';
 
+/**
+ * Configuration options for creating a file logger.
+ *
+ * Combines file sink options, batching options, and logger-specific settings to provide comprehensive control over file
+ * logging behavior.
+ */
 export type FileLoggerOptions = Omit<FileSinkOptions, 'filePath' | 'formatter'> &
   BatchSinkOptions &
   BaseLoggerOptions & {
     /**
      * By default the log entry `args` array is written out to the file if the format supports it. Pass `true` so that
      * the array is never written out.
+     *
+     * @default false
      */
     readonly omitArgs?: boolean;
 
@@ -38,9 +46,69 @@ export type FileLoggerOptions = Omit<FileSinkOptions, 'filePath' | 'formatter'> 
     readonly format?: LogFormat;
   };
 
+/**
+ * A file-based logger with batching capabilities and access to the file path.
+ */
 export type FileLogger = AsyncFinalizer<Logger> & Pick<FileSink, 'filePath'>;
 
+/**
+ * Creates a file logger with basic level and format configuration.
+ *
+ * @example Basic usage
+ *
+ * ```ts
+ * import { createFileLogger } from 'emitnlog/logger/node';
+ *
+ * const logger = createFileLogger('~/logs/app.log', 'info', 'plain');
+ * logger.i`Application started`;
+ * ```
+ *
+ * @param filePath Path to the log file
+ * @param level The minimum log level to emit (default: 'info')
+ * @param format The format for log entries (default: 'plain')
+ * @returns A file logger with batching enabled
+ */
 export function createFileLogger(filePath: string, level?: LogLevel, format?: LogFormat): FileLogger;
+
+/**
+ * Creates a file logger with comprehensive configuration options.
+ *
+ * This overload provides full control over file operations, batching behavior, and formatting options including
+ * argument handling.
+ *
+ * @example With comprehensive options
+ *
+ * ```ts
+ * import { createFileLogger } from 'emitnlog/logger/node';
+ *
+ * const logger = createFileLogger('~/logs/app.log', {
+ *   level: 'debug',
+ *   format: 'json-compact',
+ *   maxBufferSize: 50,
+ *   flushDelayMs: 2000,
+ *   datePrefix: true,
+ *   omitArgs: false,
+ * });
+ *
+ * logger.d`Processing user request`;
+ * ```
+ *
+ * @example With error handling
+ *
+ * ```ts
+ * import { createFileLogger } from 'emitnlog/logger/node';
+ *
+ * const logger = createFileLogger('~/logs/app.log', {
+ *   errorHandler: (error) => {
+ *     console.error('Log file error:', error);
+ *   },
+ * });
+ * ```
+ *
+ * @param filePath Path to the log file
+ * @param options Configuration options for the file logger
+ * @returns A file logger with batching enabled and the specified configuration
+ */
 export function createFileLogger(filePath: string, options?: FileLoggerOptions): FileLogger;
 export function createFileLogger(
   filePath: string,

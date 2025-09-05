@@ -8,19 +8,26 @@ import { asLogEntry, asLogSink } from './common.ts';
  */
 export type BatchSinkOptions = {
   /**
-   * Maximum number of log entries to buffer before flushing. Default: 100
+   * Maximum number of log entries to buffer before flushing.
+   *
+   * @default 100
    */
   readonly maxBufferSize?: number;
 
   /**
-   * Maximum time in milliseconds to wait before flushing the buffer. Default: 1000 (1 second)
+   * Maximum time in milliseconds to wait before flushing the buffer.
+   *
+   * @default 1000 (1s)
    */
   readonly flushDelayMs?: number;
 
   /**
-   * Whether to flush remaining logs when the process exits. Default: true
+   * By default the batch sink flushes the buffer if the `process` object is available. Use true to change this
+   * behavior.
+   *
+   * @default false
    */
-  readonly flushOnExit?: boolean;
+  readonly skipFlushOnExit?: boolean;
 };
 
 /**
@@ -32,49 +39,32 @@ export type BatchSinkOptions = {
  * @example Basic usage with file sink
  *
  * ```ts
- * import { emitter } from 'emitnlog/logger';
+ * import { batchSink, createLogger } from 'emitnlog/logger/emitter';
  * import { fileSink } from 'emitnlog/logger/node';
  *
- * const batchedFile = emitter.batchSink(fileSink('/logs/app.log'), { maxBufferSize: 100, flushDelayMs: 1000 });
- * const logger = emitter.createLogger('info', batchedFile);
+ * const batchedFile = batchSink(fileSink('/logs/app.log'), { maxBufferSize: 100, flushDelayMs: 1000 });
+ * const logger = createLogger('info', batchedFile);
  * ```
  *
- * @example Batching multiple sinks
+ * @example Memory sink with batching
  *
  * ```ts
- * import { batchEmitter, multiEmitter, fileEmitter, syslogEmitter } from 'emitnlog/logger/plugin';
+ * import { batchSink, memorySink } from 'emitnlog/logger/emitter';
  *
- * // Batch writes to both file and syslog
- * const batchedMulti = batchEmitter(
- *   multiEmitter([fileEmitter('/logs/app.log'), syslogEmitter({ host: 'logs.example.com' })]),
- *   { maxBufferSize: 500, flushDelayMs: 5000 },
- * );
+ * const memory = memorySink();
+ * const batched = batchSink(memory, { maxBufferSize: 50, flushDelayMs: 2000 });
  * ```
  *
- * @example Different batching per emitter
- *
- * ```ts
- * const logger = new PluggableLoggerBuilder()
- *   .emitter(batchEmitter(fileEmitter('/logs/app.log'), {
- *     maxBufferSize: 1000,  // Large batches for file
- *     flushDelayMs: 10000   // Flush every 10 seconds
- *   }))
- *   .emitter(batchEmitter(networkEmitter(...), {
- *     maxBufferSize: 50,    // Smaller batches for network
- *     flushDelayMs: 1000    // Flush every second
- *   }))
- *   .emitter(consoleEmitter()) // No batching for console
- *   .build();
  * ```
- *
  * @param logSink The log sink to wrap with batching
  * @param options Configuration options for batching behavior
  * @returns A log sink that batches log entries
+ * ```
  */
 export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFinalizer<LogSink> => {
   const maxBufferSize = options?.maxBufferSize ?? 100;
   const flushDelayMs = options?.flushDelayMs ?? 1000;
-  const flushOnExit = options?.flushOnExit ?? true;
+  const skipFlushOnExit = options?.skipFlushOnExit ?? true;
 
   if (flushDelayMs === 0) {
     return asLogSink((level, message, args) => logSink.sink(level, message, args), {
@@ -142,7 +132,7 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
   let exitHandler: (() => void) | undefined;
 
   /* eslint-disable no-undef */
-  if (flushOnExit && typeof process !== 'undefined' && typeof process.on === 'function') {
+  if (!skipFlushOnExit && typeof process !== 'undefined' && typeof process.on === 'function') {
     exitHandler = (): void => {
       isClosing = true;
       flushBuffer(true);
@@ -205,8 +195,10 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
  * @example
  *
  * ```ts
- * const batchedFile = batchSizeSink(
- *   fileSink('/logs/app.log'),
+ * import { batchSizeSink, memorySink } from 'emitnlog/logger/emitter';
+ *
+ * const batched = batchSizeSink(
+ *   memorySink(),
  *   100, // Flush every 100 entries
  * );
  * ```
@@ -223,8 +215,10 @@ export const batchSizeSink = (logSink: LogSink, maxBufferSize: number): AsyncFin
  * @example
  *
  * ```ts
- * const batchedFile = batchTimeSink(
- *   fileSink('/logs/app.log'),
+ * import { batchTimeSink, memorySink } from 'emitnlog/logger/emitter';
+ *
+ * const batched = batchTimeSink(
+ *   memorySink(),
  *   5000, // Flush every 5 seconds
  * );
  * ```

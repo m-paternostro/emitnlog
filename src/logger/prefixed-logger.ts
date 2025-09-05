@@ -45,12 +45,12 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Basic Usage
  *
  * ```ts
- * import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withPrefix } from 'emitnlog/logger';
  *
- * const logger = new ConsoleLogger();
+ * const logger = createConsoleLogLogger('info');
  * const dbLogger = withPrefix(logger, 'DB');
  *
- * dbLogger.info('Connected to database');
+ * dbLogger.i`Connected to database`;
  * // Output: "DB: Connected to database"
  * ```
  *
@@ -105,12 +105,12 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * // Custom prefix separator
  * const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
  * const v1Logger = withPrefix(apiLogger, 'v1');
- * v1Logger.info('Request processed');
+ * v1Logger.i`Request processed`;
  * // Output: "API/v1: Request processed"
  *
  * // Custom message separator
  * const compactLogger = withPrefix(logger, 'SYS', { messageSeparator: ' | ' });
- * compactLogger.info('System ready');
+ * compactLogger.i`System ready`;
  * // Output: "SYS | System ready"
  * ```
  *
@@ -121,7 +121,7 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  *
  * // Add a fallback prefix when the logger isn't already prefixed
  * const serviceLogger = withPrefix(logger, 'UserService', { fallbackPrefix: 'APP' });
- * serviceLogger.info('Service started');
+ * serviceLogger.i`Service started`;
  * // Output: "APP.UserService: Service started"
  *
  * // If applied to an already prefixed logger, fallback is ignored
@@ -129,7 +129,7 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * const userDbLogger = withPrefix(dbLogger, 'UserService', {
  *   fallbackPrefix: 'APP', // This is ignored
  * });
- * userDbLogger.info('Service started');
+ * userDbLogger.i`Service started`;
  * // Output: "DB.UserService: Service started"
  * ```
  *
@@ -387,13 +387,13 @@ const toTemplateProvider =
  * @example Basic Appending
  *
  * ```ts
- * import { ConsoleLogger, appendPrefix, withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, appendPrefix, withPrefix } from 'emitnlog/logger';
  *
- * const logger = new ConsoleLogger();
+ * const logger = createConsoleLogLogger('info');
  * const dbLogger = withPrefix(logger, 'DB');
  * const userDbLogger = appendPrefix(dbLogger, 'users');
  *
- * userDbLogger.info('User created successfully');
+ * userDbLogger.i`User created successfully`;
  * // Output: "DB.users: User created successfully"
  * ```
  *
@@ -418,7 +418,7 @@ const toTemplateProvider =
  * const v1Logger = appendPrefix(apiLogger, 'v1');
  * const usersLogger = appendPrefix(v1Logger, 'users');
  *
- * usersLogger.info('Processing user request');
+ * usersLogger.i`Processing user request`;
  * // Output: "API/v1/users: Processing user request"
  * ```
  *
@@ -462,16 +462,16 @@ export const appendPrefix = <
  * @example Basic Reset
  *
  * ```ts
- * import { ConsoleLogger, resetPrefix, withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, resetPrefix, withPrefix } from 'emitnlog/logger';
  *
- * const logger = new ConsoleLogger();
+ * const logger = createConsoleLogLogger('info');
  * const dbLogger = withPrefix(logger, 'DB');
  * const userDbLogger = withPrefix(dbLogger, 'users'); // Prefix: "DB.users"
  *
  * // Reset to a completely new prefix
  * const apiLogger = resetPrefix(userDbLogger, 'API'); // Prefix: "API" (not "DB.users.API")
  *
- * apiLogger.info('API server started');
+ * apiLogger.i`API server started`;
  * // Output: "API: API server started"
  * ```
  *
@@ -504,7 +504,7 @@ export const appendPrefix = <
  * const newLogger = resetPrefix(existingLogger, 'NewPrefix', { prefixSeparator: '/', messageSeparator: ' >> ' });
  *
  * const subLogger = appendPrefix(newLogger, 'SubModule');
- * subLogger.info('Module initialized');
+ * subLogger.i`Module initialized`;
  * // Output: "NewPrefix/SubModule >> Module initialized"
  * ```
  *
@@ -521,8 +521,8 @@ export const appendPrefix = <
  * const cacheLogger = resetPrefix(complexDbLogger, 'Cache'); // Uses same root as dbLogger
  * const metricsLogger = resetPrefix(complexDbLogger, 'Metrics'); // Uses same root as dbLogger
  *
- * cacheLogger.info('Cache warmed up'); // Output: "Cache: Cache warmed up"
- * metricsLogger.info('Metrics collected'); // Output: "Metrics: Metrics collected"
+ * cacheLogger.i`Cache warmed up`; // Output: "Cache: Cache warmed up"
+ * metricsLogger.i`Metrics collected`; // Output: "Metrics: Metrics collected"
  * ```
  *
  * @param logger The logger to extract the root logger from and apply a new prefix to

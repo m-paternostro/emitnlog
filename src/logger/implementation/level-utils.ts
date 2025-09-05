@@ -97,6 +97,9 @@ export const toLevelSeverity = (level: LogLevel): number => {
   }
 };
 
+/**
+ * The lowest severity log level.
+ */
 export const LOWEST_SEVERITY_LOG_LEVEL: LogLevel = 'emergency';
 
 /**

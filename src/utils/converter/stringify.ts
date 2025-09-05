@@ -5,35 +5,47 @@ import { exhaustiveCheck } from '../common/exhaustive-check.ts';
  */
 export type StringifyOptions = {
   /**
-   * Whether to include stack traces for errors (default: false)
+   * Whether to include stack traces for errors.
+   *
+   * @default false
    */
   readonly includeStack?: boolean;
 
   /**
-   * Whether to prettify the output with indentation (default: false)
+   * Whether to prettify the output with indentation.
+   *
+   * @default false
    */
   readonly pretty?: boolean;
 
   /**
-   * Maximum depth for recursive object serialization (default: 5). Use a negative number to disable the depth limit.
+   * Maximum depth for recursive object serialization. Use a negative number to disable the depth limit.
+   *
+   * @default 5
    */
   readonly maxDepth?: number;
 
   /**
-   * Format dates using the local locale instead of ISO format (default: false) When true, uses `toLocaleString()`
-   * instead of `toISOString()`
+   * Format dates using the local locale instead of ISO format. When true, uses `toLocaleString()` instead of
+   * `toISOString()`
+   *
+   * @default false
    */
   readonly useLocale?: boolean;
 
   /**
-   * Maximum number of array elements to show before truncating (default: 100) Use a negative number to disable the
-   * array element limit.
+   * Maximum number of array elements to show before truncating. Use a negative number to disable the array element
+   * limit.
+   *
+   * @default 100
    */
   readonly maxArrayElements?: number;
 
   /**
-   * Maximum number of object properties to show before truncating (default: 50) Use a negative number to disable the
-   * object property limit.
+   * Maximum number of object properties to show before truncating. Use a negative number to disable the object property
+   * limit.
+   *
+   * @default 50
    */
   readonly maxProperties?: number;
 };

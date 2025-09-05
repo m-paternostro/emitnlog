@@ -13,6 +13,8 @@ import { delay } from './delay.ts';
 export type PollingOptions<T, V> = {
   /**
    * Whether to invoke the operation immediately or instead wait for the first interval.
+   *
+   * @default false
    */
   readonly invokeImmediately?: boolean;
 

@@ -3,6 +3,40 @@ import type { BaseLoggerOptions } from '../implementation/base-logger.ts';
 import { BaseLogger } from '../implementation/base-logger.ts';
 import type { LogSink } from './common.ts';
 
+/**
+ * Creates a logger that emits entries to the specified log sink.
+ *
+ * This is the core logger factory function that powers all other logger creation functions. It accepts either a sink
+ * function directly or a full LogSink object with optional flush/close methods.
+ *
+ * @example Basic usage with sink function
+ *
+ * ```ts
+ * import { createLogger } from 'emitnlog/logger/emitter';
+ *
+ * const logger = createLogger('info', (level, message, args) => {
+ *   console.log(`[${level.toUpperCase()}] ${message}`, ...args);
+ * });
+ *
+ * logger.i`Hello world`;
+ * ```
+ *
+ * @example Usage with full LogSink object
+ *
+ * ```ts
+ * import { createLogger } from 'emitnlog/logger/emitter';
+ * import { consoleLogSink } from 'emitnlog/logger/emitter';
+ *
+ * const sink = consoleLogSink();
+ * const logger = createLogger('info', sink);
+ * logger.i`Hello world`;
+ * ```
+ *
+ * @param level The minimum log level or a function that returns the level
+ * @param logSink The sink function or LogSink object to emit entries to
+ * @param options Additional logger configuration options
+ * @returns A logger instance that emits to the specified sink
+ */
 export function createLogger(
   level: LogLevel | 'off' | (() => LogLevel | 'off'),
   logSink: LogSink['sink'],

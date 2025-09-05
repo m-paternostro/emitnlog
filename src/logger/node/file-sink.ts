@@ -48,7 +48,14 @@ export type FileSinkOptions = {
   readonly errorHandler?: (error: unknown) => void;
 };
 
-export type FileSink = Simplify<AsyncFinalizer<LogSink> & { readonly filePath: string }>;
+export type FileSink = Simplify<
+  AsyncFinalizer<LogSink> & {
+    /**
+     * The path to the log file
+     */
+    readonly filePath: string;
+  }
+>;
 
 /**
  * Creates a file log sink that writes logs directly to a file.
