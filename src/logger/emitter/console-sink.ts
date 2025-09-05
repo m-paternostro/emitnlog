@@ -31,7 +31,7 @@ export const consoleByLevelSink = (formatter: LogFormatter = plainFormatter): Lo
     } else if (shouldEmitEntry('info', level)) {
       // eslint-disable-next-line no-undef, no-console
       console.log(line, ...args);
-    } else if (shouldEmitEntry('debug', level)) {
+    } else {
       // eslint-disable-next-line no-undef, no-console
       console.debug(line, ...args);
     }

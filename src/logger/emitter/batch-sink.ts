@@ -76,7 +76,7 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
   const flushDelayMs = options?.flushDelayMs ?? 1000;
   const flushOnExit = options?.flushOnExit ?? true;
 
-  if (!flushDelayMs) {
+  if (flushDelayMs === 0) {
     return asLogSink((level, message, args) => logSink.sink(level, message, args), {
       flush: async () => logSink.flush?.(),
       close: async () => logSink.close?.(),
@@ -85,6 +85,39 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
 
   let buffer: LogEntry[] = [];
   let isClosing = false;
+
+  const useTimeBasedFlushing = flushDelayMs < Number.MAX_SAFE_INTEGER;
+  if (!useTimeBasedFlushing) {
+    return asLogSink(
+      (level, message, args) => {
+        if (buffer.length >= maxBufferSize - 1) {
+          logSink.sink(level, message, args);
+          for (const entry of buffer) {
+            logSink.sink(entry.level, entry.message, entry.args);
+          }
+          buffer = [];
+        } else {
+          buffer.push(asLogEntry(level, message, args));
+        }
+      },
+      {
+        flush: async () => {
+          for (const entry of buffer) {
+            logSink.sink(entry.level, entry.message, entry.args);
+          }
+          buffer = [];
+          await logSink.flush?.();
+        },
+        close: async () => {
+          for (const entry of buffer) {
+            logSink.sink(entry.level, entry.message, entry.args);
+          }
+          buffer = [];
+          await logSink.close?.();
+        },
+      },
+    );
+  }
 
   const flushBuffer = (force = false): void => {
     if (!buffer.length) {
@@ -132,7 +165,6 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
 
       // Flush immediately if buffer is full
       if (buffer.length >= maxBufferSize) {
-        debouncedFlush.cancel(true); // Cancel pending flush silently
         flushBuffer();
       } else {
         // Schedule a flush after the delay using debounce

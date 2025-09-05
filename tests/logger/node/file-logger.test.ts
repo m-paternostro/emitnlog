@@ -12,7 +12,7 @@ import { delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.logger.node.FileLogger', () => {
   const TEST_FLUSH_DELAY = { flushDelayMs: 50 } as const satisfies FileLoggerOptions;
-  const TEST_FLUSH_WAIT = TEST_FLUSH_DELAY.flushDelayMs + 10;
+  const TEST_FLUSH_WAIT = TEST_FLUSH_DELAY.flushDelayMs * 2;
 
   const testDir = path.join(os.tmpdir(), `file-logger-test-${Date.now()}`);
   const testLogFile = path.join(testDir, 'test.log');

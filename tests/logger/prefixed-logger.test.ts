@@ -1132,4 +1132,208 @@ describe('emitnlog.logger.prefixed-logger', () => {
       assertType(nested, 'Custom/Nested');
     });
   });
+
+  describe('pendingArgs behavior', () => {
+    test('should accumulate args with prefixed logger', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'TEST');
+
+      prefixedLogger.args('arg1', 42).info('Message with args');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('TEST: Message with args');
+      expect(memoryLogger.entries[0].args).toEqual(['arg1', 42]);
+    });
+
+    test('should isolate pendingArgs between log calls', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'PREFIX');
+
+      // First log with args
+      prefixedLogger.args('first').info('First message');
+
+      // Second log without args - should not have 'first'
+      prefixedLogger.info('Second message');
+
+      expect(memoryLogger.entries).toHaveLength(2);
+      expect(memoryLogger.entries[0].args).toEqual(['first']);
+      expect(memoryLogger.entries[1].args).toEqual([]);
+    });
+
+    test('should accumulate multiple args calls', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'MULTI');
+
+      prefixedLogger.args('arg1').args('arg2', 'arg3').args({ key: 'value' }).info('Message');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('MULTI: Message');
+      expect(memoryLogger.entries[0].args).toEqual(['arg1', 'arg2', 'arg3', { key: 'value' }]);
+    });
+
+    test('should handle pendingArgs with error methods', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'ERROR');
+      const error = new Error('Test error');
+
+      prefixedLogger.args('context').error(error);
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('ERROR: Test error');
+      expect(memoryLogger.entries[0].args).toEqual(['context', error]);
+    });
+
+    test('should handle pendingArgs with template literals', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'TEMPLATE');
+
+      const value = 'test';
+      prefixedLogger.args('context').i`Template ${value}`;
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('TEMPLATE: Template test');
+      expect(memoryLogger.entries[0].args).toEqual(['context']);
+    });
+
+    test('should not share pendingArgs between prefixed logger instances', () => {
+      const memoryLogger1 = createMemoryLogger();
+      const memoryLogger2 = createMemoryLogger();
+
+      const prefixed1 = withPrefix(memoryLogger1, 'PREFIX1');
+      const prefixed2 = withPrefix(memoryLogger2, 'PREFIX2');
+
+      prefixed1.args('logger1').info('From logger 1');
+      prefixed2.args('logger2').info('From logger 2');
+
+      expect(memoryLogger1.entries[0].args).toEqual(['logger1']);
+      expect(memoryLogger2.entries[0].args).toEqual(['logger2']);
+    });
+
+    test('should handle pendingArgs with nested prefixes', () => {
+      const memoryLogger = createMemoryLogger();
+      const level1 = withPrefix(memoryLogger, 'L1');
+      const level2 = appendPrefix(level1, 'L2');
+      const level3 = appendPrefix(level2, 'L3');
+
+      level3.args('nested', 'args').info('Deeply nested');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('L1.L2.L3: Deeply nested');
+      expect(memoryLogger.entries[0].args).toEqual(['nested', 'args']);
+    });
+
+    test('should handle pendingArgs after reset', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixed = withPrefix(memoryLogger, 'OLD');
+      const reset = resetPrefix(prefixed, 'NEW');
+
+      reset.args('afterReset').info('Message');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('NEW: Message');
+      expect(memoryLogger.entries[0].args).toEqual(['afterReset']);
+    });
+
+    test('should clear pendingArgs after each log operation', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'CLEAR');
+
+      // Add args
+      const withArgs = prefixedLogger.args('arg1', 'arg2');
+
+      // First log consumes the args
+      withArgs.info('First');
+
+      // Second log from the same chain should not have args
+      withArgs.info('Second');
+
+      expect(memoryLogger.entries).toHaveLength(2);
+      expect(memoryLogger.entries[0].args).toEqual(['arg1', 'arg2']);
+      expect(memoryLogger.entries[1].args).toEqual([]);
+    });
+
+    test('should handle pendingArgs with all log levels', () => {
+      const memoryLogger = createMemoryLogger('trace');
+      const prefixedLogger = withPrefix(memoryLogger, 'LEVELS');
+
+      prefixedLogger.args('t').trace('Trace');
+      prefixedLogger.args('d').debug('Debug');
+      prefixedLogger.args('i').info('Info');
+      prefixedLogger.args('n').notice('Notice');
+      prefixedLogger.args('w').warning('Warning');
+      prefixedLogger.args('e').error('Error');
+      prefixedLogger.args('c').critical('Critical');
+      prefixedLogger.args('a').alert('Alert');
+      prefixedLogger.args('em').emergency('Emergency');
+      prefixedLogger.args('log').log('info', 'Log');
+
+      expect(memoryLogger.entries).toHaveLength(10);
+      expect(memoryLogger.entries[0].args).toEqual(['t']);
+      expect(memoryLogger.entries[1].args).toEqual(['d']);
+      expect(memoryLogger.entries[2].args).toEqual(['i']);
+      expect(memoryLogger.entries[3].args).toEqual(['n']);
+      expect(memoryLogger.entries[4].args).toEqual(['w']);
+      expect(memoryLogger.entries[5].args).toEqual(['e']);
+      expect(memoryLogger.entries[6].args).toEqual(['c']);
+      expect(memoryLogger.entries[7].args).toEqual(['a']);
+      expect(memoryLogger.entries[8].args).toEqual(['em']);
+      expect(memoryLogger.entries[9].args).toEqual(['log']);
+    });
+
+    test('should handle pendingArgs with shorthand template methods', () => {
+      const memoryLogger = createMemoryLogger('trace');
+      const prefixedLogger = withPrefix(memoryLogger, 'SHORT');
+
+      prefixedLogger.args('ctx').t`Trace`;
+      prefixedLogger.args('ctx').d`Debug`;
+      prefixedLogger.args('ctx').i`Info`;
+      prefixedLogger.args('ctx').n`Notice`;
+      prefixedLogger.args('ctx').w`Warning`;
+      prefixedLogger.args('ctx').e`Error`;
+      prefixedLogger.args('ctx').c`Critical`;
+      prefixedLogger.args('ctx').a`Alert`;
+      prefixedLogger.args('ctx').em`Emergency`;
+
+      expect(memoryLogger.entries).toHaveLength(9);
+      memoryLogger.entries.forEach((entry) => {
+        expect(entry.args).toEqual(['ctx']);
+        expect(entry.message.startsWith('SHORT: ')).toBe(true);
+      });
+    });
+
+    test('should handle complex args objects', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'COMPLEX');
+
+      const complexObj = { nested: { deep: { value: 'test' } }, array: [1, 2, 3], fn: () => 'function' };
+
+      prefixedLogger.args(complexObj, null, undefined, 42).info('Complex args');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].args).toHaveLength(4);
+      expect(memoryLogger.entries[0].args[0]).toBe(complexObj);
+      expect(memoryLogger.entries[0].args[1]).toBe(null);
+      expect(memoryLogger.entries[0].args[2]).toBe(undefined);
+      expect(memoryLogger.entries[0].args[3]).toBe(42);
+    });
+
+    test('should handle empty args calls', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'EMPTY');
+
+      prefixedLogger.args().info('No args added');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].args).toEqual([]);
+    });
+
+    test('should maintain args order', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'ORDER');
+
+      prefixedLogger.args(1).args(2).args(3).args(4).args(5).info('Ordered args');
+
+      expect(memoryLogger.entries[0].args).toEqual([1, 2, 3, 4, 5]);
+    });
+  });
 });

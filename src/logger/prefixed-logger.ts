@@ -337,7 +337,9 @@ const createPrefixedLogger = <TPrefix extends string = string, TSeparator extend
       ),
 
     log: (level, message, ...args) =>
-      internalLogger[rootLoggerSymbol].log(level, toMessageProvider(internalLogger, message), ...args),
+      runLogOperation(internalLogger, (logger) =>
+        logger.log(level, toMessageProvider(internalLogger, message), ...args),
+      ),
 
     flush: rootLogger.flush ? () => internalLogger[rootLoggerSymbol].flush?.() : undefined,
     close: rootLogger.close ? () => internalLogger[rootLoggerSymbol].close?.() : undefined,
