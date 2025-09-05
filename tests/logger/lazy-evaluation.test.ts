@@ -17,9 +17,9 @@ describe('emitnlog.logger.lazy-evaluation', () => {
   let consoleDebugSpy: jest.SpiedFunction<typeof console.debug>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => void 0);
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => void 0);
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation(() => void 0);
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

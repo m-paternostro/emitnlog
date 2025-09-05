@@ -6,7 +6,7 @@ describe('emitnlog.logger.OFF_LOGGER', () => {
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => void 0);
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

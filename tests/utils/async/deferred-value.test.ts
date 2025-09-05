@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { createDeferredValue } from '../../../src/utils/index.ts';
+import { createDeferredValue, delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.deferred-value', () => {
   describe('using fake timers', () => {
@@ -19,7 +19,7 @@ describe('emitnlog.utils.deferred-value', () => {
       expect(deferred.resolved).toBe(false);
       expect(deferred.rejected).toBe(false);
 
-      setTimeout(() => deferred.resolve(42), 1000);
+      void delay(1000).then(() => deferred.resolve(42));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(42);
 
@@ -36,7 +36,7 @@ describe('emitnlog.utils.deferred-value', () => {
       expect(deferred.rejected).toBe(false);
 
       const error = new Error('test error');
-      setTimeout(() => deferred.reject(error), 1000);
+      void delay(1000).then(() => deferred.reject(error));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).rejects.toThrow('test error');
 
@@ -49,7 +49,7 @@ describe('emitnlog.utils.deferred-value', () => {
       const deferred = createDeferredValue<number>();
 
       // First resolution
-      setTimeout(() => deferred.resolve(42), 1000);
+      void delay(1000).then(() => deferred.resolve(42));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(42);
       expect(deferred.settled).toBe(true);
@@ -62,7 +62,7 @@ describe('emitnlog.utils.deferred-value', () => {
       expect(deferred.rejected).toBe(false);
 
       // Second resolution
-      setTimeout(() => deferred.resolve(100), 1000);
+      void delay(1000).then(() => deferred.resolve(100));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(100);
       expect(deferred.settled).toBe(true);
@@ -72,7 +72,7 @@ describe('emitnlog.utils.deferred-value', () => {
       const deferred = createDeferredValue<number>();
 
       // First resolution
-      setTimeout(() => deferred.resolve(42), 1000);
+      void delay(1000).then(() => deferred.resolve(42));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(42);
 
@@ -82,7 +82,7 @@ describe('emitnlog.utils.deferred-value', () => {
 
       // Now reject the renewed promise
       const error = new Error('renewed rejection');
-      setTimeout(() => deferred.reject(error), 1000);
+      void delay(1000).then(() => deferred.reject(error));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).rejects.toThrow('renewed rejection');
       expect(deferred.settled).toBe(true);
@@ -93,19 +93,19 @@ describe('emitnlog.utils.deferred-value', () => {
       const deferred = createDeferredValue<string>();
 
       // First cycle
-      setTimeout(() => deferred.resolve('first'), 1000);
+      void delay(1000).then(() => deferred.resolve('first'));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe('first');
 
       // Second cycle
       deferred.renew();
-      setTimeout(() => deferred.reject(new Error('second')), 1000);
+      void delay(1000).then(() => deferred.reject(new Error('second')));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).rejects.toThrow('second');
 
       // Third cycle
       deferred.renew();
-      setTimeout(() => deferred.resolve('third'), 1000);
+      void delay(1000).then(() => deferred.resolve('third'));
       jest.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe('third');
     });

@@ -17,40 +17,20 @@ describe('emitnlog.logger.BaseLogger', () => {
   }
 
   describe('constructor', () => {
-    test('should set the level to trace', () => {
-      expect(new TestLogger('trace').level).toBe('trace');
-    });
+    const levels: readonly LogLevel[] = [
+      'trace',
+      'debug',
+      'info',
+      'notice',
+      'warning',
+      'error',
+      'critical',
+      'alert',
+      'emergency',
+    ] as const;
 
-    test('should set the level to debug', () => {
-      expect(new TestLogger('debug').level).toBe('debug');
-    });
-
-    test('should set the level to info', () => {
-      expect(new TestLogger('info').level).toBe('info');
-    });
-
-    test('should set the level to notice', () => {
-      expect(new TestLogger('notice').level).toBe('notice');
-    });
-
-    test('should set the level to warning', () => {
-      expect(new TestLogger('warning').level).toBe('warning');
-    });
-
-    test('should set the level to error', () => {
-      expect(new TestLogger('error').level).toBe('error');
-    });
-
-    test('should set the level to critical', () => {
-      expect(new TestLogger('critical').level).toBe('critical');
-    });
-
-    test('should set the level to alert', () => {
-      expect(new TestLogger('alert').level).toBe('alert');
-    });
-
-    test('should set the level to emergency', () => {
-      expect(new TestLogger('emergency').level).toBe('emergency');
+    test.each(levels)('should set the level to %s', (level) => {
+      expect(new TestLogger(level).level).toBe(level);
     });
   });
 
@@ -63,67 +43,23 @@ describe('emitnlog.logger.BaseLogger', () => {
   });
 
   describe('Basic Logging', () => {
-    test('should log trace messages', () => {
-      logger.trace('trace message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('trace');
-      expect(logger.emittedLogs[0].message).toBe('trace message');
-    });
+    const logMethods = [
+      { method: 'trace', level: 'trace' },
+      { method: 'debug', level: 'debug' },
+      { method: 'info', level: 'info' },
+      { method: 'notice', level: 'notice' },
+      { method: 'warning', level: 'warning' },
+      { method: 'error', level: 'error' },
+      { method: 'critical', level: 'critical' },
+      { method: 'alert', level: 'alert' },
+      { method: 'emergency', level: 'emergency' },
+    ] as const;
 
-    test('should log debug messages', () => {
-      logger.debug('debug message');
+    test.each(logMethods)('should log $level messages', ({ method, level }) => {
+      logger[method](`${level} message`);
       expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('debug');
-      expect(logger.emittedLogs[0].message).toBe('debug message');
-    });
-
-    test('should log info messages', () => {
-      logger.info('info message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('info');
-      expect(logger.emittedLogs[0].message).toBe('info message');
-    });
-
-    test('should log notice messages', () => {
-      logger.notice('notice message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('notice');
-      expect(logger.emittedLogs[0].message).toBe('notice message');
-    });
-
-    test('should log warning messages', () => {
-      logger.warning('warning message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('warning');
-      expect(logger.emittedLogs[0].message).toBe('warning message');
-    });
-
-    test('should log error messages', () => {
-      logger.error('error message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('error');
-      expect(logger.emittedLogs[0].message).toBe('error message');
-    });
-
-    test('should log critical messages', () => {
-      logger.critical('critical message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('critical');
-      expect(logger.emittedLogs[0].message).toBe('critical message');
-    });
-
-    test('should log alert messages', () => {
-      logger.alert('alert message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('alert');
-      expect(logger.emittedLogs[0].message).toBe('alert message');
-    });
-
-    test('should log emergency messages', () => {
-      logger.emergency('emergency message');
-      expect(logger.emittedLogs).toHaveLength(1);
-      expect(logger.emittedLogs[0].level).toBe('emergency');
-      expect(logger.emittedLogs[0].message).toBe('emergency message');
+      expect(logger.emittedLogs[0].level).toBe(level);
+      expect(logger.emittedLogs[0].message).toBe(`${level} message`);
     });
 
     test('should log an error object', () => {
@@ -252,11 +188,11 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       expect(logger.emittedLogs).toEqual([]);
       expect(count).toBe(0);
-      //
+
       logger.info(() => `Computed: ${expensiveOperation()}`);
       logger.debug(() => `Computed: ${expensiveOperation()}`);
       logger.warning(() => `Computed: ${expensiveOperation()}`);
-      //
+
       expect(logger.emittedLogs[0].level).toBe('info');
       expect(logger.emittedLogs[0].message).toBe('Computed: result');
       expect(logger.emittedLogs[1].level).toBe('warning');
@@ -492,11 +428,11 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       expect(logger.emittedLogs).toEqual([]);
       expect(count).toBe(0);
-      //
+
       logger.i`Computed: ${expensiveStringification}`;
       logger.d`Computed: ${expensiveStringification}`;
       logger.w`Computed: ${expensiveStringification}`;
-      //
+
       expect(logger.emittedLogs[0].level).toBe('info');
       expect(logger.emittedLogs[0].message).toBe('Computed: result');
       expect(logger.emittedLogs[1].level).toBe('warning');

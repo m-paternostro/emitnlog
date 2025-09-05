@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { CanceledError, debounce } from '../../../src/utils/index.ts';
+import { CanceledError, debounce, delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.debounce', () => {
   beforeEach(() => {
@@ -116,7 +116,7 @@ describe('emitnlog.utils.debounce', () => {
 
     test('should not wait for previous promise when waitForPrevious: false', async () => {
       const mockFn = jest.fn(async (value: number) => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await delay(100);
         return value * 2;
       });
 
@@ -348,7 +348,7 @@ describe('emitnlog.utils.debounce', () => {
   describe('promise support', () => {
     test('should handle async functions', async () => {
       const mockAsyncFn = jest.fn(async (value: string) => {
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await delay(100);
         return `async result: ${value}`;
       });
 

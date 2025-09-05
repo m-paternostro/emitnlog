@@ -6,7 +6,7 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => void 0);
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -18,16 +18,9 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
 
     logger.info('Test message');
 
-    // Verify console.log was called
     expect(consoleLogSpy).toHaveBeenCalled();
-
-    // Check that the first argument of the first call contains our message
     expect(consoleLogSpy.mock.calls[0][0]).toContain('Test message');
-
-    // Verify it contains level and timestamp formatting
     expect(consoleLogSpy.mock.calls[0][0]).toContain('[info     ]');
-
-    // Verify it contains ANSI color codes (from ColoredLogger)
     expect(consoleLogSpy.mock.calls[0][0]).toContain('\x1b[');
   });
 
@@ -40,7 +33,6 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
     // Verify console.log was called with additional args
     expect(consoleLogSpy).toHaveBeenCalled();
 
-    // Check if the context was included in the arguments
     expect(consoleLogSpy.mock.calls[0]).toContain(context);
   });
 
@@ -50,7 +42,6 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
     logger.info('This should not be logged');
     logger.warning('This should be logged');
 
-    // Verify console.log was called only once (for warning)
     expect(consoleLogSpy).toHaveBeenCalledTimes(1);
 
     expect(consoleLogSpy.mock.calls[0][0]).toContain('This should be logged');
@@ -61,10 +52,8 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
 
     logger.info('JSON test message');
 
-    // Verify console.log was called
     expect(consoleLogSpy).toHaveBeenCalled();
 
-    // Check that the first argument is valid JSON
     const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
     expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
 

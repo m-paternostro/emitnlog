@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 
 import type { Invocation, InvocationAtStage, InvocationTracker, Tag, Tags } from '../../../src/tracker/index.ts';
 import { createInvocationTracker, isAtStage } from '../../../src/tracker/index.ts';
+import { delay } from '../../../src/utils/index.ts';
+import type { TestLogger } from '../../jester.setup.ts';
 import { createTestLogger, flushFakeTimePromises } from '../../jester.setup.ts';
 
 describe('emitnlog.tracker', () => {
   let tracker: InvocationTracker;
-  let logger: ReturnType<typeof createTestLogger>;
+  let logger: TestLogger;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -417,7 +419,7 @@ describe('emitnlog.tracker', () => {
       // A thenable that's not a real Promise
       const thenable = {
         then(onFulfilled: (value: number) => void) {
-          setTimeout(() => onFulfilled(42), 100);
+          void delay(100).then(() => onFulfilled(42));
           return this;
         },
       };
