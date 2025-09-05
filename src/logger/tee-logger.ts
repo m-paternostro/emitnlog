@@ -1,4 +1,4 @@
-import type { Logger, LogLevel } from './definition.ts';
+import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from './definition.ts';
 import { asSingleFinalizer, type ForgeFinalizer, type MergeFinalizer } from './implementation/finalizer.ts';
 import { LOWEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
@@ -71,13 +71,46 @@ export const tee = <T extends readonly Logger[]>(...loggers: T): TeeLogger<T> =>
     return args;
   };
 
-  const runLogOperation = (operation: (logger: Logger) => void) => {
+  type TeeInput = LogMessage | Error | { error: unknown };
+
+  const toTeeInputProvider = <I>(message: I): I => {
+    if (typeof message === 'function') {
+      let cache: unknown = toTeeInputProvider;
+      return (() => {
+        if (cache === toTeeInputProvider) {
+          cache = (message as () => I)();
+        }
+        return cache;
+      }) as I;
+    }
+
+    return message;
+  };
+
+  const runLogOperation = <I extends TeeInput>(input: I, operation: (logger: Logger, input: I) => void) => {
     const currentArgs = consumePendingArgs();
+    input = toTeeInputProvider(input);
     loggers.forEach((logger) => {
       if (currentArgs) {
         logger.args(...currentArgs);
       }
-      operation(logger);
+      operation(logger, input);
+    });
+  };
+
+  const runTemplateOperation = <I extends LogTemplateStringsArray>(
+    input: I,
+    values: unknown[],
+    operation: (logger: Logger, input: I, values: unknown[]) => void,
+  ) => {
+    const currentArgs = consumePendingArgs();
+    input = toTeeInputProvider(input);
+    values = values.map(toTeeInputProvider);
+    loggers.forEach((logger) => {
+      if (currentArgs) {
+        logger.args(...currentArgs);
+      }
+      operation(logger, input, values);
     });
   };
 
@@ -93,25 +126,26 @@ export const tee = <T extends readonly Logger[]>(...loggers: T): TeeLogger<T> =>
       return teeLogger;
     },
 
-    trace: (message, ...args) => runLogOperation((logger) => logger.trace(message, ...args)),
-    t: (strings, ...values) => runLogOperation((logger) => logger.t(strings, ...values)),
-    debug: (message, ...args) => runLogOperation((logger) => logger.debug(message, ...args)),
-    d: (strings, ...values) => runLogOperation((logger) => logger.d(strings, ...values)),
-    info: (message, ...args) => runLogOperation((logger) => logger.info(message, ...args)),
-    i: (strings, ...values) => runLogOperation((logger) => logger.i(strings, ...values)),
-    notice: (message, ...args) => runLogOperation((logger) => logger.notice(message, ...args)),
-    n: (strings, ...values) => runLogOperation((logger) => logger.n(strings, ...values)),
-    warning: (input, ...args) => runLogOperation((logger) => logger.warning(input, ...args)),
-    w: (strings, ...values) => runLogOperation((logger) => logger.w(strings, ...values)),
-    error: (input, ...args) => runLogOperation((logger) => logger.error(input, ...args)),
-    e: (strings, ...values) => runLogOperation((logger) => logger.e(strings, ...values)),
-    critical: (input, ...args) => runLogOperation((logger) => logger.critical(input, ...args)),
-    c: (strings, ...values) => runLogOperation((logger) => logger.c(strings, ...values)),
-    alert: (input, ...args) => runLogOperation((logger) => logger.alert(input, ...args)),
-    a: (strings, ...values) => runLogOperation((logger) => logger.a(strings, ...values)),
-    emergency: (input, ...args) => runLogOperation((logger) => logger.emergency(input, ...args)),
-    em: (strings, ...values) => runLogOperation((logger) => logger.em(strings, ...values)),
-    log: (level, message, ...args) => runLogOperation((logger) => logger.log(level, message, ...args)),
+    trace: (message, ...args) => runLogOperation(message, (logger, i) => logger.trace(i, ...args)),
+    debug: (message, ...args) => runLogOperation(message, (logger, i) => logger.debug(i, ...args)),
+    info: (message, ...args) => runLogOperation(message, (logger, i) => logger.info(i, ...args)),
+    notice: (message, ...args) => runLogOperation(message, (logger, i) => logger.notice(i, ...args)),
+    error: (input, ...args) => runLogOperation(input, (logger, i) => logger.error(i, ...args)),
+    warning: (input, ...args) => runLogOperation(input, (logger, i) => logger.warning(i, ...args)),
+    critical: (input, ...args) => runLogOperation(input, (logger, i) => logger.critical(i, ...args)),
+    alert: (input, ...args) => runLogOperation(input, (logger, i) => logger.alert(i, ...args)),
+    emergency: (input, ...args) => runLogOperation(input, (logger, i) => logger.emergency(i, ...args)),
+    log: (level, message, ...args) => runLogOperation(message, (logger, i) => logger.log(level, i, ...args)),
+
+    t: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.t(i, ...v)),
+    d: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.d(i, ...v)),
+    i: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.i(i, ...v)),
+    n: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.n(i, ...v)),
+    w: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.w(i, ...v)),
+    e: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.e(i, ...v)),
+    c: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.c(i, ...v)),
+    a: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.a(i, ...v)),
+    em: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.em(i, ...v)),
 
     ...finalizer,
   };

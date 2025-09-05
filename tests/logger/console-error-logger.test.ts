@@ -3,18 +3,14 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import { createConsoleErrorLogger } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
-  // Spy on console.error
-  let consoleErrorSpy: jest.Mock;
+  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
 
   beforeEach(() => {
-    // Create a spy on console.error
-
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined) as jest.Mock;
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => void 0);
   });
 
   afterEach(() => {
-    // Clear all mocks
-    jest.clearAllMocks();
+    consoleErrorSpy.mockRestore();
   });
 
   test('should write logs to console.error', () => {

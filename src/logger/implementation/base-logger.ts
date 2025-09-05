@@ -32,13 +32,13 @@ export abstract class BaseLogger implements Logger {
     logger: Logger,
     input: LogMessage | Error | { error: unknown },
     args: readonly unknown[],
-  ): { readonly convertedMessage: LogMessage; readonly convertedArgs: readonly unknown[] } {
+  ): { readonly message: LogMessage; readonly args: readonly unknown[] } {
     const stringifyValue =
       logger instanceof BaseLogger
         ? (value: unknown) => logger.stringifyValue(value)
         : (value: unknown) => stringify(value);
 
-    const convertedMessage: LogMessage = () =>
+    const message: LogMessage = () =>
       typeof input === 'function'
         ? input()
         : input && typeof input === 'object' && 'error' in input
@@ -47,7 +47,7 @@ export abstract class BaseLogger implements Logger {
 
     const convertedArgs = typeof input === 'object' ? (args.length ? [input, ...args] : [input]) : args;
 
-    return { convertedMessage, convertedArgs };
+    return { message, args: convertedArgs };
   }
 
   /**
@@ -116,8 +116,8 @@ export abstract class BaseLogger implements Logger {
   }
 
   public warning(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
-    this.log('warning', convertedMessage, ...convertedArgs);
+    const converted = BaseLogger.convertErrorInput(this, input, args);
+    this.log('warning', converted.message, ...converted.args);
   }
 
   public w(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
@@ -125,8 +125,8 @@ export abstract class BaseLogger implements Logger {
   }
 
   public error(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
-    this.log('error', convertedMessage, ...convertedArgs);
+    const converted = BaseLogger.convertErrorInput(this, input, args);
+    this.log('error', converted.message, ...converted.args);
   }
 
   public e(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
@@ -134,8 +134,8 @@ export abstract class BaseLogger implements Logger {
   }
 
   public critical(input: LogMessage | Error | { error: unknown }, ...args: unknown[]): void {
-    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
-    this.log('critical', convertedMessage, ...convertedArgs);
+    const converted = BaseLogger.convertErrorInput(this, input, args);
+    this.log('critical', converted.message, ...converted.args);
   }
 
   public c(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
@@ -143,8 +143,8 @@ export abstract class BaseLogger implements Logger {
   }
 
   public alert(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
-    this.log('alert', convertedMessage, ...convertedArgs);
+    const converted = BaseLogger.convertErrorInput(this, input, args);
+    this.log('alert', converted.message, ...converted.args);
   }
 
   public a(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {
@@ -152,8 +152,8 @@ export abstract class BaseLogger implements Logger {
   }
 
   public emergency(input: LogMessage | Error | { error: unknown }, ...args: readonly unknown[]): void {
-    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(this, input, args);
-    this.log('emergency', convertedMessage, ...convertedArgs);
+    const converted = BaseLogger.convertErrorInput(this, input, args);
+    this.log('emergency', converted.message, ...converted.args);
   }
 
   public em(strings: LogTemplateStringsArray, ...values: readonly unknown[]): void {

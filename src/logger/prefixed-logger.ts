@@ -1,7 +1,6 @@
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from './definition.ts';
+import type { Logger, LogMessage, LogTemplateStringsArray } from './definition.ts';
 import { BaseLogger } from './implementation/base-logger.ts';
-import { shouldEmitEntry } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
@@ -253,93 +252,89 @@ const createPrefixedLogger = <TPrefix extends string = string, TSeparator extend
       return internalLogger;
     },
 
-    trace: (message, ...args) =>
-      runLogOperation(internalLogger, (logger) => logger.trace(toMessageProvider(internalLogger, message), ...args)),
-    t: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.t(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    trace: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.trace(toMessageProvider(internalLogger, message), ...args));
+    },
+    t: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.t(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    debug: (message, ...args) =>
-      runLogOperation(internalLogger, (logger) => logger.debug(toMessageProvider(internalLogger, message), ...args)),
-    d: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.d(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    debug: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.debug(toMessageProvider(internalLogger, message), ...args));
+    },
+    d: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.d(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    info: (message, ...args) =>
-      runLogOperation(internalLogger, (logger) => logger.info(toMessageProvider(internalLogger, message), ...args)),
-    i: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.i(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    info: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.info(toMessageProvider(internalLogger, message), ...args));
+    },
+    i: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.i(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    notice: (message, ...args) =>
-      runLogOperation(internalLogger, (logger) => logger.notice(toMessageProvider(internalLogger, message), ...args)),
-    n: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.n(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    notice: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.notice(toMessageProvider(internalLogger, message), ...args));
+    },
+    n: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.n(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    warning: (input, ...args) =>
-      runLogOperation(internalLogger, () =>
-        runErrorInputOperation(internalLogger, 'warning', input, args, (logger, convertedMessage, convertedArgs) =>
-          logger.warning(convertedMessage, ...convertedArgs),
-        ),
-      ),
-    w: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.w(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    warning: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.warning(converted.message, ...converted.args);
+      });
+    },
+    w: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.w(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    error: (input, ...args) =>
-      runLogOperation(internalLogger, () =>
-        runErrorInputOperation(internalLogger, 'error', input, args, (logger, convertedMessage, convertedArgs) =>
-          logger.error(convertedMessage, ...convertedArgs),
-        ),
-      ),
-    e: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.e(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    error: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.error(converted.message, ...converted.args);
+      });
+    },
+    e: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.e(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    critical: (input, ...args) =>
-      runLogOperation(internalLogger, () =>
-        runErrorInputOperation(internalLogger, 'critical', input, args, (logger, convertedMessage, convertedArgs) =>
-          logger.critical(convertedMessage, ...convertedArgs),
-        ),
-      ),
-    c: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.c(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    critical: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.critical(converted.message, ...converted.args);
+      });
+    },
+    c: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.c(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    alert: (input, ...args) =>
-      runLogOperation(internalLogger, () =>
-        runErrorInputOperation(internalLogger, 'alert', input, args, (logger, convertedMessage, convertedArgs) =>
-          logger.alert(convertedMessage, ...convertedArgs),
-        ),
-      ),
-    a: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.a(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    alert: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.alert(converted.message, ...converted.args);
+      });
+    },
+    a: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.a(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    emergency: (input, ...args) =>
-      runLogOperation(internalLogger, () =>
-        runErrorInputOperation(internalLogger, 'emergency', input, args, (logger, convertedMessage, convertedArgs) =>
-          logger.emergency(convertedMessage, ...convertedArgs),
-        ),
-      ),
-    em: (strings, ...values) =>
-      runLogOperation(internalLogger, (logger) =>
-        logger.em(toTemplateStringsArrayProvider(internalLogger, strings), ...values),
-      ),
+    emergency: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.emergency(converted.message, ...converted.args);
+      });
+    },
+    em: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.em(toTemplateProvider(internalLogger, strings), ...values));
+    },
 
-    log: (level, message, ...args) =>
+    log: (level, message, ...args) => {
       runLogOperation(internalLogger, (logger) =>
         logger.log(level, toMessageProvider(internalLogger, message), ...args),
-      ),
+      );
+    },
 
     flush: rootLogger.flush ? () => internalLogger[rootLoggerSymbol].flush?.() : undefined,
     close: rootLogger.close ? () => internalLogger[rootLoggerSymbol].close?.() : undefined,
@@ -355,21 +350,17 @@ const toMessageProvider = (prefixLogger: InternalPrefixedLogger, message: LogMes
   return `${prefixLogger[prefixSymbol]}${prefixLogger[messageSeparatorSymbol]}${message}`;
 };
 
-const runErrorInputOperation = (
+const toErrorInput = (
   prefixLogger: InternalPrefixedLogger,
-  level: LogLevel,
   input: LogMessage | Error | { error: unknown },
   args: readonly unknown[],
-  operation: (logger: Logger, convertedMessage: LogMessage, convertedArgs: readonly unknown[]) => void,
-): void => {
-  const rootLogger = prefixLogger[rootLoggerSymbol];
-  if (shouldEmitEntry(rootLogger, level)) {
-    const { convertedMessage, convertedArgs } = BaseLogger.convertErrorInput(rootLogger, input, args);
-    operation(rootLogger, toMessageProvider(prefixLogger, convertedMessage), convertedArgs);
-  }
+): { readonly message: LogMessage; readonly args: readonly unknown[] } => {
+  const logger = prefixLogger[rootLoggerSymbol];
+  const converted = BaseLogger.convertErrorInput(logger, input, args);
+  return { message: toMessageProvider(prefixLogger, converted.message), args: converted.args };
 };
 
-const toTemplateStringsArrayProvider =
+const toTemplateProvider =
   (prefixLogger: InternalPrefixedLogger, strings: LogTemplateStringsArray) => (): TemplateStringsArray => {
     if (typeof strings === 'function') {
       strings = strings();
