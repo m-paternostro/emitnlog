@@ -1,7 +1,7 @@
 import type { Writable } from 'type-fest';
 
 import type { Logger } from '../../logger/definition.ts';
-import { OFF_LOGGER } from '../../logger/off-logger.ts';
+import { withLogger } from '../../logger/off-logger.ts';
 import { appendPrefix, withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
 import { generateRandomString } from '../../utils/common/generate-random-string.ts';
@@ -82,7 +82,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
   options?: InvocationTrackerOptions,
 ): InvocationTracker<TOperation> => {
   const trackerId = generateRandomString();
-  const logger = options?.logger ?? OFF_LOGGER;
+  const logger = withLogger(options?.logger);
 
   const invokedNotifier = createEventNotifier<Invocation<TOperation>>();
   const startedNotifier = createEventNotifier<InvocationAtStage<'started', TOperation>>();

@@ -51,3 +51,24 @@ export const OFF_LOGGER: Logger = Object.freeze({
 
   log: () => void {},
 });
+
+/**
+ * Returns a non-nullable logger: either the specified logger or the OFF_LOGGER.
+ *
+ * @example
+ *
+ * ```ts
+ * import type { Logger } from 'emitnlog/logger';
+ * import { asNonNullableLogger, withPrefix } from 'emitnlog/logger';
+ *
+ * const calculate = (logger?: Logger) => {
+ *   const calculateLogger = withPrefix(withLogger(logger), 'calculate');
+ *   calculateLogger.i`starting calculation`;
+ *   ...
+ * };
+ * ```
+ *
+ * @param logger A logger or null or undefined
+ * @returns Either the specified logger or the OFF_Logger
+ */
+export const withLogger = (logger: Logger | undefined | null): NonNullable<Logger> => logger ?? OFF_LOGGER;

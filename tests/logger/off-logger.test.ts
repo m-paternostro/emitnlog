@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
-import { OFF_LOGGER } from '../../src/logger/index.ts';
+import { OFF_LOGGER, withLogger } from '../../src/logger/index.ts';
+import { createMemoryLogger } from '../jester.setup.ts';
 
-describe('emitnlog.logger.OFF_LOGGER', () => {
+describe('emitnlog.logger.off-logger', () => {
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeEach(() => {
@@ -35,5 +36,13 @@ describe('emitnlog.logger.OFF_LOGGER', () => {
     OFF_LOGGER.log('error', 'error message');
     OFF_LOGGER.args({ data: 'test' }).e`Should not log`;
     expect(consoleLogSpy).not.toHaveBeenCalled();
+  });
+
+  test('withLogger should return OFF_LOGGER if the logger is undefined', () => {
+    expect(withLogger(undefined)).toBe(OFF_LOGGER);
+    expect(withLogger(null)).toBe(OFF_LOGGER);
+
+    const logger = createMemoryLogger();
+    expect(withLogger(logger)).toBe(logger);
   });
 });

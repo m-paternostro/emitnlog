@@ -3,7 +3,7 @@ import type { Logger, LogLevel } from '../definition.ts';
 import type { LogFormat } from '../factory.ts';
 import { createConsoleByLevelLogger, createConsoleErrorLogger, createConsoleLogLogger } from '../factory.ts';
 import { isLogLevel } from '../implementation/level-utils.ts';
-import { OFF_LOGGER } from '../off-logger.ts';
+import { withLogger } from '../off-logger.ts';
 
 const ENV_LOGGER = 'EMITNLOG_LOGGER';
 const ENV_LEVEL = 'EMITNLOG_LEVEL';
@@ -159,7 +159,7 @@ export const createLoggerFromEnv = (
     }
   }
 
-  return options?.fallbackLogger?.(decodedEnv?.envLevel, decodedEnv?.envFormat) ?? OFF_LOGGER;
+  return withLogger(options?.fallbackLogger?.(decodedEnv?.envLevel, decodedEnv?.envFormat));
 };
 
 /**
