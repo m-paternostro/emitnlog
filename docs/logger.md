@@ -602,9 +602,9 @@ You can also create your own logger by extending `BaseLogger`:
 
 ```ts
 import type { LogLevel } from 'emitnlog/logger';
-import { BaseLogger, emitter } from 'emitnlog/logger';
+import { emitter, implementation } from 'emitnlog/logger';
 
-class MyCustomLogger extends BaseLogger {
+class MyCustomLogger extends implementation.BaseLogger {
   protected override emit(level: LogLevel, message: string, args: readonly unknown[]): void {
     // Send the log information to a remote logging service
     myLoggingService.send(emitter.asLogEntry(level, message, args));
