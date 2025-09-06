@@ -31,10 +31,10 @@ export type MemorySink = SyncFinalizer<LogSink> & MemoryStore;
  * @example Basic usage
  *
  * ```ts
- * import { memorySink, createLogger } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const memory = memorySink();
- * const logger = createLogger('info', memory);
+ * const memory = emitter.memorySink();
+ * const logger = emitter.createLogger('info', memory);
  *
  * logger.i`Application started`;
  * logger.e`Something failed`;
@@ -46,10 +46,10 @@ export type MemorySink = SyncFinalizer<LogSink> & MemoryStore;
  * @example With pre-existing entries array
  *
  * ```ts
- * import { memorySink } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const existingEntries: LogEntry[] = [];
- * const memory = memorySink(existingEntries);
+ * const existingEntries: emitter.LogEntry[] = [];
+ * const memory = emitter.memorySink(existingEntries);
  * // Now both memory.entries and existingEntries reference the same array
  * ```
  *

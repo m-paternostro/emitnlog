@@ -112,9 +112,9 @@ export const jsonPrettyFormatter: LogFormatter = (level, message, args) =>
  * @example Usage
  *
  * ```ts
- * import { plainArgAppendingFormatter, plainFormatter } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const formatter = plainArgAppendingFormatter(plainFormatter);
+ * const formatter = emitter.plainArgAppendingFormatter(emitter.plainFormatter);
  * // Now arguments will be formatted and appended to each log entry
  * ```
  *

@@ -12,9 +12,9 @@ import type { LogSink } from './common.ts';
  * @example Basic usage with sink function
  *
  * ```ts
- * import { createLogger } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const logger = createLogger('info', (level, message, args) => {
+ * const logger = emitter.createLogger('info', (level, message, args) => {
  *   console.log(`[${level.toUpperCase()}] ${message}`, ...args);
  * });
  *
@@ -24,11 +24,10 @@ import type { LogSink } from './common.ts';
  * @example Usage with full LogSink object
  *
  * ```ts
- * import { createLogger } from 'emitnlog/logger/emitter';
- * import { consoleLogSink } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const sink = consoleLogSink();
- * const logger = createLogger('info', sink);
+ * const sink = emitter.consoleLogSink();
+ * const logger = emitter.createLogger('info', sink);
  * logger.i`Hello world`;
  * ```
  *

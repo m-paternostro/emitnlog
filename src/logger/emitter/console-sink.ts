@@ -13,10 +13,10 @@ import { plainFormatter } from './formatter.ts';
  * @example Basic usage
  *
  * ```ts
- * import { consoleLogSink, createLogger } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const sink = consoleLogSink();
- * const logger = createLogger('info', sink);
+ * const sink = emitter.consoleLogSink();
+ * const logger = emitter.createLogger('info', sink);
  *
  * logger.i`This goes to console.log`;
  * logger.e`This also goes to console.log`;
@@ -41,10 +41,10 @@ export const consoleLogSink = (formatter: LogFormatter = plainFormatter): LogSin
  * @example Basic usage
  *
  * ```ts
- * import { consoleErrorSink, createLogger } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const sink = consoleErrorSink();
- * const logger = createLogger('info', sink);
+ * const sink = emitter.consoleErrorSink();
+ * const logger = emitter.createLogger('info', sink);
  *
  * logger.i`This goes to console.error`;
  * logger.e`This also goes to console.error`;
@@ -76,10 +76,10 @@ export const consoleErrorSink = (formatter: LogFormatter = plainFormatter): LogS
  * @example Basic usage
  *
  * ```ts
- * import { consoleByLevelSink, createLogger } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const sink = consoleByLevelSink();
- * const logger = createLogger('info', sink);
+ * const sink = emitter.consoleByLevelSink();
+ * const logger = emitter.createLogger('info', sink);
  *
  * logger.i`Goes to console.log`;
  * logger.w`Goes to console.warn`;

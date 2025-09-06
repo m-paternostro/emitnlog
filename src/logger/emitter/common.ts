@@ -32,9 +32,9 @@ export type LogSink = {
  * @example Basic conversion
  *
  * ```ts
- * import { asLogSink } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const basicSink = asLogSink((level, message, args) => {
+ * const basicSink = emitter.asLogSink((level, message, args) => {
  *   console.log(`[${level}] ${message}`, ...args);
  * });
  * ```
@@ -124,9 +124,9 @@ export type LogEntry = {
  * @example
  *
  * ```ts
- * import { asLogEntry } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const entry = asLogEntry('info', 'Operation completed', [{ duration: 150 }]);
+ * const entry = emitter.asLogEntry('info', 'Operation completed', [{ duration: 150 }]);
  * console.log(entry.timestamp); // Current timestamp in milliseconds
  * ```
  *

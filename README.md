@@ -27,9 +27,9 @@ npm install emitnlog
 Clean, template-literal logging with multiple output formats and lazy evaluation:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger();
+const logger = createConsoleLogLogger();
 
 // Template logging with lazy evaluation
 const userId = 'user123';
@@ -158,12 +158,12 @@ Here's how the logger and notifier components work together:
 
 ```ts
 import { createEventNotifier } from 'emitnlog/notifier';
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
 type Progress = { filename: string; percent: number };
 
 class FileUploader {
-  private _logger = new ConsoleLogger('debug');
+  private _logger = createConsoleLogLogger('debug');
   private _notifier = createEventNotifier<Progress>();
   public onProgress = this._notifier.onEvent;
 

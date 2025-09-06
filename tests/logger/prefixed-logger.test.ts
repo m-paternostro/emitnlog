@@ -2,10 +2,10 @@ import { describe, expect, test } from '@jest/globals';
 
 import type { IsEqual } from 'type-fest';
 
-import { createLogger } from '../../src/logger/emitter/index.ts';
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
 import {
   appendPrefix,
+  emitter,
   inspectPrefixedLogger,
   isPrefixedLogger,
   OFF_LOGGER,
@@ -392,7 +392,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message functions when using basic methods', () => {
       const emittedLines: string[] = [];
-      const logger = createLogger('info', (level, message) => {
+      const logger = emitter.createLogger('info', (level, message) => {
         emittedLines.push(`[${level}] ${message}`);
       });
 
@@ -417,7 +417,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message functions when using template methods', () => {
       const emittedLines: string[] = [];
-      const logger = createLogger('info', (level, message) => {
+      const logger = emitter.createLogger('info', (level, message) => {
         emittedLines.push(`[${level}] ${message}`);
       });
 
@@ -443,7 +443,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message stringification when using template methods', () => {
       const emittedLines: string[] = [];
-      const logger = createLogger('info', (level, message) => {
+      const logger = emitter.createLogger('info', (level, message) => {
         emittedLines.push(`[${level}] ${message}`);
       });
 
@@ -538,7 +538,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should allow chaining with args', () => {
       const emittedLines: string[] = [];
       const emittedArgs: (readonly unknown[])[] = [];
-      const logger = createLogger('info', (level, message, args) => {
+      const logger = emitter.createLogger('info', (level, message, args) => {
         emittedLines.push(`[${level}] ${message}`);
         emittedArgs.push(args);
       });
@@ -590,7 +590,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with basic methods', () => {
       const emittedLines: string[] = [];
-      const logger = createLogger('info', (level, message) => {
+      const logger = emitter.createLogger('info', (level, message) => {
         emittedLines.push(`[${level}] ${message}`);
       });
 
@@ -613,7 +613,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with template methods', () => {
       const emittedLines: string[] = [];
-      const logger = createLogger('info', (level, message) => {
+      const logger = emitter.createLogger('info', (level, message) => {
         emittedLines.push(`[${level}] ${message}`);
       });
 
@@ -636,7 +636,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with different separators', () => {
       const emittedLines: string[] = [];
-      const logger = createLogger('info', (level, message) => {
+      const logger = emitter.createLogger('info', (level, message) => {
         emittedLines.push(`[${level}] ${message}`);
       });
 

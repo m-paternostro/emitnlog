@@ -39,20 +39,20 @@ export type BatchSinkOptions = {
  * @example Basic usage with file sink
  *
  * ```ts
- * import { batchSink, createLogger } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  * import { fileSink } from 'emitnlog/logger/node';
  *
- * const batchedFile = batchSink(fileSink('/logs/app.log'), { maxBufferSize: 100, flushDelayMs: 1000 });
- * const logger = createLogger('info', batchedFile);
+ * const batchedFile = emitter.batchSink(fileSink('/logs/app.log'), { maxBufferSize: 100, flushDelayMs: 1000 });
+ * const logger = emitter.createLogger('info', batchedFile);
  * ```
  *
  * @example Memory sink with batching
  *
  * ```ts
- * import { batchSink, memorySink } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const memory = memorySink();
- * const batched = batchSink(memory, { maxBufferSize: 50, flushDelayMs: 2000 });
+ * const memory = emitter.memorySink();
+ * const batched = emitter.batchSink(memory, { maxBufferSize: 50, flushDelayMs: 2000 });
  * ```
  *
  * ```
@@ -195,10 +195,10 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
  * @example
  *
  * ```ts
- * import { batchSizeSink, memorySink } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const batched = batchSizeSink(
- *   memorySink(),
+ * const batched = emitter.batchSizeSink(
+ *   emitter.memorySink(),
  *   100, // Flush every 100 entries
  * );
  * ```
@@ -215,10 +215,10 @@ export const batchSizeSink = (logSink: LogSink, maxBufferSize: number): AsyncFin
  * @example
  *
  * ```ts
- * import { batchTimeSink, memorySink } from 'emitnlog/logger/emitter';
+ * import { emitter } from 'emitnlog/logger';
  *
- * const batched = batchTimeSink(
- *   memorySink(),
+ * const batched = emitter.batchTimeSink(
+ *   emitter.memorySink(),
  *   5000, // Flush every 5 seconds
  * );
  * ```

@@ -592,6 +592,135 @@ export interface Logger {
    */
   readonly log: (level: LogLevel, message: LogMessage, ...args: unknown[]) => void;
 
+  /**
+   * Flushes any buffered log entries, ensuring they are written to their destination.
+   *
+   * This method is optional and may not be available on all logger implementations. It is primarily used by loggers
+   * that buffer entries for performance reasons (such as batch loggers or file loggers) to force immediate writing of
+   * pending entries.
+   *
+   * The method can be either synchronous or asynchronous depending on the underlying implementation:
+   *
+   * - **Synchronous**: Returns `void` when the flush operation completes immediately
+   * - **Asynchronous**: Returns a `Promise<void>` that resolves when the flush operation completes
+   *
+   * @example Handling both sync and async flush
+   *
+   * ```ts
+   * const logger = createSomeLogger();
+   * logger.info('Important message');
+   *
+   * // This approach simple calls the flush without investigating
+   * // if it's defined, async or sync
+   * await logger?.flush();
+   * ```
+   *
+   * @example Synchronous flush
+   *
+   * ```ts
+   * import { createConsoleLogLogger } from 'emitnlog/logger';
+   *
+   * const logger = createConsoleLogLogger();
+   * logger.info('Buffered message');
+   *
+   * if (logger.flush) {
+   *   logger.flush(); // Synchronous flush
+   * }
+   * ```
+   *
+   * @example Asynchronous flush
+   *
+   * ```ts
+   * import { createFileLogger } from 'emitnlog/logger/node';
+   *
+   * const logger = createFileLogger('app.log');
+   * logger.info('Buffered message');
+   *
+   * if (logger.flush) {
+   *   await logger.flush(); // Asynchronous flush
+   * }
+   * ```
+   *
+   * @returns Either void for synchronous flush or Promise<void> for asynchronous flush, or undefined if not supported
+   */
   readonly flush?: () => void | Promise<void>;
+
+  /**
+   * Closes the logger and releases any associated resources.
+   *
+   * This method is optional and may not be available on all logger implementations. It should be called when the logger
+   * is no longer needed to ensure proper cleanup of resources such as file handles, network connections, or other
+   * system resources.
+   *
+   * The method can be either synchronous or asynchronous depending on the underlying implementation:
+   *
+   * - **Synchronous**: Returns `void` when the close operation completes immediately
+   * - **Asynchronous**: Returns a `Promise<void>` that resolves when the close operation completes
+   *
+   * After calling `close()`, the logger should not be used for further logging operations. Calling `flush()` before
+   * `close()` is recommended to ensure all pending log entries are written before cleanup.
+   *
+   * @example Handling both sync and async close
+   *
+   * ```ts
+   * const logger = createSomeLogger();
+   * logger.info('Important message');
+   *
+   * // This approach simple calls the flush without investigating
+   * // if it's defined, async or close
+   * await logger?.close();
+   * ```
+   *
+   * @example Synchronous close
+   *
+   * ```ts
+   * import { createConsoleLogLogger } from 'emitnlog/logger';
+   *
+   * const logger = createConsoleLogLogger();
+   * logger.info('Final message');
+   *
+   * if (logger.close) {
+   *   logger.close(); // Synchronous close
+   * }
+   * ```
+   *
+   * @example Asynchronous close with file logger
+   *
+   * ```ts
+   * import { createFileLogger } from 'emitnlog/logger/node';
+   *
+   * const logger = createFileLogger('app.log');
+   * logger.info('Final message');
+   *
+   * if (logger.close) {
+   *   await logger.close(); // Asynchronous close
+   * }
+   * ```
+   *
+   * @example A shutdown sequence that precisely investigates if the methods are sync or async.
+   *
+   * ```ts
+   * const logger = createSomeLogger();
+   * logger.info('Application shutting down');
+   *
+   * // Flush pending entries before closing
+   * if (logger.flush) {
+   *   const flushResult = logger.flush();
+   *   if (flushResult instanceof Promise) {
+   *     await flushResult;
+   *   }
+   * }
+   *
+   * // Close and release resources
+   * if (logger.close) {
+   *   const closeResult = logger.close();
+   *   if (closeResult instanceof Promise) {
+   *     await closeResult;
+   *   }
+   * }
+   * ```
+   *
+   * @returns Either void for synchronous close or Promise<void> for asynchronous close, or undefined if not supported
+   */
   readonly close?: () => void | Promise<void>;
 }
