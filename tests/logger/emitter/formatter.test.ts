@@ -13,12 +13,12 @@ describe('emitnlog.logger.emitter.formatter', () => {
   describe('basicFormatter', () => {
     test('should format with level and message', () => {
       const formatted = emitter.basicFormatter('info', 'Test message', []);
-      expect(formatted).toBe('info - Test message');
+      expect(formatted).toBe('[info] Test message');
     });
 
     test('should ignore args in basic formatter', () => {
       const formatted = emitter.basicFormatter('error', 'Error occurred', ['arg1', 42]);
-      expect(formatted).toBe('error - Error occurred');
+      expect(formatted).toBe('[error] Error occurred');
     });
 
     test('should handle all log levels', () => {
@@ -36,18 +36,18 @@ describe('emitnlog.logger.emitter.formatter', () => {
 
       levels.forEach((level) => {
         const formatted = emitter.basicFormatter(level, 'Message', []);
-        expect(formatted).toBe(`${level} - Message`);
+        expect(formatted).toBe(`[${level}] Message`);
       });
     });
 
     test('should handle empty message', () => {
       const formatted = emitter.basicFormatter('info', '', []);
-      expect(formatted).toBe('info - ');
+      expect(formatted).toBe('[info]');
     });
 
     test('should handle special characters in message', () => {
       const formatted = emitter.basicFormatter('info', 'Line 1\nLine 2\tTabbed', []);
-      expect(formatted).toBe('info - Line 1\nLine 2\tTabbed');
+      expect(formatted).toBe('[info] Line 1\nLine 2\tTabbed');
     });
   });
 
@@ -225,7 +225,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
 
       const formatted = formatter('info', 'Message', ['arg1', 42]);
 
-      expect(formatted).toContain('info - Message');
+      expect(formatted).toContain('[info] Message');
       expect(formatted).toContain('[arg0] arg1');
       expect(formatted).toContain('[arg1] 42');
     });
@@ -236,7 +236,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
 
       const formatted = formatter('info', 'Message', []);
 
-      expect(formatted).toBe('info - Message');
+      expect(formatted).toBe('[info] Message');
     });
 
     test('should use custom delimiter', () => {
@@ -245,7 +245,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
 
       const formatted = formatter('info', 'Message', ['arg1']);
 
-      expect(formatted).toBe('info - Message | [arg0] arg1');
+      expect(formatted).toBe('[info] Message | [arg0] arg1');
     });
 
     test('should pad arg indices correctly for multiple args', () => {

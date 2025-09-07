@@ -12,6 +12,7 @@ import {
   resetPrefix,
   withPrefix,
 } from '../../src/logger/index.ts';
+import { emptyArray } from '../../src/utils/index.ts';
 import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
 
 describe('emitnlog.logger.prefixed-logger', () => {
@@ -393,7 +394,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should handle lazy message functions when using basic methods', () => {
       const emittedLines: string[] = [];
       const logger = emitter.createLogger('info', (level, message) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
       });
 
       const prefixedLogger = withPrefix(logger, 'test');
@@ -418,7 +419,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should handle lazy message functions when using template methods', () => {
       const emittedLines: string[] = [];
       const logger = emitter.createLogger('info', (level, message) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
       });
 
       const prefixedLogger = withPrefix(logger, 'test');
@@ -444,7 +445,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should handle lazy message stringification when using template methods', () => {
       const emittedLines: string[] = [];
       const logger = emitter.createLogger('info', (level, message) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
       });
 
       const prefixedLogger = withPrefix(logger, 'test');
@@ -539,7 +540,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const emittedLines: string[] = [];
       const emittedArgs: (readonly unknown[])[] = [];
       const logger = emitter.createLogger('info', (level, message, args) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
         emittedArgs.push(args);
       });
 
@@ -591,7 +592,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should support nested prefixes with basic methods', () => {
       const emittedLines: string[] = [];
       const logger = emitter.createLogger('info', (level, message) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
       });
 
       const appLogger = withPrefix(logger, 'app');
@@ -614,7 +615,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should support nested prefixes with template methods', () => {
       const emittedLines: string[] = [];
       const logger = emitter.createLogger('info', (level, message) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
       });
 
       const appLogger = withPrefix(logger, 'app');
@@ -637,7 +638,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should support nested prefixes with different separators', () => {
       const emittedLines: string[] = [];
       const logger = emitter.createLogger('info', (level, message) => {
-        emittedLines.push(`[${level}] ${message}`);
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
       });
 
       const appLogger = withPrefix(logger, 'app', { messageSeparator: '--' });

@@ -94,7 +94,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
     });
 
     test('should log to console.error with custom formatter', () => {
-      const customFormatter = jest.fn(
+      const customFormatter = jest.fn<emitter.LogFormatter>(
         (level: LogLevel, message: string, _args: readonly unknown[]) => `ERROR: ${level} - ${message}`,
       );
       const sink = emitter.consoleErrorSink(customFormatter);

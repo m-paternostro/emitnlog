@@ -24,7 +24,7 @@ export type LogFormatter = (level: LogLevel, message: string, args: readonly unk
  * error - Connection failed
  * ```
  */
-export const basicFormatter: LogFormatter = (level, message) => `${level} - ${message}`;
+export const basicFormatter: LogFormatter = (level, message) => (message ? `[${level}] ${message}` : `[${level}]`);
 
 /**
  * Plain text formatter with timestamp and padded level labels.
@@ -44,7 +44,7 @@ export const plainFormatter: LogFormatter = (level, message) => {
 
   const paddedLevel = level.padEnd(9, ' ');
   const levelText = `[${paddedLevel}]`;
-  const line = `${timestamp} ${levelText} ${message}`;
+  const line = message ? `${timestamp} ${levelText} ${message}` : `${timestamp} ${levelText}`;
 
   return line;
 };
@@ -67,7 +67,7 @@ export const colorfulFormatter: LogFormatter = (level, message) => {
 
   const paddedLevel = level.padEnd(9, ' ');
   const levelText = decorateLogText(level, `[${paddedLevel}]`);
-  const line = `${timestamp} ${levelText} ${message}`;
+  const line = message ? `${timestamp} ${levelText} ${message}` : `${timestamp} ${levelText}`;
 
   return line;
 };
