@@ -1,5 +1,5 @@
 import type { Logger } from '../../../logger/definition.ts';
-import { OFF_LOGGER } from '../../../logger/off-logger.ts';
+import { withLogger } from '../../../logger/off-logger.ts';
 import { withPrefix } from '../../../logger/prefixed-logger.ts';
 import type { InvocationKey } from '../definition.ts';
 import type { AsyncStackStorage, InvocationStack } from './definition.ts';
@@ -27,7 +27,7 @@ import type { AsyncStackStorage, InvocationStack } from './definition.ts';
  * @returns A synchronous, in-memory invocation stack.
  */
 export const createBasicInvocationStack = (options?: { readonly logger: Logger }): InvocationStack => {
-  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'stack.basic', { fallbackPrefix: 'emitnlog.tracker' });
+  const logger = withPrefix(withLogger(options?.logger), 'stack.basic', { fallbackPrefix: 'emitnlog.tracker' });
   const stack: InvocationKey[] = [];
 
   logger.d`creating stack`;
@@ -74,7 +74,7 @@ export const createThreadSafeInvocationStack = (
   storage: AsyncStackStorage,
   options?: { readonly logger: Logger },
 ): InvocationStack => {
-  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'stack.thread-safe', { fallbackPrefix: 'emitnlog.tracker' });
+  const logger = withPrefix(withLogger(options?.logger), 'stack.thread-safe', { fallbackPrefix: 'emitnlog.tracker' });
   logger.d`creating stack`;
   return {
     close: () => {

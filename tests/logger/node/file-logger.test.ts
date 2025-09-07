@@ -3,20 +3,22 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { afterEach } from 'node:test';
 
+import type { LogFormat } from '../../../src/logger/index.ts';
 import { tee } from '../../../src/logger/index.ts';
-import { FileLogger } from '../../../src/logger/node/index.ts';
+import type { FileLoggerOptions } from '../../../src/logger/node/index.ts';
+import { createFileLogger } from '../../../src/logger/node/index.ts';
 import { delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.logger.node.FileLogger', () => {
+  const TEST_FLUSH_DELAY = { flushDelayMs: 50 } as const satisfies FileLoggerOptions;
+  const TEST_FLUSH_WAIT = TEST_FLUSH_DELAY.flushDelayMs * 2;
+
   const testDir = path.join(os.tmpdir(), `file-logger-test-${Date.now()}`);
   const testLogFile = path.join(testDir, 'test.log');
 
   const readLogFile = async (filePath = testLogFile): Promise<string> => {
     try {
-      // Give the file system a moment to complete writes
-      await new Promise((resolve) => setTimeout(resolve, 50));
       return await fs.readFile(filePath, 'utf8');
     } catch (_error) {
       return '';
@@ -40,21 +42,19 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should create a log file and write to it', async () => {
-    const logger = new FileLogger(testLogFile);
+    const logger = createFileLogger(testLogFile, TEST_FLUSH_DELAY);
     expect(logger.level).toBe('info');
 
     logger.info('Test message');
 
-    // Wait a bit for async operations
-    await delay(50);
-
-    const content = await readLogFile();
-    expect(content).toContain('Test message');
+    await expect(readLogFile()).resolves.toBe('');
+    await delay(TEST_FLUSH_WAIT);
+    await expect(readLogFile()).resolves.toContain('Test message');
   });
 
   test('should handle home directory expansion with tilde', async () => {
     const homeRelativePath = '~/test-logger-home.log';
-    const logger = new FileLogger(homeRelativePath, 'debug');
+    const logger = createFileLogger(homeRelativePath, 'debug');
     expect(logger.level).toBe('debug');
 
     expect(logger.filePath).toContain(os.homedir());
@@ -64,7 +64,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
   test('should handle relative paths by placing in temp directory', async () => {
     const relativeFileName = 'relative-test.log';
-    const logger = new FileLogger(relativeFileName);
+    const logger = createFileLogger(relativeFileName);
 
     expect(logger.filePath).toContain(os.tmpdir());
     expect(path.basename(logger.filePath)).toBe(relativeFileName);
@@ -72,36 +72,18 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
   test('should throw error when no file path is provided', () => {
     expect(() => {
-      const emptyPath = '';
-      new FileLogger(emptyPath);
-    }).toThrow('File path is required');
-
-    expect(() => {
-      new FileLogger({ filePath: '' });
-    }).toThrow('File path is required');
-  });
-
-  test('should strip ANSI color codes by default', async () => {
-    const logger = new FileLogger(testLogFile);
-
-    // This would normally be colored by FormattedLogger
-    logger.info('Colored message');
-
-    await delay(50);
-
-    const content = await readLogFile();
-    expect(content).not.toMatch(/\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/);
+      createFileLogger('');
+    }).toThrow('InvalidArgument: file path is required');
   });
 
   test('should create nested directories as needed', async () => {
     const nestedDir = path.join(testDir, 'nested', 'dir');
     const nestedLogFile = path.join(nestedDir, 'nested.log');
 
-    const logger = new FileLogger(nestedLogFile);
+    const logger = createFileLogger(nestedLogFile, TEST_FLUSH_DELAY);
     logger.info('Test in nested directory');
 
-    // Wait for async operations
-    await delay(50);
+    await delay(TEST_FLUSH_WAIT);
 
     expect(await fileExists(nestedDir)).toBe(true);
     expect(await fileExists(nestedLogFile)).toBe(true);
@@ -111,14 +93,15 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should accept options object in constructor', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, level: 'warning', format: 'colorful' });
+    const logger = createFileLogger(testLogFile, { level: 'warning', format: 'colorful' });
+    expect(logger.level).toBe('warning');
 
     // Check that level setting is respected
     logger.info('This should be filtered out');
     logger.warning('This should appear');
 
     // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await logger.flush();
 
     const content = await readLogFile();
     expect(content).not.toContain('This should be filtered out');
@@ -128,7 +111,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   test('should accept format as third parameter with string path', async () => {
     // Test JSON format with string path
     const jsonLogFile = path.join(testDir, 'json-format.log');
-    const jsonLogger = new FileLogger(jsonLogFile, 'info', 'json');
+    const jsonLogger = createFileLogger(jsonLogFile, 'info', 'json-pretty');
 
     jsonLogger.info('JSON format test');
     await jsonLogger.close();
@@ -141,11 +124,11 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
     // Test colorful format with string path
     const colorfulLogFile = path.join(testDir, 'colorful-format.log');
-    const colorfulLogger = new FileLogger(colorfulLogFile, 'debug', 'colorful');
+    const colorfulLogger = createFileLogger(colorfulLogFile, 'debug', 'colorful');
 
     // Create a string with ANSI color codes
     const coloredText = '\x1B[32mThis is colored green\x1B[0m';
-    colorfulLogger['emitLine']('debug', coloredText, []);
+    colorfulLogger.log('debug', coloredText);
     await colorfulLogger.close();
 
     const colorfulContent = await readLogFile(colorfulLogFile);
@@ -154,21 +137,21 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
     // Test plain format with string path (default behavior)
     const plainLogFile = path.join(testDir, 'plain-format.log');
-    const plainLogger = new FileLogger(plainLogFile, 'info', 'plain');
+    const plainLogger = createFileLogger(plainLogFile, 'info', 'plain');
 
     plainLogger.info('Plain format test');
-    await plainLogger.close();
+    await plainLogger.flush();
 
     const plainContent = await readLogFile(plainLogFile);
     expect(plainContent).toContain('Plain format test');
     expect(plainContent).toContain('[info     ]');
   });
 
-  test('should use default format when none specified with string path', async () => {
-    const defaultFormatLogger = new FileLogger(testLogFile, 'info');
+  test('should use plain format when none specified with string path', async () => {
+    const logger = createFileLogger(testLogFile, 'info');
 
-    defaultFormatLogger.info('Default format test');
-    await defaultFormatLogger.close();
+    logger.info('Default format test');
+    await logger.close();
 
     const content = await readLogFile();
     expect(content).toContain('Default format test');
@@ -176,23 +159,21 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should handle undefined format parameter with string path', async () => {
-    const undefinedFormatLogger = new FileLogger(testLogFile, 'info', undefined);
+    const logger = createFileLogger(testLogFile, 'info', undefined);
 
-    undefinedFormatLogger.info('Undefined format test');
-    await undefinedFormatLogger.close();
+    logger.info('Undefined format test');
+    await logger.close();
 
     const content = await readLogFile();
     expect(content).toContain('Undefined format test');
     expect(content).toContain('[info     ]'); // Should default to plain format
   });
 
-  test('should prioritize format parameter over options format when both provided', async () => {
-    // This tests edge case where format is provided as parameter and also in options
-    // The parameter should take precedence, but this constructor pattern doesn't actually exist
-    // in the current API, so we'll test the expected behavior with separate calls
-
-    // Test that options format works
-    const optionsLogger = new FileLogger({ filePath: path.join(testDir, 'options-format.log'), format: 'json' });
+  test('should handle the format parameter either on options or as parameter', async () => {
+    const optionsLogger = createFileLogger(path.join(testDir, 'options-format.log'), {
+      level: 'info',
+      format: 'json-pretty',
+    });
 
     optionsLogger.info('Options format test');
     await optionsLogger.close();
@@ -202,7 +183,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(parsed.message).toBe('Options format test');
 
     // Test that parameter format works with string path
-    const paramLogger = new FileLogger(path.join(testDir, 'param-format.log'), 'info', 'unformatted-json');
+    const paramLogger = createFileLogger(path.join(testDir, 'param-format.log'), 'info', 'json-compact');
 
     paramLogger.info('Parameter format test');
     await paramLogger.close();
@@ -215,17 +196,17 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should work with all supported formats using string path', async () => {
-    const formats: { format: 'plain' | 'colorful' | 'json' | 'unformatted-json'; description: string }[] = [
+    const formats: { format: LogFormat; description: string }[] = [
       { format: 'plain', description: 'plain format' },
       { format: 'colorful', description: 'colorful format' },
-      { format: 'json', description: 'JSON format' },
-      { format: 'unformatted-json', description: 'unformatted JSON format' },
+      { format: 'json-pretty', description: 'JSON format' },
+      { format: 'json-compact', description: 'unformatted JSON format' },
     ];
 
     // Create all loggers and log messages
     const loggers = formats.map(({ format, description }) => {
       const formatLogFile = path.join(testDir, `${format}-test.log`);
-      const logger = new FileLogger(formatLogFile, 'info', format);
+      const logger = createFileLogger(formatLogFile, 'info', format);
       logger.info(`Testing ${description}`);
       return { logger, format, description, formatLogFile };
     });
@@ -246,10 +227,10 @@ describe('emitnlog.logger.node.FileLogger', () => {
       expect(content).toContain(`Testing ${description}`);
 
       // Format-specific assertions
-      if (format === 'json' || format === 'unformatted-json') {
+      if (format === 'json-pretty' || format === 'json-compact') {
         // Should be valid JSON
         const lines = content.trim().split('\n');
-        const firstLine = format === 'json' ? content.trim() : lines[0];
+        const firstLine = format === 'json-pretty' ? content.trim() : lines[0];
         const parsed = JSON.parse(firstLine) as Record<string, unknown>;
         expect(parsed.message).toBe(`Testing ${description}`);
         expect(parsed.level).toBe('info');
@@ -261,7 +242,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should work with JSON format', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, format: 'json' });
+    const logger = createFileLogger(testLogFile, { format: 'json-pretty' });
 
     logger.info('JSON test message');
     await logger.close();
@@ -279,7 +260,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should work with unformatted JSON format', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, format: 'unformatted-json' });
+    const logger = createFileLogger(testLogFile, { format: 'json-compact' });
 
     logger.info('Unformatted JSON test message');
     await logger.close();
@@ -300,7 +281,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should include args in JSON format', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, format: 'json' });
+    const logger = createFileLogger(testLogFile, { format: 'json-pretty' });
 
     const context = { userId: '123', action: 'login' };
     const additionalData = 'extra info';
@@ -317,7 +298,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should handle args separately for non-JSON formats', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, format: 'plain' });
+    const logger = createFileLogger(testLogFile, undefined, 'plain');
 
     const context = { userId: '123', action: 'login' };
     const additionalData = 'extra info';
@@ -332,23 +313,21 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).toContain('[info     ]');
 
     // Should contain args section
-    expect(content).toContain('args:');
-    expect(content).toContain('[0]');
-    expect(content).toContain('[1]');
+    expect(content).toContain('[arg0]');
+    expect(content).toContain('[arg1]');
     expect(content).toContain('userId');
     expect(content).toContain('123');
     expect(content).toContain('extra info');
   });
 
   test('should keep ANSI color codes when format is colorful', async () => {
-    const logger = new FileLogger({ filePath: testLogFile + '.colors', format: 'colorful' });
+    const logger = createFileLogger(testLogFile + '.colors', { ...TEST_FLUSH_DELAY, format: 'colorful' });
 
     // Create a string with ANSI color codes (simulate what FormattedLogger might produce)
     const coloredText = '\x1B[32mThis is colored green\x1B[0m';
-    // We can't directly log this, but we can use the write method which is being tested
-    logger['emitLine']('debug', coloredText, []);
+    logger.log('info', coloredText);
 
-    await delay(50);
+    await delay(TEST_FLUSH_WAIT);
 
     const content = await readLogFile(testLogFile + '.colors');
     // Should contain the ANSI codes
@@ -360,9 +339,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
     try {
       // Force an error by trying to write to a non-existent directory
-      const forcedErrorLogger = new FileLogger({
-        // This should trigger an error in the file system operations
-        filePath: '/non/existent/directory/that/does/not/exist/test.log',
+      const forcedErrorLogger = createFileLogger('/non/existent/directory/that/does/not/exist/test.log', {
         errorHandler: mockErrorHandler,
       });
 
@@ -381,8 +358,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
   test('should work with tee logger for multiple outputs', async () => {
     // Create a second file logger as our second output destination
     const secondLogFile = path.join(testDir, 'second.log');
-    const firstLogger = new FileLogger(testLogFile);
-    const secondLogger = new FileLogger(secondLogFile);
+    const firstLogger = createFileLogger(testLogFile, TEST_FLUSH_DELAY);
+    const secondLogger = createFileLogger(secondLogFile, TEST_FLUSH_DELAY);
 
     // Create tee logger that writes to both files
     const combinedLogger = tee(firstLogger, secondLogger);
@@ -391,7 +368,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     combinedLogger.info('Test message for both loggers');
 
     // Wait for flushing
-    await delay(50);
+    await delay(TEST_FLUSH_WAIT);
 
     // Verify both files have the content
     const content1 = await readLogFile(testLogFile);
@@ -402,7 +379,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should include additional arguments by default', async () => {
-    const logger = new FileLogger(testLogFile);
+    const logger = createFileLogger(testLogFile);
 
     // Create some test arguments of different types
     const error = new Error('Test error');
@@ -434,13 +411,13 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should not include args when omitArgs is true', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, omitArgs: true });
+    const logger = createFileLogger(testLogFile, { ...TEST_FLUSH_DELAY, omitArgs: true });
 
     // Log with additional arguments
     logger.info('Message with args', { should: 'not appear' });
 
     // Wait for async operations
-    await delay(50);
+    await delay(TEST_FLUSH_WAIT);
 
     // Read the log file
     const content = await readLogFile();
@@ -455,7 +432,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should handle complex and circular objects', async () => {
-    const logger = new FileLogger(testLogFile);
+    const logger = createFileLogger(testLogFile, TEST_FLUSH_DELAY);
 
     // Create a complex object
     const complex = { name: 'complex', nested: { value: 42, data: [1, 2, 3] } };
@@ -464,7 +441,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     logger.info('Complex object test', complex);
 
     // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await delay(TEST_FLUSH_WAIT);
 
     // Read the log file
     const content = await readLogFile();
@@ -477,7 +454,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
     // Create an object with circular reference using a separate test file
     const circularLogFile = path.join(testDir, 'circular.log');
-    const circularLogger = new FileLogger(circularLogFile);
+    const circularLogger = createFileLogger(circularLogFile);
 
     const circular: Record<string, unknown> = { id: 'circular-test' };
     circular.self = circular; // Create circular reference
@@ -486,7 +463,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     circularLogger.info('Circular reference test', circular);
 
     // Wait for async operations
-    await delay(50);
+    await circularLogger.flush();
 
     // Read the log file
     const circularContent = await readLogFile(circularLogFile);
@@ -499,10 +476,10 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should handle null and undefined arguments', async () => {
-    const logger = new FileLogger(testLogFile);
+    const logger = createFileLogger(testLogFile);
     logger.info('Null and undefined test', null, undefined);
 
-    await delay(50);
+    await logger.flush();
     const content = await readLogFile();
 
     expect(content).toContain('Null and undefined test');
@@ -511,7 +488,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should handle multiple log entries, with different delays between them', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, flushDelayMs: 10 });
+    const logger = createFileLogger(testLogFile, { flushDelayMs: 10 });
 
     for (let i = 1; i <= 50; i++) {
       logger.info(`line ${i}`);
@@ -543,7 +520,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should not write after closing', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, flushDelayMs: 10 });
+    const logger = createFileLogger(testLogFile, { flushDelayMs: 10 });
 
     logger.info('Test message 1');
     await logger.close();
@@ -555,7 +532,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should respect custom stringify options', async () => {
-    const logger = new FileLogger({ filePath: testLogFile, stringifyOptions: { maxArrayElements: 5 } });
+    const logger = createFileLogger(testLogFile, { stringifyOptions: { maxArrayElements: 5 } });
     const array = Array.from({ length: 20 }, (_, i) => i);
 
     logger.i`Array: ${array}`;
@@ -565,43 +542,37 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).toContain('...(15)');
   });
 
-  describe('handling errors', () => {
-    let failCount = 2;
-    const spy = jest.fn();
-    const realAppendFile = fs.appendFile;
+  test('should append to the log file by default', async () => {
+    const logger1 = createFileLogger(testLogFile, { flushDelayMs: 0 });
+    const logger2 = createFileLogger(testLogFile);
 
-    beforeEach(() => {
-      fs.appendFile = jest.fn(async (...args: unknown[]) => {
-        spy();
-        if (failCount-- > 0) {
-          throw new Error('Simulated write failure');
-        }
-        await realAppendFile(...(args as Parameters<typeof fs.appendFile>));
-      });
-    });
+    logger1.info('First logger message');
+    await delay(10);
+    await expect(readLogFile()).resolves.toContain('First logger message');
 
-    afterEach(() => {
-      fs.appendFile = realAppendFile;
-    });
+    logger2.info('Second logger message');
+    await logger2.close();
 
-    test('should fail without retry', async () => {
-      const logger = new FileLogger(testLogFile);
-      logger.info('This should fail');
-      await expect(() => logger.close()).rejects.toThrow('Simulated write failure');
-      expect(spy).toHaveBeenCalledTimes(1);
-    });
+    // Verify both messages are present
+    const content = await readLogFile();
+    expect(content).toContain('First logger message');
+    expect(content).toContain('Second logger message');
+  });
 
-    test('should retry on appendFile failure', async () => {
-      const logger = new FileLogger({ filePath: testLogFile, retryLimit: 3, retryDelayMs: 10 });
+  test('should overwrite the log file when overwrite option is true', async () => {
+    const logger1 = createFileLogger(testLogFile, { flushDelayMs: 0, overwrite: true });
+    const logger2 = createFileLogger(testLogFile, { overwrite: true });
 
-      logger.info('This should eventually succeed');
+    logger1.info('First logger message');
+    await delay(10);
+    await expect(readLogFile()).resolves.toContain('First logger message');
 
-      await logger.close();
+    logger2.info('Second logger message');
+    await logger2.close();
 
-      const content = await fs.readFile(testLogFile, 'utf8');
-      expect(content).toContain('This should eventually succeed');
-
-      expect(spy).toHaveBeenCalledTimes(3);
-    });
+    // Verify only the second message is present
+    const content = await readLogFile();
+    expect(content).toContain('Second logger message');
+    expect(content).not.toContain('First logger message');
   });
 });

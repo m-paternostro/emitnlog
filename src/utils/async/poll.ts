@@ -1,5 +1,5 @@
 import type { Logger } from '../../logger/definition.ts';
-import { OFF_LOGGER } from '../../logger/off-logger.ts';
+import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createDeferredValue } from './deferred-value.ts';
 import { delay } from './delay.ts';
@@ -13,6 +13,8 @@ import { delay } from './delay.ts';
 export type PollingOptions<T, V> = {
   /**
    * Whether to invoke the operation immediately or instead wait for the first interval.
+   *
+   * @default false
    */
   readonly invokeImmediately?: boolean;
 
@@ -149,7 +151,7 @@ export const startPolling = <T, const V = undefined>(
   let active = true;
   let lastResult: T | V | undefined;
 
-  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'poll', { fallbackPrefix: 'emitnlog' });
+  const logger = withPrefix(withLogger(options?.logger), 'poll', { fallbackPrefix: 'emitnlog' });
 
   const polledOperation = (): void => {
     if (resolving || !active) {

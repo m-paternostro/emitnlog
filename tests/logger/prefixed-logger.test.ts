@@ -1,30 +1,19 @@
-import { describe, expect, jest, test } from '@jest/globals';
+import { describe, expect, test } from '@jest/globals';
 
 import type { IsEqual } from 'type-fest';
 
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
 import {
   appendPrefix,
-  BaseLogger,
+  emitter,
   inspectPrefixedLogger,
   isPrefixedLogger,
   OFF_LOGGER,
   resetPrefix,
-  shouldEmitEntry,
   withPrefix,
 } from '../../src/logger/index.ts';
-import { createTestLogger } from '../jester.setup.ts';
-
-// Mock the shouldEmitEntry to track calls
-jest.mock('../../src/logger/level-utils.ts', () => ({
-  shouldEmitEntry: jest.fn().mockImplementation((level, messageLevel) => {
-    // Default implementation to allow testing level filtering
-    const levels = ['trace', 'debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'];
-    const levelIndex = levels.indexOf(String(level));
-    const messageLevelIndex = levels.indexOf(String(messageLevel));
-    return levelIndex <= messageLevelIndex;
-  }),
-}));
+import { emptyArray } from '../../src/utils/index.ts';
+import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
 
 describe('emitnlog.logger.prefixed-logger', () => {
   test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
@@ -208,17 +197,18 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should maintain level synchronization', () => {
-      const logger = createTestLogger();
+      let level: LogLevel = 'info';
+      const logger = createTestLogger(() => level);
       const dbLogger = withPrefix(logger, 'DB');
       const userLogger = appendPrefix(dbLogger, 'User');
 
       expect(userLogger.level).toBe(logger.level);
 
-      userLogger.level = 'warning';
+      level = 'warning';
       expect(logger.level).toBe('warning');
       expect(dbLogger.level).toBe('warning');
 
-      logger.level = 'error';
+      level = 'error';
       expect(userLogger.level).toBe('error');
       expect(dbLogger.level).toBe('error');
     });
@@ -253,32 +243,6 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       v1Logger.info('Request processed');
       expect(logger).toHaveLoggedWith('info', 'API/v1 >> Request processed');
-    });
-
-    test('should extract root logger correctly', () => {
-      const logger = createTestLogger();
-      const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
-
-      const cacheLogger = resetPrefix(userLogger, 'Cache');
-      const metricsLogger = resetPrefix(userLogger, 'Metrics');
-
-      // Both should use the same root logger
-      cacheLogger.level = 'warning';
-      expect(metricsLogger.level).toBe('warning');
-      expect(logger.level).toBe('warning');
-    });
-
-    test('should maintain level synchronization with reset logger', () => {
-      const logger = createTestLogger();
-      const complexLogger = withPrefix(logger, 'Complex');
-      const resetLogger = resetPrefix(complexLogger, 'Simple');
-
-      expect(resetLogger.level).toBe(logger.level);
-
-      resetLogger.level = 'critical';
-      expect(logger.level).toBe('critical');
-      expect(complexLogger.level).toBe('critical');
     });
   });
 
@@ -429,11 +393,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message functions when using basic methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
 
@@ -456,13 +418,12 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message functions when using template methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
+      expect(prefixedLogger.level).toBe('info');
 
       let count = 0;
       const expensiveOperation = () => {
@@ -483,11 +444,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should handle lazy message stringification when using template methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
 
@@ -543,26 +502,24 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
   describe('level filtering', () => {
     test('should check level before processing template literals', () => {
-      const logger = createTestLogger();
-      logger.level = 'info';
+      const logger = createMemoryLogger('info');
       const prefixedLogger = withPrefix(logger, 'test');
 
-      // Reset the mock to clearly see if shouldEmitEntry is called
-      (shouldEmitEntry as jest.Mock).mockClear();
+      let executed = false;
+      const value = () => {
+        executed = true;
+        return 'a value';
+      };
 
       // This should be filtered out at the 'debug' level
-      prefixedLogger.d`Debug message`;
+      prefixedLogger.d`Debug message: ${value}`;
 
-      // Should check level before trying to process template
-      expect(shouldEmitEntry).toHaveBeenCalledWith('info', 'debug');
-
-      // The log method should not be called since level is above debug
-      expect(logger.log).not.toHaveBeenCalledWith('debug', expect.anything());
+      expect(executed).toBe(false);
+      expect(logger.entries).toHaveLength(0);
     });
 
     test('should respect logger level for standard methods', () => {
-      const logger = createTestLogger();
-      logger.level = 'warning';
+      const logger = createTestLogger('warning');
       const prefixedLogger = withPrefix(logger, 'test');
 
       prefixedLogger.info('Info message');
@@ -582,12 +539,10 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should allow chaining with args', () => {
       const emittedLines: string[] = [];
       const emittedArgs: (readonly unknown[])[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-          emittedLines.push(`[${level}] ${message}`);
-          emittedArgs.push(args);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message, args) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+        emittedArgs.push(args);
+      });
 
       const prefixedLogger = withPrefix(logger, 'test');
       prefixedLogger.args({ id: 123 }, 42).info('User logged in');
@@ -596,14 +551,15 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should support nested prefixes with different levels', () => {
-      const logger = createTestLogger();
+      let level: LogLevel | 'off' = 'debug';
+      const logger = createTestLogger(() => level);
       expect(logger.level).toBe('debug');
 
       const appLogger = withPrefix(logger, 'app');
       expect(appLogger).not.toBe(logger);
       expect(appLogger.level).toBe('debug');
 
-      appLogger.level = 'critical';
+      level = 'critical';
       expect(logger.level).toBe('critical');
       expect(appLogger.level).toBe('critical');
 
@@ -612,22 +568,22 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(userLogger).not.toBe(appLogger);
       expect(userLogger.level).toBe('critical');
 
-      userLogger.level = 'notice';
+      level = 'notice';
       expect(logger.level).toBe('notice');
       expect(appLogger.level).toBe('notice');
       expect(userLogger.level).toBe('notice');
 
-      logger.level = 'error';
+      level = 'error';
       expect(logger.level).toBe('error');
       expect(appLogger.level).toBe('error');
       expect(userLogger.level).toBe('error');
 
-      appLogger.level = 'warning';
+      level = 'warning';
       expect(logger.level).toBe('warning');
       expect(appLogger.level).toBe('warning');
       expect(userLogger.level).toBe('warning');
 
-      userLogger.level = 'off';
+      level = 'off';
       expect(logger.level).toBe('off');
       expect(appLogger.level).toBe('off');
       expect(userLogger.level).toBe('off');
@@ -635,11 +591,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with basic methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+      });
 
       const appLogger = withPrefix(logger, 'app');
 
@@ -660,11 +614,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with template methods', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+      });
 
       const appLogger = withPrefix(logger, 'app');
 
@@ -685,11 +637,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
     test('should support nested prefixes with different separators', () => {
       const emittedLines: string[] = [];
-      const logger = new (class extends BaseLogger {
-        protected emitLine(level: LogLevel, message: string): void {
-          emittedLines.push(`[${level}] ${message}`);
-        }
-      })();
+      const logger = emitter.createLogger('info', (level, message) => {
+        emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
+      });
 
       const appLogger = withPrefix(logger, 'app', { messageSeparator: '--' });
 
@@ -973,7 +923,8 @@ describe('emitnlog.logger.prefixed-logger', () => {
     });
 
     test('should handle long prefix chains with type validation', () => {
-      const logger = createTestLogger();
+      let level: LogLevel | 'off' = 'info';
+      const logger = createTestLogger(() => level);
 
       // Helper function to validate types at compile time
       const validateType = <T extends string>(prefixedLogger: PrefixedLogger<T>, expectedPrefix: T): void => {
@@ -1039,7 +990,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       // Test that all loggers share the same level
       expect(level14.level).toBe(logger.level);
-      level14.level = 'warning';
+      level = 'warning';
       expect(logger.level).toBe('warning');
       expect(level0.level).toBe('warning');
       expect(level7.level).toBe('warning');
@@ -1059,7 +1010,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14: This should also appear',
       );
 
-      level14.level = 'info';
+      level = 'info';
 
       // Test template literals
       const value = 42;
@@ -1180,6 +1131,210 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       const nested = appendPrefix(custom, 'Nested');
       assertType(nested, 'Custom/Nested');
+    });
+  });
+
+  describe('pendingArgs behavior', () => {
+    test('should accumulate args with prefixed logger', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'TEST');
+
+      prefixedLogger.args('arg1', 42).info('Message with args');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('TEST: Message with args');
+      expect(memoryLogger.entries[0].args).toEqual(['arg1', 42]);
+    });
+
+    test('should isolate pendingArgs between log calls', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'PREFIX');
+
+      // First log with args
+      prefixedLogger.args('first').info('First message');
+
+      // Second log without args - should not have 'first'
+      prefixedLogger.info('Second message');
+
+      expect(memoryLogger.entries).toHaveLength(2);
+      expect(memoryLogger.entries[0].args).toEqual(['first']);
+      expect(memoryLogger.entries[1].args).toEqual([]);
+    });
+
+    test('should accumulate multiple args calls', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'MULTI');
+
+      prefixedLogger.args('arg1').args('arg2', 'arg3').args({ key: 'value' }).info('Message');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('MULTI: Message');
+      expect(memoryLogger.entries[0].args).toEqual(['arg1', 'arg2', 'arg3', { key: 'value' }]);
+    });
+
+    test('should handle pendingArgs with error methods', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'ERROR');
+      const error = new Error('Test error');
+
+      prefixedLogger.args('context').error(error);
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('ERROR: Test error');
+      expect(memoryLogger.entries[0].args).toEqual(['context', error]);
+    });
+
+    test('should handle pendingArgs with template literals', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'TEMPLATE');
+
+      const value = 'test';
+      prefixedLogger.args('context').i`Template ${value}`;
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('TEMPLATE: Template test');
+      expect(memoryLogger.entries[0].args).toEqual(['context']);
+    });
+
+    test('should not share pendingArgs between prefixed logger instances', () => {
+      const memoryLogger1 = createMemoryLogger();
+      const memoryLogger2 = createMemoryLogger();
+
+      const prefixed1 = withPrefix(memoryLogger1, 'PREFIX1');
+      const prefixed2 = withPrefix(memoryLogger2, 'PREFIX2');
+
+      prefixed1.args('logger1').info('From logger 1');
+      prefixed2.args('logger2').info('From logger 2');
+
+      expect(memoryLogger1.entries[0].args).toEqual(['logger1']);
+      expect(memoryLogger2.entries[0].args).toEqual(['logger2']);
+    });
+
+    test('should handle pendingArgs with nested prefixes', () => {
+      const memoryLogger = createMemoryLogger();
+      const level1 = withPrefix(memoryLogger, 'L1');
+      const level2 = appendPrefix(level1, 'L2');
+      const level3 = appendPrefix(level2, 'L3');
+
+      level3.args('nested', 'args').info('Deeply nested');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('L1.L2.L3: Deeply nested');
+      expect(memoryLogger.entries[0].args).toEqual(['nested', 'args']);
+    });
+
+    test('should handle pendingArgs after reset', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixed = withPrefix(memoryLogger, 'OLD');
+      const reset = resetPrefix(prefixed, 'NEW');
+
+      reset.args('afterReset').info('Message');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].message).toBe('NEW: Message');
+      expect(memoryLogger.entries[0].args).toEqual(['afterReset']);
+    });
+
+    test('should clear pendingArgs after each log operation', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'CLEAR');
+
+      // Add args
+      const withArgs = prefixedLogger.args('arg1', 'arg2');
+
+      // First log consumes the args
+      withArgs.info('First');
+
+      // Second log from the same chain should not have args
+      withArgs.info('Second');
+
+      expect(memoryLogger.entries).toHaveLength(2);
+      expect(memoryLogger.entries[0].args).toEqual(['arg1', 'arg2']);
+      expect(memoryLogger.entries[1].args).toEqual([]);
+    });
+
+    test('should handle pendingArgs with all log levels', () => {
+      const memoryLogger = createMemoryLogger('trace');
+      const prefixedLogger = withPrefix(memoryLogger, 'LEVELS');
+
+      prefixedLogger.args('t').trace('Trace');
+      prefixedLogger.args('d').debug('Debug');
+      prefixedLogger.args('i').info('Info');
+      prefixedLogger.args('n').notice('Notice');
+      prefixedLogger.args('w').warning('Warning');
+      prefixedLogger.args('e').error('Error');
+      prefixedLogger.args('c').critical('Critical');
+      prefixedLogger.args('a').alert('Alert');
+      prefixedLogger.args('em').emergency('Emergency');
+      prefixedLogger.args('log').log('info', 'Log');
+
+      expect(memoryLogger.entries).toHaveLength(10);
+      expect(memoryLogger.entries[0].args).toEqual(['t']);
+      expect(memoryLogger.entries[1].args).toEqual(['d']);
+      expect(memoryLogger.entries[2].args).toEqual(['i']);
+      expect(memoryLogger.entries[3].args).toEqual(['n']);
+      expect(memoryLogger.entries[4].args).toEqual(['w']);
+      expect(memoryLogger.entries[5].args).toEqual(['e']);
+      expect(memoryLogger.entries[6].args).toEqual(['c']);
+      expect(memoryLogger.entries[7].args).toEqual(['a']);
+      expect(memoryLogger.entries[8].args).toEqual(['em']);
+      expect(memoryLogger.entries[9].args).toEqual(['log']);
+    });
+
+    test('should handle pendingArgs with shorthand template methods', () => {
+      const memoryLogger = createMemoryLogger('trace');
+      const prefixedLogger = withPrefix(memoryLogger, 'SHORT');
+
+      prefixedLogger.args('ctx').t`Trace`;
+      prefixedLogger.args('ctx').d`Debug`;
+      prefixedLogger.args('ctx').i`Info`;
+      prefixedLogger.args('ctx').n`Notice`;
+      prefixedLogger.args('ctx').w`Warning`;
+      prefixedLogger.args('ctx').e`Error`;
+      prefixedLogger.args('ctx').c`Critical`;
+      prefixedLogger.args('ctx').a`Alert`;
+      prefixedLogger.args('ctx').em`Emergency`;
+
+      expect(memoryLogger.entries).toHaveLength(9);
+      memoryLogger.entries.forEach((entry) => {
+        expect(entry.args).toEqual(['ctx']);
+        expect(entry.message.startsWith('SHORT: ')).toBe(true);
+      });
+    });
+
+    test('should handle complex args objects', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'COMPLEX');
+
+      const complexObj = { nested: { deep: { value: 'test' } }, array: [1, 2, 3], fn: () => 'function' };
+
+      prefixedLogger.args(complexObj, null, undefined, 42).info('Complex args');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].args).toHaveLength(4);
+      expect(memoryLogger.entries[0].args[0]).toBe(complexObj);
+      expect(memoryLogger.entries[0].args[1]).toBe(null);
+      expect(memoryLogger.entries[0].args[2]).toBe(undefined);
+      expect(memoryLogger.entries[0].args[3]).toBe(42);
+    });
+
+    test('should handle empty args calls', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'EMPTY');
+
+      prefixedLogger.args().info('No args added');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].args).toEqual([]);
+    });
+
+    test('should maintain args order', () => {
+      const memoryLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(memoryLogger, 'ORDER');
+
+      prefixedLogger.args(1).args(2).args(3).args(4).args(5).info('Ordered args');
+
+      expect(memoryLogger.entries[0].args).toEqual([1, 2, 3, 4, 5]);
     });
   });
 });

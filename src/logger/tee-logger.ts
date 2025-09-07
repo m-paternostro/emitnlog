@@ -1,4 +1,6 @@
-import type { Logger, LogLevel, LogMessage } from './definition.ts';
+import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from './definition.ts';
+import { asSingleFinalizer, type ForgeFinalizer, type MergeFinalizer } from './implementation/finalizer.ts';
+import { LOWEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 /**
@@ -19,29 +21,49 @@ import { OFF_LOGGER } from './off-logger.ts';
  * @example
  *
  * ```ts
- * import { tee } from 'emitnlog/logger';
+ * import { createConsoleErrorLogger, tee } from 'emitnlog/logger';
+ * import { createFileLogger } from 'emitnlog/logger/node';
  *
+ * const consoleLogger = createConsoleErrorLogger('info');
+ * const fileLogger = createFileLogger('~/tmp/entries.log');
  * const logger = tee(consoleLogger, fileLogger);
- * logger.info('This will be logged to both console and file');
+ * logger.i`This will be logged to both console error and file`;
  * ```
  *
  * @param loggers One or more loggers to combine.
  * @returns A new logger that fans out logs to the provided loggers. Returns the 'off logger' if loggers is empty or the
  *   specified logger is loggers length is one.
  */
-export const tee = (...loggers: readonly Logger[]): Logger => {
+export const tee = <T extends readonly Logger[]>(...loggers: T): TeeLogger<T> => {
+  loggers = loggers.filter((logger) => logger !== OFF_LOGGER) as unknown as T;
+
   if (!loggers.length) {
-    return OFF_LOGGER;
+    return OFF_LOGGER as TeeLogger<T>;
   }
 
   if (loggers.length === 1) {
-    return loggers[0];
+    return loggers[0] as TeeLogger<T>;
   }
 
-  // Track pending args for the tee logger
+  const computeLevel = (): LogLevel | 'off' => {
+    const level = loggers.reduce<LogLevel | 'off'>((acc, logger) => {
+      if (logger.level === 'off') {
+        return acc;
+      }
+
+      if (acc === 'off') {
+        return logger.level;
+      }
+
+      // Return the most permissive level (i.e., the highest severity) among all loggers
+      return toLevelSeverity(acc) > toLevelSeverity(logger.level) ? acc : logger.level;
+    }, LOWEST_SEVERITY_LOG_LEVEL);
+
+    return level;
+  };
+
   let pendingArgs: unknown[] = [];
 
-  // Helper to consume pending args similar to BaseLogger
   const consumePendingArgs = (): readonly unknown[] | undefined => {
     if (!pendingArgs.length) {
       return undefined;
@@ -52,230 +74,86 @@ export const tee = (...loggers: readonly Logger[]): Logger => {
     return args;
   };
 
-  return {
-    get level() {
-      return loggers[0].level;
-    },
+  type TeeInput = LogMessage | Error | { error: unknown };
 
-    set level(newLevel: LogLevel | 'off') {
-      for (const logger of loggers) {
-        logger.level = newLevel;
-      }
-    },
-
-    args(...args: unknown[]): Logger {
-      // Store args locally instead of forwarding immediately
-      pendingArgs = args;
-      return this;
-    },
-
-    trace(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).trace(message, ...args);
-        } else {
-          logger.trace(message, ...args);
+  const toTeeInputProvider = <I>(message: I): I => {
+    if (typeof message === 'function') {
+      let cache: unknown = toTeeInputProvider;
+      return (() => {
+        if (cache === toTeeInputProvider) {
+          cache = (message as () => I)();
         }
-      }
-    },
+        return cache;
+      }) as I;
+    }
 
-    t(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).t(strings, ...values);
-        } else {
-          logger.t(strings, ...values);
-        }
-      }
-    },
-
-    debug(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).debug(message, ...args);
-        } else {
-          logger.debug(message, ...args);
-        }
-      }
-    },
-
-    d(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).d(strings, ...values);
-        } else {
-          logger.d(strings, ...values);
-        }
-      }
-    },
-
-    info(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).info(message, ...args);
-        } else {
-          logger.info(message, ...args);
-        }
-      }
-    },
-
-    i(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).i(strings, ...values);
-        } else {
-          logger.i(strings, ...values);
-        }
-      }
-    },
-
-    notice(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).notice(message, ...args);
-        } else {
-          logger.notice(message, ...args);
-        }
-      }
-    },
-
-    n(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).n(strings, ...values);
-        } else {
-          logger.n(strings, ...values);
-        }
-      }
-    },
-
-    warning(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).warning(message, ...args);
-        } else {
-          logger.warning(message, ...args);
-        }
-      }
-    },
-
-    w(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).w(strings, ...values);
-        } else {
-          logger.w(strings, ...values);
-        }
-      }
-    },
-
-    error(message: LogMessage | Error | { error: unknown }, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).error(message, ...args);
-        } else {
-          logger.error(message, ...args);
-        }
-      }
-    },
-
-    e(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).e(strings, ...values);
-        } else {
-          logger.e(strings, ...values);
-        }
-      }
-    },
-
-    critical(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).critical(message, ...args);
-        } else {
-          logger.critical(message, ...args);
-        }
-      }
-    },
-
-    c(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).c(strings, ...values);
-        } else {
-          logger.c(strings, ...values);
-        }
-      }
-    },
-
-    alert(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).alert(message, ...args);
-        } else {
-          logger.alert(message, ...args);
-        }
-      }
-    },
-
-    a(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).a(strings, ...values);
-        } else {
-          logger.a(strings, ...values);
-        }
-      }
-    },
-
-    emergency(message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).emergency(message, ...args);
-        } else {
-          logger.emergency(message, ...args);
-        }
-      }
-    },
-
-    em(strings: TemplateStringsArray, ...values: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).em(strings, ...values);
-        } else {
-          logger.em(strings, ...values);
-        }
-      }
-    },
-
-    log(level: LogLevel, message: LogMessage, ...args: unknown[]): void {
-      const currentArgs = consumePendingArgs();
-      for (const logger of loggers) {
-        if (currentArgs) {
-          logger.args(...currentArgs).log(level, message, ...args);
-        } else {
-          logger.log(level, message, ...args);
-        }
-      }
-    },
+    return message;
   };
+
+  const runLogOperation = <I extends TeeInput>(input: I, operation: (logger: Logger, input: I) => void) => {
+    const currentArgs = consumePendingArgs();
+    input = toTeeInputProvider(input);
+    loggers.forEach((logger) => {
+      if (currentArgs) {
+        logger.args(...currentArgs);
+      }
+      operation(logger, input);
+    });
+  };
+
+  const runTemplateOperation = <I extends LogTemplateStringsArray>(
+    input: I,
+    values: unknown[],
+    operation: (logger: Logger, input: I, values: unknown[]) => void,
+  ) => {
+    const currentArgs = consumePendingArgs();
+    input = toTeeInputProvider(input);
+    values = values.map(toTeeInputProvider);
+    loggers.forEach((logger) => {
+      if (currentArgs) {
+        logger.args(...currentArgs);
+      }
+      operation(logger, input, values);
+    });
+  };
+
+  const finalizer = asSingleFinalizer(...loggers);
+
+  const teeLogger: Logger = {
+    get level() {
+      return computeLevel();
+    },
+
+    args: (...args) => {
+      pendingArgs.push(...args);
+      return teeLogger;
+    },
+
+    trace: (message, ...args) => runLogOperation(message, (logger, i) => logger.trace(i, ...args)),
+    debug: (message, ...args) => runLogOperation(message, (logger, i) => logger.debug(i, ...args)),
+    info: (message, ...args) => runLogOperation(message, (logger, i) => logger.info(i, ...args)),
+    notice: (message, ...args) => runLogOperation(message, (logger, i) => logger.notice(i, ...args)),
+    error: (input, ...args) => runLogOperation(input, (logger, i) => logger.error(i, ...args)),
+    warning: (input, ...args) => runLogOperation(input, (logger, i) => logger.warning(i, ...args)),
+    critical: (input, ...args) => runLogOperation(input, (logger, i) => logger.critical(i, ...args)),
+    alert: (input, ...args) => runLogOperation(input, (logger, i) => logger.alert(i, ...args)),
+    emergency: (input, ...args) => runLogOperation(input, (logger, i) => logger.emergency(i, ...args)),
+    log: (level, message, ...args) => runLogOperation(message, (logger, i) => logger.log(level, i, ...args)),
+
+    t: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.t(i, ...v)),
+    d: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.d(i, ...v)),
+    i: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.i(i, ...v)),
+    n: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.n(i, ...v)),
+    w: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.w(i, ...v)),
+    e: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.e(i, ...v)),
+    c: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.c(i, ...v)),
+    a: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.a(i, ...v)),
+    em: (strings, ...values) => runTemplateOperation(strings, values, (logger, i, v) => logger.em(i, ...v)),
+
+    ...finalizer,
+  };
+
+  return teeLogger as TeeLogger<T>;
 };
+
+type TeeLogger<Ls extends readonly Logger[]> = MergeFinalizer<Logger, ForgeFinalizer<Ls>>;

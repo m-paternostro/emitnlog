@@ -1,17 +1,24 @@
-import type { Logger, LogLevel } from './definition.ts';
+import type { Logger } from './definition.ts';
 
 /**
  * A logger implementation that does not emit any log entries regardless of level. Useful for completely disabling
  * logging in specific contexts.
+ *
+ * @example
+ *
+ * ```ts
+ * import type { Logger } from 'emitnlog/logger';
+ * import { OFF_LOGGER, withPrefix } from 'emitnlog/logger';
+ *
+ * const calculate = (logger?: Logger) => {
+ *   const calculateLogger = withPrefix(logger ?? OFF_LOGGER, 'calculate');
+ *   calculateLogger.i`starting calculation`;
+ *   ...
+ * };
+ * ```
  */
-export const OFF_LOGGER: Logger = {
-  get level() {
-    return 'off';
-  },
-
-  set level(_: LogLevel | 'off') {
-    // ignored
-  },
+export const OFF_LOGGER: Logger = Object.freeze({
+  level: 'off',
 
   args: () => OFF_LOGGER,
 
@@ -43,4 +50,25 @@ export const OFF_LOGGER: Logger = {
   em: () => void {},
 
   log: () => void {},
-} as const;
+});
+
+/**
+ * Returns a non-nullable logger: either the specified logger or the OFF_LOGGER.
+ *
+ * @example
+ *
+ * ```ts
+ * import type { Logger } from 'emitnlog/logger';
+ * import { asNonNullableLogger, withPrefix } from 'emitnlog/logger';
+ *
+ * const calculate = (logger?: Logger) => {
+ *   const calculateLogger = withPrefix(withLogger(logger), 'calculate');
+ *   calculateLogger.i`starting calculation`;
+ *   ...
+ * };
+ * ```
+ *
+ * @param logger A logger or null or undefined
+ * @returns Either the specified logger or the OFF_Logger
+ */
+export const withLogger = (logger: Logger | undefined | null): NonNullable<Logger> => logger ?? OFF_LOGGER;

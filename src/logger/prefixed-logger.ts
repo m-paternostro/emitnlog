@@ -1,11 +1,12 @@
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
-import type { Logger, LogLevel, LogMessage } from './definition.ts';
-import { shouldEmitEntry } from './level-utils.ts';
+import type { Logger, LogMessage, LogTemplateStringsArray } from './definition.ts';
+import { BaseLogger } from './implementation/base-logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
 const separatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/separator');
-const dataSymbol: unique symbol = Symbol.for('@emitnlog/logger/data');
+const messageSeparatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/messageSeparator');
+const rootLoggerSymbol: unique symbol = Symbol.for('@emitnlog/logger/rootLogger');
 
 /**
  * A specialized logger that prepends a fixed prefix to all log messages.
@@ -29,11 +30,6 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
    * The value used to separate different parts of the prefix, or undefined
    */
   readonly [separatorSymbol]: TSeparator | undefined;
-
-  /*
-   * Arbitrary data needed by the prefix logger.
-   */
-  readonly [dataSymbol]: { readonly rootLogger: Logger; readonly messageSeparator: string } | undefined;
 }
 
 /**
@@ -49,12 +45,12 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Basic Usage
  *
  * ```ts
- * import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withPrefix } from 'emitnlog/logger';
  *
- * const logger = new ConsoleLogger();
+ * const logger = createConsoleLogLogger('info');
  * const dbLogger = withPrefix(logger, 'DB');
  *
- * dbLogger.info('Connected to database');
+ * dbLogger.i`Connected to database`;
  * // Output: "DB: Connected to database"
  * ```
  *
@@ -109,12 +105,12 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * // Custom prefix separator
  * const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
  * const v1Logger = withPrefix(apiLogger, 'v1');
- * v1Logger.info('Request processed');
+ * v1Logger.i`Request processed`;
  * // Output: "API/v1: Request processed"
  *
  * // Custom message separator
  * const compactLogger = withPrefix(logger, 'SYS', { messageSeparator: ' | ' });
- * compactLogger.info('System ready');
+ * compactLogger.i`System ready`;
  * // Output: "SYS | System ready"
  * ```
  *
@@ -125,7 +121,7 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  *
  * // Add a fallback prefix when the logger isn't already prefixed
  * const serviceLogger = withPrefix(logger, 'UserService', { fallbackPrefix: 'APP' });
- * serviceLogger.info('Service started');
+ * serviceLogger.i`Service started`;
  * // Output: "APP.UserService: Service started"
  *
  * // If applied to an already prefixed logger, fallback is ignored
@@ -133,7 +129,7 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * const userDbLogger = withPrefix(dbLogger, 'UserService', {
  *   fallbackPrefix: 'APP', // This is ignored
  * });
- * userDbLogger.info('Service started');
+ * userDbLogger.i`Service started`;
  * // Output: "DB.UserService: Service started"
  * ```
  *
@@ -205,147 +201,179 @@ export const withPrefix = <
     }
   }
 
-  const prefixedLogger: PrefixedLogger<TPrefix, TSeparator> = {
-    [prefixSymbol]: prefix,
-    [separatorSymbol]: prefixSeparator,
-    [dataSymbol]: { rootLogger: logger, messageSeparator },
-
-    get level() {
-      return logger.level;
-    },
-
-    set level(value: LogLevel | 'off') {
-      logger.level = value;
-    },
-
-    args(...args: unknown[]) {
-      logger.args(...args);
-      return prefixedLogger;
-    },
-
-    trace(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'trace')) {
-        logger.trace(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    t(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'trace')) {
-        logger.t(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    debug(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'debug')) {
-        logger.debug(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    d(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'debug')) {
-        logger.d(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    info(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'info')) {
-        logger.info(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    i(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'info')) {
-        logger.i(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    notice(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'notice')) {
-        logger.notice(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    n(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'notice')) {
-        logger.n(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    warning(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'warning')) {
-        logger.warning(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    w(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'warning')) {
-        logger.w(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    error(error: LogMessage | Error | { error: unknown }, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'error')) {
-        if (error instanceof Error) {
-          logger.error(toMessageProvider(prefixedLogger, error.message), error, ...args);
-        } else if (error && typeof error === 'object' && 'error' in error) {
-          logger.error(toMessageProvider(prefixedLogger, String(error.error)), error, ...args);
-        } else {
-          logger.error(toMessageProvider(prefixedLogger, error as LogMessage), ...args);
-        }
-      }
-    },
-
-    e(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'error')) {
-        logger.e(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    critical(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'critical')) {
-        logger.critical(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    c(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'critical')) {
-        logger.c(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    alert(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'alert')) {
-        logger.alert(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    a(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'alert')) {
-        logger.a(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    emergency(message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'emergency')) {
-        logger.emergency(toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-
-    em(strings: TemplateStringsArray, ...values: unknown[]) {
-      if (shouldEmitEntry(logger.level, 'emergency')) {
-        logger.em(prefixTemplateString(prefixedLogger, strings), ...values);
-      }
-    },
-
-    log(level: LogLevel, message: LogMessage, ...args: unknown[]) {
-      if (shouldEmitEntry(logger.level, level)) {
-        logger.log(level, toMessageProvider(prefixedLogger, message), ...args);
-      }
-    },
-  };
-
+  const prefixedLogger = createPrefixedLogger(logger, prefix, prefixSeparator, messageSeparator);
   return prefixedLogger as unknown as WithPrefixResult<TLogger, TPrefix, TSeparator, TFallbackPrefix>;
 };
+
+type InternalPrefixedLogger<TPrefix extends string = string, TSeparator extends string = string> = PrefixedLogger<
+  TPrefix,
+  TSeparator
+> & { readonly [messageSeparatorSymbol]: string; readonly [rootLoggerSymbol]: Logger };
+
+const createPrefixedLogger = <TPrefix extends string = string, TSeparator extends string = string>(
+  rootLogger: Logger,
+  prefix: TPrefix,
+  prefixSeparator: TSeparator,
+  messageSeparator: string,
+): PrefixedLogger<TPrefix, TSeparator> => {
+  let pendingArgs: unknown[] = [];
+
+  const consumePendingArgs = (): readonly unknown[] | undefined => {
+    if (!pendingArgs.length) {
+      return undefined;
+    }
+
+    const args = pendingArgs;
+    pendingArgs = [];
+    return args;
+  };
+
+  const runLogOperation = (internalLogger: InternalPrefixedLogger, operation: (logger: Logger) => void) => {
+    const logger = internalLogger[rootLoggerSymbol];
+    const currentArgs = consumePendingArgs();
+    if (currentArgs) {
+      logger.args(...currentArgs);
+    }
+    operation(logger);
+  };
+
+  const internalLogger: InternalPrefixedLogger<TPrefix, TSeparator> = {
+    [prefixSymbol]: prefix,
+    [separatorSymbol]: prefixSeparator,
+    [messageSeparatorSymbol]: messageSeparator,
+    [rootLoggerSymbol]: rootLogger,
+
+    get level() {
+      return internalLogger[rootLoggerSymbol].level;
+    },
+
+    args: (...args) => {
+      pendingArgs.push(...args);
+      return internalLogger;
+    },
+
+    trace: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.trace(toMessageProvider(internalLogger, message), ...args));
+    },
+    t: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.t(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    debug: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.debug(toMessageProvider(internalLogger, message), ...args));
+    },
+    d: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.d(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    info: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.info(toMessageProvider(internalLogger, message), ...args));
+    },
+    i: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.i(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    notice: (message, ...args) => {
+      runLogOperation(internalLogger, (logger) => logger.notice(toMessageProvider(internalLogger, message), ...args));
+    },
+    n: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.n(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    warning: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.warning(converted.message, ...converted.args);
+      });
+    },
+    w: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.w(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    error: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.error(converted.message, ...converted.args);
+      });
+    },
+    e: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.e(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    critical: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.critical(converted.message, ...converted.args);
+      });
+    },
+    c: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.c(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    alert: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.alert(converted.message, ...converted.args);
+      });
+    },
+    a: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.a(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    emergency: (input, ...args) => {
+      runLogOperation(internalLogger, (logger) => {
+        const converted = toErrorInput(internalLogger, input, args);
+        logger.emergency(converted.message, ...converted.args);
+      });
+    },
+    em: (strings, ...values) => {
+      runLogOperation(internalLogger, (logger) => logger.em(toTemplateProvider(internalLogger, strings), ...values));
+    },
+
+    log: (level, message, ...args) => {
+      runLogOperation(internalLogger, (logger) =>
+        logger.log(level, toMessageProvider(internalLogger, message), ...args),
+      );
+    },
+
+    flush: rootLogger.flush ? () => internalLogger[rootLoggerSymbol].flush?.() : undefined,
+    close: rootLogger.close ? () => internalLogger[rootLoggerSymbol].close?.() : undefined,
+  } as const;
+
+  return internalLogger;
+};
+
+const toMessageProvider = (prefixLogger: InternalPrefixedLogger, message: LogMessage) => (): string => {
+  if (typeof message === 'function') {
+    message = message();
+  }
+  return `${prefixLogger[prefixSymbol]}${prefixLogger[messageSeparatorSymbol]}${message}`;
+};
+
+const toErrorInput = (
+  prefixLogger: InternalPrefixedLogger,
+  input: LogMessage | Error | { error: unknown },
+  args: readonly unknown[],
+): { readonly message: LogMessage; readonly args: readonly unknown[] } => {
+  const logger = prefixLogger[rootLoggerSymbol];
+  const converted = BaseLogger.convertErrorInput(logger, input, args);
+  return { message: toMessageProvider(prefixLogger, converted.message), args: converted.args };
+};
+
+const toTemplateProvider =
+  (prefixLogger: InternalPrefixedLogger, strings: LogTemplateStringsArray) => (): TemplateStringsArray => {
+    if (typeof strings === 'function') {
+      strings = strings();
+    }
+
+    const prefix = `${prefixLogger[prefixSymbol]}${prefixLogger[messageSeparatorSymbol]}`;
+    const newStrings = Array.from(strings);
+    newStrings[0] = `${prefix}${newStrings[0]}`;
+    const prefixedStrings = Object.assign(newStrings, { raw: Array.from(strings.raw) });
+    prefixedStrings.raw[0] = `${prefix}${prefixedStrings.raw[0]}`;
+
+    return prefixedStrings;
+  };
 
 /**
  * Appends a prefix to an existing prefixed logger, creating a hierarchical prefix structure.
@@ -359,13 +387,13 @@ export const withPrefix = <
  * @example Basic Appending
  *
  * ```ts
- * import { ConsoleLogger, appendPrefix, withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, appendPrefix, withPrefix } from 'emitnlog/logger';
  *
- * const logger = new ConsoleLogger();
+ * const logger = createConsoleLogLogger('info');
  * const dbLogger = withPrefix(logger, 'DB');
  * const userDbLogger = appendPrefix(dbLogger, 'users');
  *
- * userDbLogger.info('User created successfully');
+ * userDbLogger.i`User created successfully`;
  * // Output: "DB.users: User created successfully"
  * ```
  *
@@ -390,7 +418,7 @@ export const withPrefix = <
  * const v1Logger = appendPrefix(apiLogger, 'v1');
  * const usersLogger = appendPrefix(v1Logger, 'users');
  *
- * usersLogger.info('Processing user request');
+ * usersLogger.i`Processing user request`;
  * // Output: "API/v1/users: Processing user request"
  * ```
  *
@@ -434,16 +462,16 @@ export const appendPrefix = <
  * @example Basic Reset
  *
  * ```ts
- * import { ConsoleLogger, resetPrefix, withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, resetPrefix, withPrefix } from 'emitnlog/logger';
  *
- * const logger = new ConsoleLogger();
+ * const logger = createConsoleLogLogger('info');
  * const dbLogger = withPrefix(logger, 'DB');
  * const userDbLogger = withPrefix(dbLogger, 'users'); // Prefix: "DB.users"
  *
  * // Reset to a completely new prefix
  * const apiLogger = resetPrefix(userDbLogger, 'API'); // Prefix: "API" (not "DB.users.API")
  *
- * apiLogger.info('API server started');
+ * apiLogger.i`API server started`;
  * // Output: "API: API server started"
  * ```
  *
@@ -476,7 +504,7 @@ export const appendPrefix = <
  * const newLogger = resetPrefix(existingLogger, 'NewPrefix', { prefixSeparator: '/', messageSeparator: ' >> ' });
  *
  * const subLogger = appendPrefix(newLogger, 'SubModule');
- * subLogger.info('Module initialized');
+ * subLogger.i`Module initialized`;
  * // Output: "NewPrefix/SubModule >> Module initialized"
  * ```
  *
@@ -493,8 +521,8 @@ export const appendPrefix = <
  * const cacheLogger = resetPrefix(complexDbLogger, 'Cache'); // Uses same root as dbLogger
  * const metricsLogger = resetPrefix(complexDbLogger, 'Metrics'); // Uses same root as dbLogger
  *
- * cacheLogger.info('Cache warmed up'); // Output: "Cache: Cache warmed up"
- * metricsLogger.info('Metrics collected'); // Output: "Metrics: Metrics collected"
+ * cacheLogger.i`Cache warmed up`; // Output: "Cache: Cache warmed up"
+ * metricsLogger.i`Metrics collected`; // Output: "Metrics: Metrics collected"
  * ```
  *
  * @param logger The logger to extract the root logger from and apply a new prefix to
@@ -525,7 +553,15 @@ export const resetPrefix = <const TPrefix extends string, const TSeparator exten
 };
 
 export const isPrefixedLogger = (logger: Logger | undefined | null): logger is PrefixedLogger =>
-  isNotNullable(logger) && prefixSymbol in logger && typeof logger[prefixSymbol] === 'string' && dataSymbol in logger;
+  isNotNullable(logger) &&
+  prefixSymbol in logger &&
+  typeof logger[prefixSymbol] === 'string' &&
+  separatorSymbol in logger &&
+  typeof logger[separatorSymbol] === 'string' &&
+  rootLoggerSymbol in logger &&
+  logger[rootLoggerSymbol] !== undefined &&
+  messageSeparatorSymbol in logger &&
+  typeof logger[messageSeparatorSymbol] === 'string';
 
 export const inspectPrefixedLogger = (
   logger: Logger,
@@ -539,28 +575,12 @@ export const inspectPrefixedLogger = (
   | undefined =>
   isPrefixedLogger(logger)
     ? {
-        rootLogger: logger[dataSymbol]!.rootLogger,
+        rootLogger: (logger as InternalPrefixedLogger)[rootLoggerSymbol],
         prefix: logger[prefixSymbol]!,
         separator: logger[separatorSymbol]!,
-        messageSeparator: logger[dataSymbol]!.messageSeparator,
+        messageSeparator: (logger as InternalPrefixedLogger)[messageSeparatorSymbol],
       }
     : undefined;
-
-const prefixTemplateString = (prefixLogger: PrefixedLogger, strings: TemplateStringsArray): TemplateStringsArray => {
-  const prefix = prefixLogger[prefixSymbol]!;
-  const messageSeparator = prefixLogger[dataSymbol]!.messageSeparator;
-  const newStrings = Array.from(strings);
-  newStrings[0] = `${prefix}${messageSeparator}${newStrings[0]}`;
-  const prefixedStrings = Object.assign(newStrings, { raw: Array.from(strings.raw) });
-  prefixedStrings.raw[0] = `${prefix}${messageSeparator}${prefixedStrings.raw[0]}`;
-  return prefixedStrings as unknown as TemplateStringsArray;
-};
-
-const toMessageProvider = (prefixLogger: PrefixedLogger, message: LogMessage) => () => {
-  const messageString = typeof message === 'function' ? message() : message;
-  const messageSeparator = prefixLogger[dataSymbol]!.messageSeparator;
-  return `${prefixLogger[prefixSymbol]}${messageSeparator}${messageString}`;
-};
 
 type WithPrefixResult<
   TLogger extends Logger,

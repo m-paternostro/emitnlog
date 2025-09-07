@@ -1,4 +1,4 @@
-import { ConsoleLogger, fromEnv as fromEnvLogger, OFF_LOGGER } from 'emitnlog/logger';
+import { createConsoleLogLogger, fromEnv as fromEnvLogger, OFF_LOGGER } from 'emitnlog/logger';
 import { fromEnv } from 'emitnlog/logger/environment';
 import { createEventNotifier } from 'emitnlog/notifier';
 import { createInvocationTracker, trackPromises, trackMethods } from 'emitnlog/tracker';
@@ -7,7 +7,7 @@ import { expect, test, describe } from '@jest/globals';
 
 describe('ESM Named imports', () => {
   test('Logger import works', () => {
-    expect(typeof ConsoleLogger).toBe('function');
+    expect(typeof createConsoleLogLogger).toBe('function');
     expect(typeof fromEnvLogger).toBe('function');
 
     process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
@@ -15,11 +15,11 @@ describe('ESM Named imports', () => {
       const logger = fromEnvLogger();
       expect(logger).toBe(OFF_LOGGER);
     }
-    process.env.EMITNLOG_LOGGER = 'console';
+    process.env.EMITNLOG_LOGGER = 'console-log';
     {
       const logger = fromEnvLogger();
       expect(logger).toBeDefined();
-      expect(logger.constructor.name).toBe('ConsoleLogger');
+      expect(logger.level).toBe('info');
     }
   });
 
@@ -31,13 +31,14 @@ describe('ESM Named imports', () => {
     {
       const logger = fromEnv();
       expect(logger).toBeDefined();
-      expect(logger.constructor.name).toBe('FileLogger');
+      expect(logger.level).toBe('info');
+      expect(logger.filePath).toBe('/tmp/log.txt');
     }
-    process.env.EMITNLOG_LOGGER = 'console';
+    process.env.EMITNLOG_LOGGER = 'console-log';
     {
       const logger = fromEnv();
       expect(logger).toBeDefined();
-      expect(logger.constructor.name).toBe('ConsoleLogger');
+      expect(logger.level).toBe('info');
     }
   });
 

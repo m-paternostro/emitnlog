@@ -15,12 +15,16 @@ export type DebounceOptions<TArgs extends unknown[] = unknown[]> = {
   /**
    * If true, the function will be called immediately, i.e., on the leading edge of the timeout. If false (default), the
    * function will be called on the trailing edge.
+   *
+   * @default false
    */
   readonly leading?: boolean;
 
   /**
    * If true, the debounce will wait for the previous promise to complete before processing new calls. If false
    * (default), new calls will be debounced immediately regardless of previous promise state.
+   *
+   * @default false
    */
   readonly waitForPrevious?: boolean;
 

@@ -1,6 +1,6 @@
-import type { Logger } from './definition.ts';
-import type { EnvironmentLoggerOptions } from './environment-common.ts';
-import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
+import type { Logger } from '../definition.ts';
+import type { EnvironmentLoggerOptions } from './shared.ts';
+import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
 
 /**
  * Returns the logger to use based on the environment variables.
@@ -10,9 +10,11 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
  * ```
  * EMITNLOG_LOGGER: The logger to use.
  * The possible values are
- *   - `console`: The console logger.
+ *   - `console-log`: The console log logger.
  *   - `console-error`: The console error logger.
+ *   - `console-level`: The console by level logger.
  *   - `file:<path>`: The file logger with the (required) file path information (Node.js only)
+ *   - `file:date:<path>`: Same as 'file:<path>' however the local date is prefixed to the file name (Node.js only)
  *
  * EMITNLOG_LEVEL: The level to use.
  * The possible values are
@@ -30,8 +32,8 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
  * The possible values are
  *   - `plain`
  *   - `colorful`
- *   - `json`
- *   - `unformatted-json`
+ *   - `json-compact`
+ *   - `json-pretty`
  * ```
  *
  * If a environment variable is not set, the associated value in `options` is used.
@@ -82,7 +84,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './environment-common.ts';
  * process.env.EMITNLOG_LEVEL = 'info';
  * process.env.EMITNLOG_FORMAT = 'colorful';
  * const logger = fromEnv();
- * logger.info('Hello, world!'); // Will output with colors to console
+ * logger.i`Hello, world!`; // Will output with colors to console
  * ```
  *
  * @param options The options to use.

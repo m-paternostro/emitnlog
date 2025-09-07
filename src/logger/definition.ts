@@ -20,6 +20,17 @@
 export type LogLevel = 'trace' | 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
 
 /**
+ * Type representing the content of a log entry. Can be a primitive value or a function that returns a primitive value.
+ */
+export type LogMessage = string | number | boolean | (() => string | number | boolean);
+
+/**
+ * Type representing the template strings of a log entry. Can be a TemplateStringsArray or a function that returns a
+ * TemplateStringsArray.
+ */
+export type LogTemplateStringsArray = TemplateStringsArray | (() => TemplateStringsArray);
+
+/**
  * Generic logger interface that provides methods for logging entries at different severity levels.
  *
  * The logger supports a filtering mechanism based on severity levels:
@@ -45,7 +56,7 @@ export interface Logger {
    *
    * If set to 'off', no log entries are emitted regardless of level.
    */
-  level: LogLevel | 'off';
+  readonly level: LogLevel | 'off';
 
   /**
    * Sets additional arguments to be included with the next log entry. This is particularly useful with the template
@@ -111,7 +122,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly t: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly t: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a debug-level entry for detailed debugging information (e.g., function entry/exit points).
@@ -162,7 +173,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly d: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly d: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an info-level entry for general informational messages (e.g., operation progress updates).
@@ -213,7 +224,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly i: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly i: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a notice-level entry for normal but significant events (e.g., configuration changes).
@@ -264,7 +275,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly n: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly n: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a warning-level entry for warning conditions (e.g., deprecated feature usage).
@@ -275,17 +286,27 @@ export interface Logger {
    * when the message is expensive to construct, as the function will only be invoked if the entry will actually be
    * emitted based on the current logger level.
    *
+   * The warning entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.warning('Feature X is deprecated and will be removed in version 2.0');
    * logger.warning(() => `Slow operation detected: ${operation} took ${duration}ms`);
+   * logger.warning(new Error('Connection timeout... Retrying...'), error);
+   * logger.warning({ error: ['Connection timeout... Retrying...', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly warning: (message: LogMessage, ...args: unknown[]) => void;
+  readonly warning: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs a warning-level entry using a template string, which is only computed if the current log level
@@ -315,7 +336,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly w: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly w: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an error-level entry for error conditions (e.g., operation failures).
@@ -325,10 +346,11 @@ export interface Logger {
    *
    * The error entry content can be:
    *
-   * - A direct value that is logged as is
-   * - A function that returns a value, useful for messages that are expensive to compute
-   * - An Error object, which is automatically stringified and added as an additional argument
-   * - An object with an `error` property that is logged as a string and added as an additional argument
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
    *
    * @example
    *
@@ -339,10 +361,10 @@ export interface Logger {
    * logger.error({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param error The error content, Error object, or function that returns content
+   * @param input The error content, Error object, or function that returns content
    * @param args Additional arguments to include in the log entry
    */
-  readonly error: (error: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
+  readonly error: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an error-level entry using a template string, which is only computed if the current log level (`logger.level`)
@@ -375,7 +397,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly e: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly e: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs a critical-level entry for critical conditions (e.g., system component failures).
@@ -383,17 +405,27 @@ export interface Logger {
    * Critical entries are only emitted if the logger's level is set to `critical`, `error`, `warning`, `notice`, `info`,
    * , `debug`, or `trace`.
    *
+   * The critical entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.critical('Database connection pool exhausted');
    * logger.critical(() => `System memory usage critical: ${memoryUsage}%`);
+   * logger.critical(new Error('Connection timeout'), error);
+   * logger.critical({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly critical: (message: LogMessage, ...args: unknown[]) => void;
+  readonly critical: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs a critical-level entry using a template string, which is only computed if the current log level
@@ -423,7 +455,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly c: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly c: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an alert-level entry for conditions where action must be taken immediately (e.g., data corruption detected).
@@ -431,17 +463,27 @@ export interface Logger {
    * Alert entries are only emitted if the logger's level is set to `alert`, `critical`, `error`, `warning`, `notice`,
    * `info`, `debug`, or `trace`.
    *
+   * The alert entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.alert('Data corruption detected in customer database');
    * logger.alert(() => `Security breach detected from IP ${ipAddress}`);
+   * logger.alert(new Error('Connection timeout'), error);
+   * logger.alert({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly alert: (message: LogMessage, ...args: unknown[]) => void;
+  readonly alert: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an alert-level entry using a template string, which is only computed if the current log level (`logger.level`)
@@ -471,24 +513,34 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly a: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly a: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an emergency-level entry for when the system is unusable (e.g., complete system failure).
    *
    * Emergency entries are emitted at all logger levels except when the logger level is set to 'off'.
    *
+   * The emergency entry content can be:
+   *
+   * - A direct value that is logged as is,
+   * - A function that returns a value, useful for messages that are expensive to compute,
+   * - An Error object, which is automatically stringified and added as an additional argument,
+   * - An object with an `error` property that is logged as a string and added as an additional argument - use this
+   *   whenever logging an error of type unknown.
+   *
    * @example
    *
    * ```ts
    * logger.emergency('System is shutting down due to critical failure');
    * logger.emergency(() => `Fatal error in primary system: ${errorDetails}`);
+   * logger.emergency(new Error('Connection timeout'), error);
+   * logger.emergency({ error: ['Database connection failed', errorCode] });
    * ```
    *
-   * @param message The entry content or function that returns the content
+   * @param input The entry content or function that returns the content
    * @param args Additional arguments to include in the log entry
    */
-  readonly emergency: (message: LogMessage, ...args: unknown[]) => void;
+  readonly emergency: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
    * Logs an emergency-level entry using a template string, which is computed at all logger levels except 'off'.
@@ -517,7 +569,7 @@ export interface Logger {
    * @param strings The template strings
    * @param values The values to be interpolated into the template
    */
-  readonly em: (strings: TemplateStringsArray, ...values: unknown[]) => void;
+  readonly em: (strings: LogTemplateStringsArray, ...values: unknown[]) => void;
 
   /**
    * Logs an entry at a specific severity level. This method is useful for dynamically setting the level without having
@@ -539,9 +591,136 @@ export interface Logger {
    * @param args Additional arguments to include in the log entry
    */
   readonly log: (level: LogLevel, message: LogMessage, ...args: unknown[]) => void;
-}
 
-/**
- * Type representing the content of a log entry. Can be a primitive value or a function that returns a primitive value.
- */
-export type LogMessage = string | number | boolean | (() => string | number | boolean);
+  /**
+   * Flushes any buffered log entries, ensuring they are written to their destination.
+   *
+   * This method is optional and may not be available on all logger implementations. It is primarily used by loggers
+   * that buffer entries for performance reasons (such as batch loggers or file loggers) to force immediate writing of
+   * pending entries.
+   *
+   * The method can be either synchronous or asynchronous depending on the underlying implementation:
+   *
+   * - **Synchronous**: Returns `void` when the flush operation completes immediately
+   * - **Asynchronous**: Returns a `Promise<void>` that resolves when the flush operation completes
+   *
+   * @example Handling both sync and async flush
+   *
+   * ```ts
+   * const logger = createSomeLogger();
+   * logger.info('Important message');
+   *
+   * // This approach simple calls the flush without investigating
+   * // if it's defined, async or sync
+   * await logger?.flush();
+   * ```
+   *
+   * @example Synchronous flush
+   *
+   * ```ts
+   * import { createConsoleLogLogger } from 'emitnlog/logger';
+   *
+   * const logger = createConsoleLogLogger();
+   * logger.info('Buffered message');
+   *
+   * if (logger.flush) {
+   *   logger.flush(); // Synchronous flush
+   * }
+   * ```
+   *
+   * @example Asynchronous flush
+   *
+   * ```ts
+   * import { createFileLogger } from 'emitnlog/logger/node';
+   *
+   * const logger = createFileLogger('app.log');
+   * logger.info('Buffered message');
+   *
+   * if (logger.flush) {
+   *   await logger.flush(); // Asynchronous flush
+   * }
+   * ```
+   *
+   * @returns Either void for synchronous flush or Promise<void> for asynchronous flush, or undefined if not supported
+   */
+  readonly flush?: () => void | Promise<void>;
+
+  /**
+   * Closes the logger and releases any associated resources.
+   *
+   * This method is optional and may not be available on all logger implementations. It should be called when the logger
+   * is no longer needed to ensure proper cleanup of resources such as file handles, network connections, or other
+   * system resources.
+   *
+   * The method can be either synchronous or asynchronous depending on the underlying implementation:
+   *
+   * - **Synchronous**: Returns `void` when the close operation completes immediately
+   * - **Asynchronous**: Returns a `Promise<void>` that resolves when the close operation completes
+   *
+   * After calling `close()`, the logger should not be used for further logging operations. Calling `flush()` before
+   * `close()` is recommended to ensure all pending log entries are written before cleanup.
+   *
+   * @example Handling both sync and async close
+   *
+   * ```ts
+   * const logger = createSomeLogger();
+   * logger.info('Important message');
+   *
+   * // This approach simple calls the flush without investigating
+   * // if it's defined, async or close
+   * await logger?.close();
+   * ```
+   *
+   * @example Synchronous close
+   *
+   * ```ts
+   * import { createConsoleLogLogger } from 'emitnlog/logger';
+   *
+   * const logger = createConsoleLogLogger();
+   * logger.info('Final message');
+   *
+   * if (logger.close) {
+   *   logger.close(); // Synchronous close
+   * }
+   * ```
+   *
+   * @example Asynchronous close with file logger
+   *
+   * ```ts
+   * import { createFileLogger } from 'emitnlog/logger/node';
+   *
+   * const logger = createFileLogger('app.log');
+   * logger.info('Final message');
+   *
+   * if (logger.close) {
+   *   await logger.close(); // Asynchronous close
+   * }
+   * ```
+   *
+   * @example A shutdown sequence that precisely investigates if the methods are sync or async.
+   *
+   * ```ts
+   * const logger = createSomeLogger();
+   * logger.info('Application shutting down');
+   *
+   * // Flush pending entries before closing
+   * if (logger.flush) {
+   *   const flushResult = logger.flush();
+   *   if (flushResult instanceof Promise) {
+   *     await flushResult;
+   *   }
+   * }
+   *
+   * // Close and release resources
+   * if (logger.close) {
+   *   const closeResult = logger.close();
+   *   if (closeResult instanceof Promise) {
+   *     await closeResult;
+   *   }
+   * }
+   * ```
+   *
+   * @returns Either void for synchronous close or Promise<void> for asynchronous close, or undefined if not supported
+   */
+  readonly close?: () => void | Promise<void>;
+}

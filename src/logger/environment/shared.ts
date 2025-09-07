@@ -1,10 +1,9 @@
-import { ConsoleErrorLogger } from './console-error-logger.ts';
-import { ConsoleLogger } from './console-logger.ts';
-import type { Logger, LogLevel } from './definition.ts';
-import type { EmitterFormat } from './emitter.ts';
-import { isEmitterFormat } from './emitter.ts';
-import { isLogLevel } from './level-utils.ts';
-import { OFF_LOGGER } from './off-logger.ts';
+import { exhaustiveCheck } from '../../utils/common/exhaustive-check.ts';
+import type { Logger, LogLevel } from '../definition.ts';
+import type { LogFormat } from '../factory.ts';
+import { createConsoleByLevelLogger, createConsoleErrorLogger, createConsoleLogLogger } from '../factory.ts';
+import { isLogLevel } from '../implementation/level-utils.ts';
+import { withLogger } from '../off-logger.ts';
 
 const ENV_LOGGER = 'EMITNLOG_LOGGER';
 const ENV_LEVEL = 'EMITNLOG_LEVEL';
@@ -22,7 +21,7 @@ export type EnvironmentLoggerOptions = {
   /**
    * The format to use if the environment variable `EMITNLOG_FORMAT` is not set.
    */
-  readonly format?: EmitterFormat;
+  readonly format?: LogFormat;
 
   /**
    * Returns the fallback logger to use if the environment variable `ENV_LOGGER` is not set.
@@ -31,13 +30,16 @@ export type EnvironmentLoggerOptions = {
    * @param format The format to use, which is `EMITNLOG_FORMAT`, `options.format`, or undefined.
    * @returns The fallback logger to use or undefined.
    */
-  readonly fallbackLogger?: (level?: LogLevel, format?: EmitterFormat) => Logger | undefined;
+  readonly fallbackLogger?: (level?: LogLevel, format?: LogFormat) => Logger | undefined;
 };
 
-type EnvLogger = 'console' | 'console-error' | `file:${string}`;
+type EnvLogger = 'console-log' | 'console-error' | 'console-level' | `file:${string}`;
 
 const isEnvLogger = (value: unknown): value is EnvLogger =>
-  value === 'console' || value === 'console-error' || (typeof value === 'string' && value.startsWith('file:'));
+  value === 'console-log' ||
+  value === 'console-error' ||
+  value === 'console-level' ||
+  (typeof value === 'string' && value.startsWith('file:'));
 
 const isEnvHolder = (value: unknown): value is { readonly env: Record<string, string | undefined> } =>
   !!value && typeof value === 'object' && 'env' in value && !!value.env && typeof value.env === 'object';
@@ -61,8 +63,9 @@ export const toEnv = (): Record<string, string | undefined> | undefined => {
 type DecodedEnv = {
   readonly envLogger?: EnvLogger;
   readonly envLevel?: LogLevel;
-  readonly envFormat?: EmitterFormat;
+  readonly envFormat?: LogFormat;
   readonly envFile?: string;
+  readonly envDatePrefix?: boolean;
 };
 
 export const decodeEnv = (
@@ -71,15 +74,20 @@ export const decodeEnv = (
 ): DecodedEnv | undefined => {
   let envLogger: EnvLogger | undefined;
   let envLevel: LogLevel | undefined = options?.level;
-  let envFormat: EmitterFormat | undefined = options?.format;
+  let envFormat: LogFormat | undefined = options?.format;
   let envFile: string | undefined;
+  let envDatePrefix: boolean | undefined;
 
   if (env) {
     const envLoggerValue = env[ENV_LOGGER];
     if (isEnvLogger(envLoggerValue)) {
       if (envLoggerValue.startsWith('file:')) {
-        const file = envLoggerValue.slice(5);
+        let file = envLoggerValue.slice(5);
         if (file) {
+          if (file.startsWith('date:')) {
+            file = file.slice(5);
+            envDatePrefix = true;
+          }
           envLogger = envLoggerValue;
           envFile = file;
         } else {
@@ -110,7 +118,7 @@ export const decodeEnv = (
 
     const envFormatValue = env[ENV_FORMAT];
     if (envFormatValue) {
-      if (isEmitterFormat(envFormatValue)) {
+      if (isLogFormat(envFormatValue)) {
         envFormat = envFormatValue;
       } else if (envFormatValue) {
         // eslint-disable-next-line no-undef, no-console
@@ -121,7 +129,7 @@ export const decodeEnv = (
     }
   }
 
-  return envLogger || envLevel || envFormat ? { envLogger, envLevel, envFormat, envFile } : undefined;
+  return envLogger || envLevel || envFormat ? { envLogger, envLevel, envFormat, envFile, envDatePrefix } : undefined;
 };
 
 export const createLoggerFromEnv = (
@@ -129,17 +137,48 @@ export const createLoggerFromEnv = (
   options: EnvironmentLoggerOptions | undefined,
 ): Logger => {
   if (decodedEnv) {
-    if (decodedEnv.envLogger === 'console') {
-      return new ConsoleLogger(decodedEnv.envLevel, decodedEnv.envFormat);
-    }
+    const { envLogger, envLevel, envFormat, envFile } = decodedEnv;
+    switch (envLogger) {
+      case 'console-log':
+        return createConsoleLogLogger(envLevel, envFormat);
 
-    if (decodedEnv.envLogger === 'console-error') {
-      return new ConsoleErrorLogger(decodedEnv.envLevel, decodedEnv.envFormat);
-    }
+      case 'console-error':
+        return createConsoleErrorLogger(envLevel, envFormat);
 
-    // eslint-disable-next-line no-undef, no-console
-    console.warn(`The file logger is only supported in Node.js.`);
+      case 'console-level':
+        return createConsoleByLevelLogger(envLevel, envFormat);
+
+      case undefined:
+        break;
+
+      default:
+        if (envFile) {
+          // eslint-disable-next-line no-undef, no-console
+          console.warn(`The file logger is only supported in Node.js.`);
+        }
+    }
   }
 
-  return options?.fallbackLogger?.(decodedEnv?.envLevel, decodedEnv?.envFormat) ?? OFF_LOGGER;
+  return withLogger(options?.fallbackLogger?.(decodedEnv?.envLevel, decodedEnv?.envFormat));
+};
+
+/**
+ * Checks if a string is a valid LogFormat.
+ *
+ * @param value The string to check
+ * @returns True if the string is a valid LogFormat, false otherwise
+ */
+const isLogFormat = (value: unknown): value is LogFormat => {
+  const format = value as LogFormat;
+  switch (format) {
+    case 'plain':
+    case 'colorful':
+    case 'json-compact':
+    case 'json-pretty':
+      return true;
+
+    default:
+      exhaustiveCheck(format);
+      return false;
+  }
 };

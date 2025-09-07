@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 
 import type { Invocation, InvocationTracker } from '../../../src/tracker/index.ts';
 import { createInvocationTracker, trackMethods } from '../../../src/tracker/index.ts';
+import type { TestLogger } from '../../jester.setup.ts';
 import { createTestLogger } from '../../jester.setup.ts';
 
 describe('trackMethods', () => {
   let tracker: InvocationTracker;
-  let logger: ReturnType<typeof createTestLogger>;
+  let logger: TestLogger;
   let invocations: { operation: string; args: unknown[] }[];
 
   beforeEach(() => {

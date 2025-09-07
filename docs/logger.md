@@ -14,6 +14,7 @@ A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rf
 - [Tee Logger](#tee-logger)
 - [Prefixed Logger](#prefixed-logger)
 - [Creating Custom Loggers](#creating-custom-loggers)
+- [Advanced Features](#advanced-features)
 
 ## Log Levels
 
@@ -47,10 +48,10 @@ unformatted-json - Compact JSON line, raw and delimiter-safe.
 Template logging uses tagged template literals for a clean, readable syntax with automatic lazy evaluation.
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
 // Defaults to 'info' level
-const logger = new ConsoleLogger();
+const logger = createConsoleLogLogger();
 
 // Simple message
 logger.i`Server started on port 3000`;
@@ -73,10 +74,10 @@ logger.d`Request data: ${data}`;
 Template logging uses lazy evaluation - values are only computed when the log level matches:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
 // Logger initialized to the `warning` level
-const logger = new ConsoleLogger('warning');
+const logger = createConsoleLogLogger('warning');
 
 // This expensive calculation isn't executed because debug < warning
 logger.d`Complex calculation: ${() => performExpensiveOperation()}`;
@@ -106,9 +107,9 @@ logger.em`emergency message`; // emergency level
 For those who prefer the traditional approach:
 
 ```ts
-import { ConsoleErrorLogger } from 'emitnlog/logger';
+import { createConsoleErrorLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleErrorLogger('debug');
+const logger = createConsoleErrorLogger('debug');
 
 // Simple static message
 logger.info('Server started on port 3000');
@@ -143,28 +144,43 @@ logger.emergency('message', ...args);
 
 ## Available Loggers
 
-All loggers implement the same interface, making them interchangeable:
+All loggers implement the same interface, making them interchangeable. Use factory functions to create logger instances:
 
-### ConsoleLogger
+### Console Log Logger
 
-Logs to console (stdout) with color formatting enabled by default.
+Logs to console (stdout) with intelligent routing and color formatting.
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger('info', 'colorful');
+// All logs go to console.log
+const logger = createConsoleLogLogger('info', 'colorful');
 logger.i`Server started on port 3000`;
 ```
 
-### ConsoleErrorLogger
+### Console Error Logger
 
 Logs to stderr with color formatting enabled by default.
 
 ```ts
-import { ConsoleErrorLogger } from 'emitnlog/logger';
+import { createConsoleErrorLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleErrorLogger('error');
+// All logs go to console.error
+const logger = createConsoleErrorLogger('error');
 logger.e`Database connection failed`;
+```
+
+### Console By Level Logger
+
+Automatically routes logs based on severity - lower levels to console.log, higher levels to console.error.
+
+```ts
+import { createConsoleByLevelLogger } from 'emitnlog/logger';
+
+const logger = createConsoleByLevelLogger('info', 'colorful');
+logger.i`Info message`; // -> console.log
+logger.w`Warning message`; // -> console.error
+logger.e`Error message`; // -> console.error
 ```
 
 ### OFF_LOGGER
@@ -178,39 +194,43 @@ import { OFF_LOGGER } from 'emitnlog/logger';
 OFF_LOGGER.i`This won't appear anywhere`;
 ```
 
+The `withLogger` utility uses the `OFF_LOGGER` to ensure the code is handling a defined logger.
+
+```ts
+import type { Logger } from 'emitnlog/logger';
+import { withLogger } from 'emitnlog/logger';
+
+export const compute = ({ logger?: Logger }) => {
+  // computeLogger is guaranteed to be defined
+  const computeLogger = withLogger(logger);
+}
+```
+
 ## File Logging (Node.js)
 
 For persistent logging in Node.js environments:
 
 ```ts
-import { FileLogger } from 'emitnlog/logger/node';
+import { createFileLogger } from 'emitnlog/logger/node';
 
-// Simple file logger (writes to OS temp directory if path is relative)
-const logger = new FileLogger('app.log', 'debug');
+// Simple file logger
+const logger = createFileLogger('app.log', 'debug');
 logger.i`Application started at ${new Date()}`;
 
-// Advanced configuration
-const configuredLogger = new FileLogger({
-  filePath: '/var/log/my-app.log', // Absolute path
-  level: 'warning', // Only warning and above
-  keepAnsiColors: true, // Preserve colors in log file
-  omitArgs: false, // Include additional arguments
-  errorHandler: (err) => console.error('Logging error:', err),
-});
-configuredLogger.e`Database connection error: ${new Error('Connection timeout')}`;
+// With custom format
+const jsonLogger = createFileLogger('/var/log/my-app.log', 'warning', 'json-compact');
+jsonLogger.e`Database connection error: ${new Error('Connection timeout')}`;
 ```
 
-### FileLogger Configuration
+### File Logger Factory Function
 
 ```ts
-interface FileLoggerOptions {
-  filePath: string;
-  level?: LogLevel;
-  format?: LogFormat;
-  keepAnsiColors?: boolean;
-  omitArgs?: boolean;
-  errorHandler?: (error: Error) => void;
-}
+createFileLogger(
+  filePath: string,
+  level?: LogLevel,
+  format?: LogFormat,
+  options?: BaseLoggerOptions
+): Logger
 ```
 
 ## Environment-Driven Configuration
@@ -250,14 +270,14 @@ EMITNLOG_FORMAT=colorful               # Use colored output
 Provide defaults and fallback behavior when environment variables aren't set:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 import { fromEnv } from 'emitnlog/logger/environment';
 
 // With fallback options
 const logger = fromEnv({
   level: 'info', // Default level if EMITNLOG_LEVEL not set
   format: 'unformatted-json', // Default format if EMITNLOG_FORMAT not set
-  fallbackLogger: () => new ConsoleLogger(),
+  fallbackLogger: () => createConsoleLogLogger(),
 });
 
 // For development vs production
@@ -266,7 +286,7 @@ const logger = fromEnv({
   fallbackLogger: (level, format) => {
     // In development, default to console logging
     if (process.env.NODE_ENV === 'development') {
-      return new ConsoleLogger(level, format);
+      return createConsoleLogLogger(level, format);
     }
     // In production, require explicit configuration
     return undefined; // Returns OFF_LOGGER
@@ -330,12 +350,12 @@ logger.e`Failed to connect to external service: ${error}`;
 Log to multiple destinations simultaneously:
 
 ```ts
-import { tee, ConsoleLogger } from 'emitnlog/logger';
-import { FileLogger } from 'emitnlog/logger/node';
+import { tee, createConsoleLogLogger } from 'emitnlog/logger';
+import { createFileLogger } from 'emitnlog/logger/node';
 
 // Create individual loggers
-const consoleLogger = new ConsoleLogger('info');
-const fileLogger = new FileLogger('/var/log/app.log');
+const consoleLogger = createConsoleLogLogger('info');
+const fileLogger = createFileLogger('/var/log/app.log');
 
 // Combine them with tee
 const logger = tee(consoleLogger, fileLogger);
@@ -350,11 +370,11 @@ logger.args({ requestId: '12345' }).e`Database query failed: ${new Error('Timeou
 Each logger in a tee can have different levels:
 
 ```ts
-import { tee, ConsoleLogger } from 'emitnlog/logger';
-import { FileLogger } from 'emitnlog/logger/node';
+import { tee, createConsoleLogLogger } from 'emitnlog/logger';
+import { createFileLogger } from 'emitnlog/logger/node';
 
 // Console shows everything, file only shows warnings and above
-const logger = tee(new ConsoleLogger('debug'), new FileLogger('/var/log/app.log', 'warning'));
+const logger = tee(createConsoleLogLogger('debug'), createFileLogger('/var/log/app.log', 'warning'));
 
 logger.d`Debug info`; // Only appears in console
 logger.w`Warning message`; // Appears in both console and file
@@ -365,9 +385,9 @@ logger.w`Warning message`; // Appears in both console and file
 Categorize and organize your logs by adding fixed prefixes to any logger:
 
 ```ts
-import { ConsoleLogger, withPrefix } from 'emitnlog/logger';
+import { createConsoleLogLogger, withPrefix } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger();
+const logger = createConsoleLogLogger();
 
 // Create a prefixed logger for a component
 const dbLogger = withPrefix(logger, 'DB');
@@ -394,9 +414,9 @@ dbLogger.d`Query executed in ${queryTime}ms`;
 For more complex applications, you can build sophisticated prefix hierarchies:
 
 ```ts
-import { ConsoleLogger, withPrefix, appendPrefix, resetPrefix } from 'emitnlog/logger';
+import { createConsoleLogLogger, appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger();
+const logger = createConsoleLogLogger();
 
 // Start with a base logger
 const appLogger = withPrefix(logger, 'APP');
@@ -435,65 +455,160 @@ interface PrefixOptions {
 
 ## Creating Custom Loggers
 
-You can create your own logger by extending `BaseLogger`:
+### Emitter Logger
+
+You can create your own custom logging destinations by implementing a LogSink and using the `emitter.createLogger` function:
 
 ```ts
 import type { LogLevel } from 'emitnlog/logger';
-import { BaseLogger, emitLine, emitColorfulLine } from 'emitnlog/logger';
+import { emitter } from 'emitnlog/logger';
 
-class MyCustomLogger extends BaseLogger {
-  protected override emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-    // Format the log entry using the formatter utilities
-    const line = emitColorfulLine(level, message);
+// Custom sink that writes logs to a database
+const databaseSink = (dbConnection: any): emitter.LogSink => {
+  return {
+    sink: (level: LogLevel, message: string, args: readonly unknown[]) => {
+      // Write log entry to the database
+      dbConnection.insert({
+        timestamp: new Date().toISOString(),
+        level,
+        message,
+        args: args.length > 0 ? args : undefined,
+      });
+    },
+    close: async (): Promise<void> => {
+      // Close the database connection
+      await dbConnection.close();
+    },
+  };
+};
 
-    // Do something with the formatted line and args
-    // e.g., send to a remote logging service
-    myLoggingService.send({ line, args });
-  }
-}
+// Create a logger using the database sink
+const logger = emitter.createLogger('info', databaseSink(myDatabaseConnection));
+logger.i`Application started`;
+
+// Add batching to the database sink
+const batchedLogger = emitter.createLogger(
+  'info',
+  batchSink(databaseSink(myDatabaseConnection), { maxBufferSize: 50, flushDelayMs: 2000 }),
+);
+batchedLogger.i`Application started with batching`;
 ```
 
 ### Available Formatters
 
+You can use built-in formatters to format log messages before sending them to your custom sink:
+
 ```ts
-import { emitLine, emitColorfulLine, emitJsonLine, emitUnformattedJsonLine } from 'emitnlog/logger';
+import { emitter } from 'emitnlog/logger';
 
-// Plain text formatting
-const plainLine = emitLine(level, message);
+// Available formatters
+const formatters = {
+  plain: emitter.plainFormatter,
+  colorful: emitter.colorfulFormatter,
+  jsonCompact: emitter.jsonCompactFormatter,
+  jsonPretty: emitter.jsonPrettyFormatter,
+  basic: emitter.basicFormatter,
+};
 
-// Colorful formatting with ANSI colors
-const colorfulLine = emitColorfulLine(level, message);
-
-// Structured JSON formatting
-const jsonLine = emitJsonLine(level, message);
-
-// Compact JSON formatting
-const compactJsonLine = emitUnformattedJsonLine(level, message);
+// Use a formatter in your custom sink
+const formattedSink = (formatter: emitter.LogFormatter): emitter.LogSink => ({
+  sink: (level: LogLevel, message: string, args: readonly unknown[]) => {
+    const formattedLine = formatter(level, message, args);
+    // Send formatted line to your destination
+    sendToCustomDestination(formattedLine);
+  },
+});
 ```
 
-### Custom Logger Example
+### Advanced Custom Sink with Lifecycle Methods
 
 ```ts
 import type { LogLevel } from 'emitnlog/logger';
-import { BaseLogger, emitJsonLine } from 'emitnlog/logger';
+import { emitter } from 'emitnlog/logger';
+import type { Timeout } from 'emitnlog/utils';
 
-class RemoteLogger extends BaseLogger {
-  private endpoint: string;
+// Custom sink with batching and resource management
+const batchingSink = (endpoint: string): emitter.LogSink => {
+  let buffer: Array<{ level: LogLevel; message: string; args: readonly unknown[] }> = [];
+  let flushTimeout: Timeout | undefined;
 
-  constructor(endpoint: string, level: LogLevel = 'info') {
-    super(level);
-    this.endpoint = endpoint;
-  }
+  const flush = async (): Promise<void> => {
+    if (buffer.length === 0) return;
 
-  protected override emitLine(level: LogLevel, message: string, args: readonly unknown[]): void {
-    const logEntry = { timestamp: new Date().toISOString(), level, message, args };
+    const entries = buffer.splice(0); // Clear buffer
+    const payload = entries.map((entry) => ({
+      timestamp: new Date().toISOString(),
+      level: entry.level,
+      message: entry.message,
+      args: entry.args.length > 0 ? entry.args : undefined,
+    }));
 
-    // Send to remote logging service
-    fetch(this.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(logEntry),
-    }).catch(console.error);
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error('Failed to send logs:', error);
+      // Could re-add to buffer or implement retry logic
+    }
+  };
+
+  return {
+    sink: (level: LogLevel, message: string, args: readonly unknown[]) => {
+      buffer.push({ level, message, args });
+
+      // Auto-flush after 10 entries or 5 seconds
+      if (buffer.length >= 10) {
+        void flush();
+      } else if (!flushTimeout) {
+        flushTimeout = setTimeout(() => {
+          flushTimeout = undefined;
+          void flush();
+        }, 5000);
+      }
+    },
+    flush: async (): Promise<void> => {
+      if (flushTimeout) {
+        clearTimeout(flushTimeout);
+        flushTimeout = undefined;
+      }
+      await flush();
+    },
+    close: async (): Promise<void> => {
+      await flush(); // Flush remaining entries before closing
+    },
+  };
+};
+
+// Create logger with lifecycle management
+const logger = emitter.createLogger('info', batchingSink('https://logs.example.com/api'));
+
+// Use the logger
+logger.i`Application event occurred`;
+
+// Properly shut down
+if (logger.flush) {
+  await logger.flush();
+}
+if (logger.close) {
+  await logger.close();
+}
+```
+
+### Base Logger
+
+You can also create your own logger by extending `BaseLogger`:
+
+```ts
+import type { LogLevel } from 'emitnlog/logger';
+import { emitter, implementation } from 'emitnlog/logger';
+
+class MyCustomLogger extends implementation.BaseLogger {
+  protected override emit(level: LogLevel, message: string, args: readonly unknown[]): void {
+    // Send the log information to a remote logging service
+    myLoggingService.send(emitter.asLogEntry(level, message, args));
   }
 }
 ```
@@ -505,9 +620,9 @@ class RemoteLogger extends BaseLogger {
 Add extra context to any log entry:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger();
+const logger = createConsoleLogLogger();
 
 // Add structured data
 logger.args({ userId: 123, requestId: 'req-456' }).i`User authenticated`;
@@ -521,9 +636,9 @@ logger.args({ traceId: 'trace-789' }).args({ component: 'auth' }).i`Authenticati
 Loggers respect the configured level and only emit messages at or above that level:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger('warning');
+const logger = createConsoleLogLogger('warning');
 
 logger.d`This debug message won't appear`;
 logger.i`This info message won't appear`;
@@ -531,22 +646,24 @@ logger.w`This warning message will appear`;
 logger.e`This error message will appear`;
 ```
 
-### Dynamic Level Changes
+### Dynamic Level Support
 
-You can change the log level at runtime:
+The logger architecture supports dynamic levels through functions:
 
 ```ts
-import { ConsoleLogger } from 'emitnlog/logger';
+import { emitter } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger('info');
+// Dynamic level based on environment variable or runtime condition
+let currentLevel: LogLevel = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
 
-// Change to debug level for troubleshooting
-logger.level = 'debug';
+const logger = emitter.createLogger(
+  () => currentLevel, // Function that returns current level
+  emitter.consoleLogSink(emitter.colorfulFormatter),
+);
 
-// Now debug messages will appear
-logger.d`Debug information`;
+// Change level at runtime
+currentLevel = 'warning';
+
+logger.d`This won't appear (debug < warning)`;
+logger.w`This will appear (warning >= warning)`;
 ```
-
----
-
-[← Back to main README](../README.md)

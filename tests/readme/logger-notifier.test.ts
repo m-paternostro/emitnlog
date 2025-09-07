@@ -1,9 +1,8 @@
 import { describe, expect, test } from '@jest/globals';
 
-import type { LogLevel } from '../../src/logger/index.ts';
-import { BaseLogger } from '../../src/logger/index.ts';
 import type { OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
+import { createMemoryLogger } from '../jester.setup.ts';
 
 describe('emitnlog.logger-notifier', () => {
   test('should make sure that the readme example works', async () => {
@@ -14,16 +13,8 @@ describe('emitnlog.logger-notifier', () => {
       upload(filename: string): void;
     }
 
-    class LocalLogger extends BaseLogger {
-      public messages: string[] = [];
-
-      protected emitLine(_: LogLevel, message: string) {
-        this.messages.push(message);
-      }
-    }
-
     class FileUploader implements Uploader {
-      public logger = new LocalLogger('debug');
+      public logger = createMemoryLogger('debug');
       private _notifier = createEventNotifier<Progress>();
       public onProgress = this._notifier.onEvent;
 
@@ -61,7 +52,7 @@ describe('emitnlog.logger-notifier', () => {
       { filename: 'video.mp4', percent: 100 },
     ]);
 
-    expect(uploader.logger.messages).toEqual([
+    expect(uploader.logger.entries.map((e) => e.message)).toEqual([
       'Starting upload of video.mp4',
       'Progress for video.mp4: 0%',
       'Progress for video.mp4: 25%',
@@ -81,7 +72,7 @@ describe('emitnlog.logger-notifier', () => {
       { filename: 'video.mp4', percent: 100 },
     ]);
 
-    expect(uploader.logger.messages).toEqual([
+    expect(uploader.logger.entries.map((e) => e.message)).toEqual([
       'Starting upload of video.mp4',
       'Progress for video.mp4: 0%',
       'Progress for video.mp4: 25%',

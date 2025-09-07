@@ -2,6 +2,7 @@ import { describe, expect, test } from '@jest/globals';
 
 import type { InvocationKey } from '../../../src/tracker/index.ts';
 import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/node/index.ts';
+import { delay } from '../../../src/utils/index.ts';
 import { createTestLogger } from '../../jester.setup.ts';
 
 // Simple function to check if we're in Node.js
@@ -130,12 +131,12 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
           // Create a new context with the given key
           stack.push(key);
 
-          // Use setTimeout to simulate async operation
-          setTimeout(() => {
+          // Use delay to simulate async operation
+          void delay(delayMs).then(() => {
             // Peek should return this context's key, even after the delay
             const result = stack.peek();
             resolve(result);
-          }, delayMs);
+          });
         });
 
       // Start two concurrent async operations with different delays
@@ -165,9 +166,6 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
       const key1: InvocationKey = { id: 'test.op1.1', trackerId: 'test', operation: 'op1', index: 1 };
       const key2: InvocationKey = { id: 'test.op2.2', trackerId: 'test', operation: 'op2', index: 2 };
       const key3: InvocationKey = { id: 'test.op3.3', trackerId: 'test', operation: 'op3', index: 3 };
-
-      // Define a function that returns a promise
-      const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
       // Start with key1
       stack.push(key1);
@@ -235,7 +233,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
         expect(stack.peek()).toEqual(childKey);
 
         // Simulate async work
-        await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+        await delay(delayMs);
 
         // The child key should still be at the top in this context
         const currentKey = stack.peek();

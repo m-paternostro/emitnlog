@@ -1,7 +1,7 @@
 import type { Writable } from 'type-fest';
 
 import type { Logger } from '../../logger/definition.ts';
-import { OFF_LOGGER } from '../../logger/off-logger.ts';
+import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
 import type { PromiseHolder, PromiseSettledEvent, PromiseTracker, PromiseVault } from './definition.ts';
@@ -35,10 +35,10 @@ import type { PromiseHolder, PromiseSettledEvent, PromiseTracker, PromiseVault }
  * @example Tracker with logging
  *
  * ```ts
+ * import { createConsoleLogLogger } from 'emitnlog/logger';
  * import { trackPromises } from 'emitnlog/tracker';
  *
- * const logger = ;
- * const tracker = trackPromises({ logger: new ConsoleLogger('debug') });
+ * const tracker = trackPromises({ logger: createConsoleLogLogger('debug') });
  *
  * // All tracking operations will be logged with 'promise' prefix
  * tracker.track(apiCall(), 'api-request');
@@ -93,7 +93,7 @@ import type { PromiseHolder, PromiseSettledEvent, PromiseTracker, PromiseVault }
  */
 export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker => {
   const promises = new Set<Promise<unknown>>();
-  const logger = withPrefix(options?.logger ?? OFF_LOGGER, 'promise', { fallbackPrefix: 'emitnlog.promise-tracker' });
+  const logger = withPrefix(withLogger(options?.logger), 'promise', { fallbackPrefix: 'emitnlog.promise-tracker' });
 
   const onSettledNotifier = createEventNotifier<PromiseSettledEvent>();
 
@@ -245,10 +245,10 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
  * @example Database query deduplication with logging
  *
  * ```ts
+ * import { createConsoleLogLogger } from 'emitnlog/logger';
  * import { holdPromises } from 'emitnlog/tracker';
- * import { ConsoleLogger } from 'emitnlog/logger';
  *
- * const queryHolder = holdPromises({ logger: new ConsoleLogger('debug') });
+ * const queryHolder = holdPromises({ logger: createConsoleLogLogger('debug') });
  *
  * // Cache expensive queries
  * const getProductById = (id: number) => {

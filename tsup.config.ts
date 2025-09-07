@@ -6,7 +6,7 @@ export default defineConfig([
     entry: {
       index: 'src/index.ts',
       'logger/index': 'src/logger/index.ts',
-      'logger/environment': 'src/logger/environment-logger.ts',
+      'logger/environment': 'src/logger/environment/environment-logger.ts',
       'notifier/index': 'src/notifier/index.ts',
       'tracker/index': 'src/tracker/index.ts',
       'utils/index': 'src/utils/index.ts',
