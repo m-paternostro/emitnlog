@@ -541,4 +541,38 @@ describe('emitnlog.logger.node.FileLogger', () => {
     const content = await readLogFile();
     expect(content).toContain('...(15)');
   });
+
+  test('should append to the log file by default', async () => {
+    const logger1 = createFileLogger(testLogFile, { flushDelayMs: 0 });
+    const logger2 = createFileLogger(testLogFile);
+
+    logger1.info('First logger message');
+    await delay(10);
+    await expect(readLogFile()).resolves.toContain('First logger message');
+
+    logger2.info('Second logger message');
+    await logger2.close();
+
+    // Verify both messages are present
+    const content = await readLogFile();
+    expect(content).toContain('First logger message');
+    expect(content).toContain('Second logger message');
+  });
+
+  test('should overwrite the log file when overwrite option is true', async () => {
+    const logger1 = createFileLogger(testLogFile, { flushDelayMs: 0, overwrite: true });
+    const logger2 = createFileLogger(testLogFile, { overwrite: true });
+
+    logger1.info('First logger message');
+    await delay(10);
+    await expect(readLogFile()).resolves.toContain('First logger message');
+
+    logger2.info('Second logger message');
+    await logger2.close();
+
+    // Verify only the second message is present
+    const content = await readLogFile();
+    expect(content).toContain('Second logger message');
+    expect(content).not.toContain('First logger message');
+  });
 });

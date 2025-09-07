@@ -64,7 +64,7 @@ export type BatchSinkOptions = {
 export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFinalizer<LogSink> => {
   const maxBufferSize = options?.maxBufferSize ?? 100;
   const flushDelayMs = options?.flushDelayMs ?? 1000;
-  const skipFlushOnExit = options?.skipFlushOnExit ?? true;
+  const skipFlushOnExit = options?.skipFlushOnExit ?? false;
 
   if (flushDelayMs === 0) {
     return asLogSink((level, message, args) => logSink.sink(level, message, args), {

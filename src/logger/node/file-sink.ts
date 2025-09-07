@@ -22,11 +22,12 @@ export type FileSinkOptions = {
   readonly datePrefix?: boolean;
 
   /**
-   * Whether to append to existing file (true) or overwrite (false).
+   * Whether to overwrite an existing file on the first emitted or not (the default is to always append new log
+   * entries).
    *
-   * @default true
+   * @default false
    */
-  readonly append?: boolean;
+  readonly overwrite?: boolean;
 
   /**
    * File encoding.
@@ -111,7 +112,7 @@ export const fileSink = (
 
   const config = {
     datePrefix: options?.datePrefix ?? false,
-    append: options?.append ?? true,
+    overwrite: options?.overwrite ?? false,
     encoding: options?.encoding ?? 'utf8',
     mode: options?.mode ?? 0o666,
     errorHandler:
@@ -142,7 +143,7 @@ export const fileSink = (
 
   let initialized = false;
   let closed = false;
-  let isAppending = config.append;
+  let isAppending = !config.overwrite;
   let writeQueue = Promise.resolve();
 
   const ensureDirectory = async (): Promise<void> => {
