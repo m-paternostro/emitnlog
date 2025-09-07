@@ -525,11 +525,12 @@ const formattedSink = (formatter: emitter.LogFormatter): emitter.LogSink => ({
 ```ts
 import type { LogLevel } from 'emitnlog/logger';
 import { emitter } from 'emitnlog/logger';
+import type { Timeout } from 'emitnlog/utils';
 
 // Custom sink with batching and resource management
 const batchingSink = (endpoint: string): emitter.LogSink => {
   let buffer: Array<{ level: LogLevel; message: string; args: readonly unknown[] }> = [];
-  let flushTimeout: NodeJS.Timeout | undefined;
+  let flushTimeout: Timeout | undefined;
 
   const flush = async (): Promise<void> => {
     if (buffer.length === 0) return;
