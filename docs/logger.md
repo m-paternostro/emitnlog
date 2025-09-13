@@ -211,7 +211,7 @@ export const compute = ({ logger?: Logger }) => {
 For persistent logging in Node.js environments:
 
 ```ts
-import { createFileLogger } from 'emitnlog/logger/node';
+import { createFileLogger } from 'emitnlog/logger';
 
 // Simple file logger
 const logger = createFileLogger('app.log', 'debug');
@@ -254,9 +254,16 @@ Configure your logger with these environment variables:
 
 ```bash
 # Logger type (required)
-EMITNLOG_LOGGER=console                # Use ConsoleLogger
-EMITNLOG_LOGGER=console-error          # Use ConsoleErrorLogger
-EMITNLOG_LOGGER=file:/var/log/app.log  # Use FileLogger with specified path (Node.js only)
+## Use ConsoleLogLogger
+EMITNLOG_LOGGER=console-log
+# Use ConsoleErrorLogger
+EMITNLOG_LOGGER=console-error
+# Use ConsoleLevelLogger
+EMITNLOG_LOGGER=console-level
+# Use FileLogger with specified path (Node.js only)
+EMITNLOG_LOGGER=file:/var/log/app.log
+# Use FileLogger with the date prefixed to the specified path (Node.js only)
+EMITNLOG_LOGGER=file:date/var/log/app.log
 
 # Log level (optional)
 EMITNLOG_LEVEL=debug                   # Set minimum log level
@@ -293,22 +300,6 @@ const logger = fromEnv({
   },
 });
 ```
-
-### Choosing the Right `fromEnv` Import
-
-There are three available `fromEnv` variants, depending on your runtime or preferences:
-
-```ts
-import { fromEnv } from 'emitnlog/logger/environment'; // dynamic resolution (recommended)
-import { fromEnv } from 'emitnlog/logger'; // neutral-only (browser-safe)
-import { fromEnv } from 'emitnlog/logger/node'; // Node-only (file support)
-```
-
-- The first form (`/logger/environment`) uses conditional exports to automatically select the correct logger at runtime: it supports file logging in Node.js, and gracefully disables it in browser-safe builds. This is the recommended option for most users.
-
-- The second form (`/logger`) is always neutral and safe to use in any environment — but does not support file loggers.
-
-- The third form (`/logger/node`) gives you full control of Node-only features like FileLogger, and should only be used when you're explicitly targeting Node.
 
 ### Environment Configuration Example
 
@@ -350,8 +341,7 @@ logger.e`Failed to connect to external service: ${error}`;
 Log to multiple destinations simultaneously:
 
 ```ts
-import { tee, createConsoleLogLogger } from 'emitnlog/logger';
-import { createFileLogger } from 'emitnlog/logger/node';
+import { tee, createConsoleLogLogger, createFileLogger } from 'emitnlog/logger';
 
 // Create individual loggers
 const consoleLogger = createConsoleLogLogger('info');
@@ -370,10 +360,10 @@ logger.args({ requestId: '12345' }).e`Database query failed: ${new Error('Timeou
 Each logger in a tee can have different levels:
 
 ```ts
-import { tee, createConsoleLogLogger } from 'emitnlog/logger';
-import { createFileLogger } from 'emitnlog/logger/node';
+import { tee, createConsoleLogLogger, createFileLogger } from 'emitnlog/logger';
 
 // Console shows everything, file only shows warnings and above
+// (`createFileLogger` is only available on Node.JS)
 const logger = tee(createConsoleLogLogger('debug'), createFileLogger('/var/log/app.log', 'warning'));
 
 logger.d`Debug info`; // Only appears in console

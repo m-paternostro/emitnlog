@@ -136,12 +136,12 @@ function handleStatus(status: 'pending' | 'success' | 'error') {
 
 ## Features
 
-- **🎯 Type-Safe**: Built with TypeScript from the ground up
-- **🪶 Lightweight**: Zero dependencies, minimal runtime overhead
-- **⚡ Lazy Evaluation**: Compute values only when needed
-- **🔧 Flexible**: Multiple logger targets, customizable formats
-- **🎪 Environment-Driven**: Configure via environment variables
-- **🔄 Promise-Friendly**: First-class async/await support
+- **Type-Safe**: Built with TypeScript from the ground up
+- **Lightweight**: Zero dependencies, minimal runtime overhead
+- **Lazy Evaluation**: Compute values only when needed
+- **Flexible**: Multiple logger targets, customizable formats
+- **Environment-Aware**: Automatically detects Node.js vs browser/neutral environments
+- **Promise-Friendly**: First-class async/await support
 
 ## Documentation
 
@@ -186,6 +186,44 @@ const subscription = uploader.onProgress(({ filename, percent }) => {
 
 uploader.upload('video.mp4');
 ```
+
+## Import Styles
+
+The examples use **path imports** for clarity, but you have three import styles to choose from:
+
+### Path Imports
+
+```ts
+import { createConsoleLogLogger } from 'emitnlog/logger';
+import { createEventNotifier } from 'emitnlog/notifier';
+import { createInvocationTracker } from 'emitnlog/tracker';
+import { debounce } from 'emitnlog/utils';
+```
+
+### Flat Imports
+
+```ts
+import { createConsoleLogLogger, createEventNotifier, createInvocationTracker, debounce } from 'emitnlog';
+```
+
+### Namespace Imports
+
+```ts
+import { logging, notifying, tracking, utils } from 'emitnlog';
+
+const logger = logging.createConsoleLogLogger();
+const notifier = notifying.createEventNotifier();
+const tracker = tracking.createInvocationTracker();
+const debouncedFn = utils.debounce(fn, 500);
+```
+
+Path imports are used throughout our examples because they:
+
+- Make it clear which module each function comes from
+- Enable better tree-shaking in bundlers
+- Provide more predictable IDE auto-imports
+
+But feel free to use whichever style fits your project best!
 
 ## API Reference
 
