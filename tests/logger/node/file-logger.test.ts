@@ -4,10 +4,8 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import type { LogFormat } from '../../../src/logger/index.ts';
-import { tee } from '../../../src/logger/index.ts';
-import type { FileLoggerOptions } from '../../../src/logger/node/index.ts';
-import { createFileLogger } from '../../../src/logger/node/index.ts';
+import type { FileLoggerOptions, LogFormat } from '../../../src/logger/index-node.ts';
+import { createFileLogger, tee } from '../../../src/logger/index-node.ts';
 import { delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.logger.node.FileLogger', () => {

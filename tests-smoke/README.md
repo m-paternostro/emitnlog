@@ -6,9 +6,9 @@ This directory contains smoke tests for the `emitnlog` package. These tests veri
 
 The smoke tests verify:
 
-- ESM imports work as expected (both flat and named imports)
-- CommonJS imports work as expected (both flat and named imports)
+- ESM and CJS imports work as expected (flat, namespace, and path imports)
 - The core functionality is accessible and working
+- There is no duplication of declarations, by testing singletons and class definitions
 
 These tests complement the unit tests by validating the package from a consumer's perspective, ensuring that the build and packaging process produces a correctly functioning library.
 
@@ -16,7 +16,7 @@ These tests complement the unit tests by validating the package from a consumer'
 
 - `esm/`: Contains tests for ESM imports
 - `cjs/`: Contains tests for CommonJS imports
-- Each folder has tests for both flat imports and named/subpath imports
+- Each folder has tests for flat imports, namespace important, and (sub)path imports
 
 ## Running the Tests
 

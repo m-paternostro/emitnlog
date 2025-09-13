@@ -19,82 +19,62 @@
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/neutral/index.d.ts",
-        "default": "./dist/neutral/index.js"
+        "types": "./dist/esm/index.d.ts",
+        "node": "./dist/esm-node/index.js",
+        "default": "./dist/esm/index.js"
       },
       "require": {
-        "types": "./dist/neutral/index.d.cts",
-        "default": "./dist/neutral/index.cjs"
+        "types": "./dist/cjs/index.d.cts",
+        "node": "./dist/cjs-node/index.cjs",
+        "default": "./dist/cjs/index.cjs"
       }
     },
     "./logger": {
       "import": {
-        "types": "./dist/neutral/logger/index.d.ts",
-        "default": "./dist/neutral/logger/index.js"
+        "types": "./dist/esm/logger/index.d.ts",
+        "node": "./dist/esm-node/logger/index.js",
+        "default": "./dist/esm/logger/index.js"
       },
       "require": {
-        "types": "./dist/neutral/logger/index.d.cts",
-        "default": "./dist/neutral/logger/index.cjs"
-      }
-    },
-    "./logger/node": {
-      "import": {
-        "types": "./dist/node/logger/node/index.d.ts",
-        "default": "./dist/node/logger/node/index.js"
-      },
-      "require": {
-        "types": "./dist/node/logger/node/index.d.cts",
-        "default": "./dist/node/logger/node/index.cjs"
-      }
-    },
-    "./logger/environment": {
-      "import": {
-        "node": "./dist/node/logger/environment.js",
-        "default": "./dist/neutral/logger/environment.js"
-      },
-      "require": {
-        "node": "./dist/node/logger/environment.cjs",
-        "default": "./dist/neutral/logger/environment.cjs"
+        "types": "./dist/cjs/logger/index.d.cts",
+        "node": "./dist/cjs-node/logger/index.cjs",
+        "default": "./dist/cjs/logger/index.cjs"
       }
     },
     "./notifier": {
       "import": {
-        "types": "./dist/neutral/notifier/index.d.ts",
-        "default": "./dist/neutral/notifier/index.js"
+        "types": "./dist/esm/notifier/index.d.ts",
+        "node": "./dist/esm-node/notifier/index.js",
+        "default": "./dist/esm/notifier/index.js"
       },
       "require": {
-        "types": "./dist/neutral/notifier/index.d.cts",
-        "default": "./dist/neutral/notifier/index.cjs"
+        "types": "./dist/cjs/notifier/index.d.cts",
+        "node": "./dist/cjs-node/notifier/index.cjs",
+        "default": "./dist/cjs/notifier/index.cjs"
       }
     },
     "./tracker": {
       "import": {
-        "types": "./dist/neutral/tracker/index.d.ts",
-        "default": "./dist/neutral/tracker/index.js"
+        "types": "./dist/esm/tracker/index.d.ts",
+        "node": "./dist/esm-node/tracker/index.js",
+        "default": "./dist/esm/tracker/index.js"
       },
       "require": {
-        "types": "./dist/neutral/tracker/index.d.cts",
-        "default": "./dist/neutral/tracker/index.cjs"
-      }
-    },
-    "./tracker/node": {
-      "import": {
-        "types": "./dist/node/tracker/node/index.d.ts",
-        "default": "./dist/node/tracker/node/index.js"
-      },
-      "require": {
-        "types": "./dist/node/tracker/node/index.d.cts",
-        "default": "./dist/node/tracker/node/index.cjs"
+        "types": "./dist/cjs/tracker/index.d.cts",
+        "node": "./dist/cjs-node/tracker/index.cjs",
+        "default": "./dist/cjs/tracker/index.cjs"
       }
     },
     "./utils": {
       "import": {
-        "types": "./dist/neutral/utils/index.d.ts",
-        "default": "./dist/neutral/utils/index.js"
+        "types": "./dist/esm/utils/index.d.ts",
+        "node": "./dist/esm-node/utils/index.js",
+        "default": "./dist/esm/utils/index.js"
       },
       "require": {
-        "types": "./dist/neutral/utils/index.d.cts",
-        "default": "./dist/neutral/utils/index.cjs"
+        "types": "./dist/cjs/utils/index.d.cts",
+        "node": "./dist/cjs-node/utils/index.cjs",
+        "default": "./dist/cjs/utils/index.cjs"
       }
     },
     "./package.json": "./package.json"
