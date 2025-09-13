@@ -1,7 +1,6 @@
-import * as emitnlog from 'emitnlog';
-import { expect, test, describe } from '@jest/globals';
+const emitnlog = require('../../node_modules/emitnlog/dist/cjs/index.cjs');
 
-describe('ESM Flat imports', () => {
+describe('CJS Flat imports - Non-Node Environment', () => {
   test('Logger exports are available', () => {
     expect(typeof emitnlog.createConsoleLogLogger).toBe('function');
     expect(typeof emitnlog.fromEnv).toBe('function');
@@ -14,10 +13,10 @@ describe('ESM Flat imports', () => {
     process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
     {
       const logger = emitnlog.fromEnv();
-      expect(logger).toBeDefined();
-      expect(logger.level).toBe('info');
-      expect(logger.filePath).toBe('/tmp/log.txt');
+      expect(logger).toBe(emitnlog.OFF_LOGGER); // file system logging is not available
     }
+
+    delete process.env.EMITNLOG_LOGGER;
   });
 
   test('Notifier exports are available', () => {
@@ -26,10 +25,12 @@ describe('ESM Flat imports', () => {
 
   test('Tracker exports are available', () => {
     expect(typeof emitnlog.createInvocationTracker).toBe('function');
-    expect(typeof emitnlog.createAsyncLocalStorageInvocationStack).toBe('function');
+
+    // AsyncLocalStorage should NOT be available in non-node environment
+    expect(emitnlog.createAsyncLocalStorageInvocationStack).toBeUndefined();
+
     expect(typeof emitnlog.isAtStage).toBe('function');
     expect(typeof emitnlog.trackMethods).toBe('function');
-
     expect(typeof emitnlog.trackPromises).toBe('function');
   });
 

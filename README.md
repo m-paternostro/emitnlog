@@ -15,6 +15,7 @@ A modern, type-safe library for logging, event notifications, and observability 
 - Function call tracking with detailed lifecycle events
 - Promise coordination, deduplication, and caching
 - Zero dependencies with full TypeScript support
+- ESM and CJS supported
 
 ## Quick Start
 
@@ -187,29 +188,45 @@ const subscription = uploader.onProgress(({ filename, percent }) => {
 uploader.upload('video.mp4');
 ```
 
-## Import Styles
+## Advanced Import Concepts
+
+This section is for developers who want more control over how modules are resolved and used, especially in projects that need to support multiple runtime environments. If you're just getting started, the standard imports shown on the examples will "just work" — no special handling required.
+
+### Runtime-Specific Imports
+
+By default, `emitnlog` automatically detects the runtime environment (Node.js or neutral like browser/edge runtimes) and loads the appropriate implementation. However, if you're building a library or SDK and want stricter control — for example, to guarantee that only runtime-neutral features are included, you can explicitly import from the `emitnlog/neutral` variant:
+
+```ts
+import { createConsoleLogLogger } from 'emitnlog/neutral/logger';
+```
+
+This ensures your code remains portable and avoids accidentally depending on Node-only features like file-based loggers.
+
+### Import Styles
+
+You can import from `emitnlog` using different styles depending on your project structure and preferences.
 
 The examples use **path imports** for clarity, but you have three import styles to choose from:
 
-### Path Imports
+#### Path Imports
 
 ```ts
 import { createConsoleLogLogger } from 'emitnlog/logger';
 import { createEventNotifier } from 'emitnlog/notifier';
-import { createInvocationTracker } from 'emitnlog/tracker';
+import { createInvocationTracker } from 'emitnlog/neutral/tracker';
 import { debounce } from 'emitnlog/utils';
 ```
 
-### Flat Imports
+#### Flat Imports
 
 ```ts
 import { createConsoleLogLogger, createEventNotifier, createInvocationTracker, debounce } from 'emitnlog';
 ```
 
-### Namespace Imports
+#### Namespace Imports
 
 ```ts
-import { logging, notifying, tracking, utils } from 'emitnlog';
+import { logging, notifying, tracking, utils } from 'emitnlog/neutral';
 
 const logger = logging.createConsoleLogLogger();
 const notifier = notifying.createEventNotifier();
@@ -217,13 +234,15 @@ const tracker = tracking.createInvocationTracker();
 const debouncedFn = utils.debounce(fn, 500);
 ```
 
-Path imports are used throughout our examples because they:
+Path imports are used throughout the examples because they:
 
 - Make it clear which module each function comes from
 - Enable better tree-shaking in bundlers
 - Provide more predictable IDE auto-imports
 
 But feel free to use whichever style fits your project best!
+
+All styles and import paths are compatible with both CommonJS and ESM environments.
 
 ## API Reference
 

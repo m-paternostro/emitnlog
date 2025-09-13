@@ -77,6 +77,56 @@
         "default": "./dist/cjs/utils/index.cjs"
       }
     },
+    "./neutral": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.cts",
+        "default": "./dist/cjs/index.cjs"
+      }
+    },
+    "./neutral/logger": {
+      "import": {
+        "types": "./dist/esm/logger/index.d.ts",
+        "default": "./dist/esm/logger/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/logger/index.d.cts",
+        "default": "./dist/cjs/logger/index.cjs"
+      }
+    },
+    "./neutral/notifier": {
+      "import": {
+        "types": "./dist/esm/notifier/index.d.ts",
+        "default": "./dist/esm/notifier/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/notifier/index.d.cts",
+        "default": "./dist/cjs/notifier/index.cjs"
+      }
+    },
+    "./neutral/tracker": {
+      "import": {
+        "types": "./dist/esm/tracker/index.d.ts",
+        "default": "./dist/esm/tracker/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/tracker/index.d.cts",
+        "default": "./dist/cjs/tracker/index.cjs"
+      }
+    },
+    "./neutral/utils": {
+      "import": {
+        "types": "./dist/esm/utils/index.d.ts",
+        "default": "./dist/esm/utils/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/utils/index.d.cts",
+        "default": "./dist/cjs/utils/index.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [

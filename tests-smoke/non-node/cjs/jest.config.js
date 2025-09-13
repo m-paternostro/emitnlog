@@ -1,4 +1,1 @@
-module.exports = {
-  testEnvironment: 'node',
-  testMatch: ['**/*.test.js'],
-};
+module.exports = { testEnvironment: 'node', testMatch: ['**/*.test.js'] };

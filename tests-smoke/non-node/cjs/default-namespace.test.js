@@ -1,12 +1,7 @@
-// Import directly from the platform-neutral ESM build to simulate non-node environment
-import * as logging from '../../node_modules/emitnlog/dist/esm/logger/index.js';
-import * as notifying from '../../node_modules/emitnlog/dist/esm/notifier/index.js';
-import * as tracking from '../../node_modules/emitnlog/dist/esm/tracker/index.js';
-import * as utils from '../../node_modules/emitnlog/dist/esm/utils/index.js';
-import { expect, test, describe } from '@jest/globals';
+const { logging, notifying, tracking, utils } = require('../../node_modules/emitnlog/dist/cjs/index.cjs');
 
-describe('ESM path imports - Non-Node Environment', () => {
-  test('Logger path exports are available', () => {
+describe('CJS namespace imports - Non-Node Environment', () => {
+  test('Logger exports are available', () => {
     expect(typeof logging.createConsoleLogLogger).toBe('function');
     expect(typeof logging.fromEnv).toBe('function');
 
@@ -20,14 +15,15 @@ describe('ESM path imports - Non-Node Environment', () => {
       const logger = logging.fromEnv();
       expect(logger).toBe(logging.OFF_LOGGER); // file system logging is not available
     }
+
     delete process.env.EMITNLOG_LOGGER;
   });
 
-  test('Notifier path exports are available', () => {
+  test('Notifier exports are available', () => {
     expect(typeof notifying.createEventNotifier).toBe('function');
   });
 
-  test('Tracker path exports are available', () => {
+  test('Tracker exports are available', () => {
     expect(typeof tracking.createInvocationTracker).toBe('function');
 
     // AsyncLocalStorage should NOT be available in non-node environment
@@ -38,7 +34,7 @@ describe('ESM path imports - Non-Node Environment', () => {
     expect(typeof tracking.trackPromises).toBe('function');
   });
 
-  test('Utils path exports are available', () => {
+  test('Utils exports are available', () => {
     expect(typeof utils.createDeferredValue).toBe('function');
     expect(typeof utils.emptyArray).toBe('function');
   });

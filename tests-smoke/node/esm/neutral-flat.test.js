@@ -1,8 +1,7 @@
-// Import directly from the platform-neutral ESM build to simulate non-node environment
-import * as emitnlog from '../../node_modules/emitnlog/dist/esm/index.js';
+import * as emitnlog from 'emitnlog/neutral';
 import { expect, test, describe } from '@jest/globals';
 
-describe('ESM Flat imports - Non-Node Environment', () => {
+describe('ESM neutral flat imports', () => {
   test('Logger exports are available', () => {
     expect(typeof emitnlog.createConsoleLogLogger).toBe('function');
     expect(typeof emitnlog.fromEnv).toBe('function');

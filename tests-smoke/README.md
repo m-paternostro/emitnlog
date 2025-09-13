@@ -67,11 +67,13 @@ The smoke tests simulate how real users would consume the package in different e
 ### Key Differences Between Environments
 
 **Node Environment Tests:**
+
 - File-based logging works with `fromEnv()` when `EMITNLOG_LOGGER=file:...`
 - `createAsyncLocalStorageInvocationStack()` is available for tracking
 - Uses builds optimized for Node.js (platform: 'node', target: 'node20')
 
 **Non-Node Environment Tests:**
+
 - File-based logging is disabled; `fromEnv()` always returns `OFF_LOGGER`
 - `createAsyncLocalStorageInvocationStack()` is undefined (AsyncLocalStorage is Node-specific)
 - Uses platform-neutral builds (platform: 'neutral', target: 'es2022')

@@ -1,10 +1,9 @@
-// Import directly from the platform-neutral CJS build to simulate non-node environment
-const logging = require('../../node_modules/emitnlog/dist/cjs/logger/index.cjs');
-const notifying = require('../../node_modules/emitnlog/dist/cjs/notifier/index.cjs');
-const tracking = require('../../node_modules/emitnlog/dist/cjs/tracker/index.cjs');
-const utils = require('../../node_modules/emitnlog/dist/cjs/utils/index.cjs');
+const logging = require('emitnlog/neutral/logger');
+const notifying = require('emitnlog/neutral/notifier');
+const tracking = require('emitnlog/neutral/tracker');
+const utils = require('emitnlog/neutral/utils');
 
-describe('CJS path imports - Non-Node Environment', () => {
+describe('CJS neutral path imports', () => {
   test('Logger path exports are available', () => {
     expect(typeof logging.createConsoleLogLogger).toBe('function');
     expect(typeof logging.fromEnv).toBe('function');
