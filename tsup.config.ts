@@ -3,6 +3,19 @@ import path from 'node:path';
 
 import { defineConfig } from 'tsup';
 
+const writeMinimalSourceMap = (targetFile: string, sourceFile: string) => {
+  const map = {
+    version: 3,
+    file: path.basename(targetFile),
+    sources: [sourceFile],
+    sourcesContent: [null],
+    names: [],
+    mappings: 'AAAA',
+  };
+
+  fs.writeFileSync(`${targetFile}.map`, JSON.stringify(map, null, 2), 'utf8');
+};
+
 const generateCjsProxyExports = (
   baseDir: string,
   entries: { readonly [importPath: string]: string },
@@ -13,6 +26,7 @@ const generateCjsProxyExports = (
 
     const file = path.join(baseDir, `${importPath}/index.cjs`);
     fs.writeFileSync(file, `module.exports = require('../index.cjs').${namespace};\n`, 'utf8');
+    writeMinimalSourceMap(file, '../index.cjs');
   }
 
   return Promise.resolve();
