@@ -17,6 +17,8 @@ describe('CJS Flat imports', () => {
       expect(logger.level).toBe('info');
       expect(logger.filePath).toBe('/tmp/log.txt');
     }
+
+    delete process.env.EMITNLOG_LOGGER;
   });
 
   test('Notifier exports are available', () => {

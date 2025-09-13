@@ -26,6 +26,8 @@ describe('CJS path imports', () => {
       expect(logger.level).toBe('info');
       expect(logger.filePath).toBe('/tmp/log.txt');
     }
+
+    delete process.env.EMITNLOG_LOGGER;
   });
 
   test('Notifier import works', () => {
