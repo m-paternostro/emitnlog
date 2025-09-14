@@ -31,30 +31,26 @@ export const isLogLevel = (value: unknown): value is LogLevel => {
 /**
  * Converts a LogLevel to its corresponding numeric severity value for comparison operations.
  *
- * This function maps each log level to a numeric value according to its severity, with lower numbers representing
- * higher severity (more important) levels:
+ * This function maps each log level to a numeric value according to its severity, with higher numbers representing
+ * higher severity (more important) levels. In other words, the return of this function follows this rule: `trace` <
+ * `debug` < `info` < `notice` < `warning` < `error` < `critical` < `alert` < `emergency`.
  *
- * - Emergency: 0 (highest severity)
- * - Alert: 1
- * - Critical: 2
- * - Error: 3
- * - Warning: 4
- * - Notice: 5
- * - Info: 6
- * - Debug: 7
- * - Trace: 8 (lowest severity)
+ * Clients should not use the numeric values directly as they may change in the future, but rather use this function to
+ * compare levels.
  *
  * @example
  *
  * ```ts
- * import { toLevelWeight } from 'emitnlog/logger';
+ * import { toLevelSeverity } from 'emitnlog/logger';
  *
- * const errorWeight = toLevelSeverity('error'); // Returns 3
- * const debugWeight = toLevelSeverity('debug'); // Returns 7
+ * const errorSeverity = toLevelSeverity('error');
+ * const debugSeverity = toLevelSeverity('debug');
+ * console.log(`Error is higher: ${errorSeverity > debugSeverity}`); // Outputs: Error is higher: true
  *
  * // Compare severity levels
- * if (toLevelWeight('error') < toLevelWeight('debug')) {
- *   // This condition is true (3 < 7), meaning 'error' is more severe than 'debug'
+ * const level: LogLevel = ...
+ * if (toLevelSeverity('level') > toLevelSeverity('debug')) {
+ *   // Indicates 'level' is more severe than 'debug'
  * }
  * ```
  *
@@ -65,42 +61,47 @@ export const isLogLevel = (value: unknown): value is LogLevel => {
 export const toLevelSeverity = (level: LogLevel): number => {
   switch (level) {
     case 'trace':
-      return 8;
+      return 2;
 
     case 'debug':
-      return 7;
+      return 4;
 
     case 'info':
       return 6;
 
     case 'notice':
-      return 5;
+      return 8;
 
     case 'warning':
-      return 4;
+      return 10;
 
     case 'error':
-      return 3;
+      return 12;
 
     case 'critical':
-      return 2;
+      return 14;
 
     case 'alert':
-      return 1;
+      return 16;
 
     case 'emergency':
-      return 0;
+      return 18;
 
     default:
       exhaustiveCheck(level);
-      return 20;
+      return 0;
   }
 };
 
 /**
+ * The highest severity log level.
+ */
+export const HIGHEST_SEVERITY_LOG_LEVEL: LogLevel = 'emergency';
+
+/**
  * The lowest severity log level.
  */
-export const LOWEST_SEVERITY_LOG_LEVEL: LogLevel = 'emergency';
+export const LOWEST_SEVERITY_LOG_LEVEL: LogLevel = 'trace';
 
 /**
  * Determines whether a log entry should be emitted based on the configured logger level and the entry's level.
@@ -111,8 +112,7 @@ export const LOWEST_SEVERITY_LOG_LEVEL: LogLevel = 'emergency';
  * - Otherwise, entries are emitted when their level's severity is equal to or greater than the logger's level
  *
  * For example, if the logger's level is set to 'warning', entries with levels 'warning', 'error', 'critical', 'alert',
- * and 'emergency' will be emitted, while entries with levels 'notice', 'info', 'debug', and 'trace' will be filtered
- * out.
+ * and 'emergency' are emitted, while entries with levels 'notice', 'info', 'debug', and 'trace' are filtered out.
  *
  * @example
  *
@@ -138,7 +138,7 @@ export const shouldEmitEntry = (loggerLevel: Logger | LogLevel | 'off', entryLev
     return false;
   }
 
-  return toLevelSeverity(loggerLevel) >= toLevelSeverity(entryLevel);
+  return toLevelSeverity(entryLevel) >= toLevelSeverity(loggerLevel);
 };
 
 /**

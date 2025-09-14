@@ -1,78 +1,69 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { shouldEmitEntry, toLevelSeverity } from '../../src/logger/implementation/index.ts';
+import {
+  HIGHEST_SEVERITY_LOG_LEVEL,
+  LOWEST_SEVERITY_LOG_LEVEL,
+  shouldEmitEntry,
+  toLevelSeverity,
+} from '../../src/logger/implementation/index.ts';
 import type { LogLevel } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.level-utils', () => {
-  describe('toLevelWeight', () => {
-    const levelSeverities: readonly [LogLevel, number][] = [
-      ['trace', 8],
-      ['debug', 7],
-      ['info', 6],
-      ['notice', 5],
-      ['warning', 4],
-      ['error', 3],
-      ['critical', 2],
-      ['alert', 1],
-      ['emergency', 0],
-    ] as const;
+  // In order of increasing severity
+  const LOG_LEVELS: readonly LogLevel[] = [
+    'trace',
+    'debug',
+    'info',
+    'notice',
+    'warning',
+    'error',
+    'critical',
+    'alert',
+    'emergency',
+  ] as const;
 
-    test.each(levelSeverities)('should return %d for %s level', (level, expectedSeverity) => {
-      expect(toLevelSeverity(level)).toBe(expectedSeverity);
+  describe('toLevelWeight', () => {
+    test.each(LOG_LEVELS)('should return a numeric value for %s level', (level) => {
+      const severity = toLevelSeverity(level);
+      expect(typeof severity).toBe('number');
+      expect(Number.isInteger(severity)).toBe(true);
+      expect(severity).toBeGreaterThan(0);
     });
 
     test('should preserve the severity ordering', () => {
-      const levels: readonly LogLevel[] = [
-        'emergency',
-        'alert',
-        'critical',
-        'error',
-        'warning',
-        'notice',
-        'info',
-        'debug',
-        'trace',
-      ];
-
-      // Verify that the weights are in ascending order
-      // (lower weight = higher severity)
-      for (let i = 0; i < levels.length - 1; i++) {
-        expect(toLevelSeverity(levels[i])).toBeLessThan(toLevelSeverity(levels[i + 1]));
+      for (let i = 0; i < LOG_LEVELS.length - 1; i++) {
+        expect(toLevelSeverity(LOG_LEVELS[i])).toBeLessThan(toLevelSeverity(LOG_LEVELS[i + 1]));
       }
+    });
+
+    test('lowest level should be LOWEST_SEVERITY_LOG_LEVEL', () => {
+      expect(toLevelSeverity('trace')).toBe(toLevelSeverity(LOWEST_SEVERITY_LOG_LEVEL));
+
+      const lowest = LOG_LEVELS.reduce(
+        (min, level) => (toLevelSeverity(level) < toLevelSeverity(min) ? level : min),
+        LOG_LEVELS[0],
+      );
+      expect(lowest).toBe(LOWEST_SEVERITY_LOG_LEVEL);
+    });
+
+    test('highest level should be HIGHEST_SEVERITY_LOG_LEVEL', () => {
+      expect(toLevelSeverity('emergency')).toBe(toLevelSeverity(HIGHEST_SEVERITY_LOG_LEVEL));
+
+      const highest = LOG_LEVELS.reduce(
+        (max, level) => (toLevelSeverity(level) > toLevelSeverity(max) ? level : max),
+        LOG_LEVELS[0],
+      );
+      expect(highest).toBe(HIGHEST_SEVERITY_LOG_LEVEL);
     });
   });
 
   describe('shouldEmitEntry', () => {
     test('should return false when logger level is off', () => {
       const loggerLevel = 'off';
-      const entryLevels: readonly LogLevel[] = [
-        'emergency',
-        'alert',
-        'critical',
-        'error',
-        'warning',
-        'notice',
-        'info',
-        'debug',
-        'trace',
-      ];
-
-      entryLevels.forEach((entryLevel) => {
+      LOG_LEVELS.forEach((entryLevel) => {
         expect(shouldEmitEntry(loggerLevel, entryLevel)).toBe(false);
       });
     });
-
-    const allLevels: readonly LogLevel[] = [
-      'emergency',
-      'alert',
-      'critical',
-      'error',
-      'warning',
-      'notice',
-      'info',
-      'debug',
-      'trace',
-    ];
 
     const levelFilteringTests: readonly [LogLevel, readonly LogLevel[], readonly LogLevel[]][] = [
       ['emergency', ['emergency'], ['alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug', 'trace']],
@@ -83,7 +74,7 @@ describe('emitnlog.logger.level-utils', () => {
       ['notice', ['emergency', 'alert', 'critical', 'error', 'warning', 'notice'], ['info', 'debug', 'trace']],
       ['info', ['emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info'], ['debug', 'trace']],
       ['debug', ['emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug'], ['trace']],
-      ['trace', allLevels, []],
+      ['trace', LOG_LEVELS, []],
     ];
 
     test.each(levelFilteringTests)(

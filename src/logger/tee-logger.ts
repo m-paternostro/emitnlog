@@ -1,6 +1,6 @@
 import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from './definition.ts';
 import { asSingleFinalizer, type ForgeFinalizer, type MergeFinalizer } from './implementation/finalizer.ts';
-import { LOWEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
+import { HIGHEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
 /**
@@ -11,7 +11,7 @@ import { OFF_LOGGER } from './off-logger.ts';
  *
  * ### Log level behavior
  *
- * The tee's `level` is computed from the underlying loggers to be the most permissive among them. It does not expose a
+ * The tee's `level` is computed from the underlying loggers to be the less severe among them. It does not expose a
  * setter and does not attempt to keep child levels in sync. Changing the level of individual child loggers after
  * composing may lead to different filtering per destination, which is expected.
  *
@@ -52,9 +52,9 @@ export const tee = <T extends readonly Logger[]>(...loggers: T): TeeLogger<T> =>
         return logger.level;
       }
 
-      // Return the most permissive level (i.e., the highest severity) among all loggers
-      return toLevelSeverity(acc) > toLevelSeverity(logger.level) ? acc : logger.level;
-    }, LOWEST_SEVERITY_LOG_LEVEL);
+      // Return the lowest level among all loggers
+      return toLevelSeverity(acc) <= toLevelSeverity(logger.level) ? acc : logger.level;
+    }, HIGHEST_SEVERITY_LOG_LEVEL);
 
     return level;
   };
