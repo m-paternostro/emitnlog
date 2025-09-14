@@ -2,4 +2,4 @@
 'emitnlog': patch
 ---
 
-Clarify invocation index, export promise option types, and fix docs
+Tracker small improvements: clarify invocation index, export promise option types, and fix docs

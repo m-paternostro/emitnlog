@@ -62,10 +62,11 @@ export type PollingOptions<T, V> = {
  * import { startPolling } from 'emitnlog/utils';
  *
  * // Poll every 5 seconds until manually stopped
- * const closeable = startPolling(() => fetchLatestData(), 5_000);
+ * const { wait, close } = startPolling(() => fetchLatestData(), 5_000);
  *
  * // Stop polling after 30 seconds
- * await delay(30_000).then(close);
+ * await delay(30_000);
+ * await close();
  *
  * // Get the final result
  * const finalData = await wait;
