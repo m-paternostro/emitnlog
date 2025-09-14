@@ -42,7 +42,7 @@ import { createFileLogger } from './factory.ts';
  * @example
  *
  * ```typescript
- * import { fromEnv } from 'emitnlog/logger/environment';
+ * import { fromEnv } from 'emitnlog/logger';
  *
  * // Basic usage - uses environment variables if set, otherwise returns OFF_LOGGER
  * const logger = fromEnv();
@@ -51,7 +51,7 @@ import { createFileLogger } from './factory.ts';
  * @example
  *
  * ```typescript
- * import { fromEnv } from 'emitnlog/logger/environment';
+ * import { fromEnv } from 'emitnlog/logger';
  *
  * // With fallback options when environment variables are not set
  * const logger = fromEnv({
@@ -66,7 +66,7 @@ import { createFileLogger } from './factory.ts';
  * @example
  *
  * ```typescript
- * import { fromEnv } from 'emitnlog/logger/environment';
+ * import { fromEnv } from 'emitnlog/logger';
  *
  * // With a custom fallback logger
  * const logger = fromEnv({
@@ -78,10 +78,10 @@ import { createFileLogger } from './factory.ts';
  * @example
  *
  * ```typescript
- * import { fromEnv } from 'emitnlog/logger/node/environment';
+ * import { fromEnv } from 'emitnlog/logger';
  *
  * // Using console logger with info level and colorful format
- * process.env.EMITNLOG_LOGGER = 'console';
+ * process.env.EMITNLOG_LOGGER = 'console-log';
  * process.env.EMITNLOG_LEVEL = 'info';
  * process.env.EMITNLOG_FORMAT = 'colorful';
  * const logger = fromEnv();

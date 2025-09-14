@@ -37,10 +37,10 @@ emergency - System is unusable
 Defines the format used to emit a log entry.
 
 ```
-plain            - One plain text line per entry, no styling.
-colorful         - ANSI-colored line, ideal for dev terminals.
-json             - One structured JSON line per entry.
-unformatted-json - Compact JSON line, raw and delimiter-safe.
+plain         - One plain text line per entry, no styling.
+colorful      - ANSI-colored line, ideal for dev terminals.
+json-compact  - Compact JSON line, raw and delimiter-safe.
+json-pretty   - Pretty-printed JSON with indentation.
 ```
 
 ## Template Logging
@@ -148,7 +148,7 @@ All loggers implement the same interface, making them interchangeable. Use facto
 
 ### Console Log Logger
 
-Logs to console (stdout) with intelligent routing and color formatting.
+Logs everything to stdout (`console.log`). Uses color formatting by default.
 
 ```ts
 import { createConsoleLogLogger } from 'emitnlog/logger';
@@ -240,7 +240,7 @@ Configure logging behavior through environment variables for easy deployment-tim
 > **Note:** Supported on Node.js or on runtimes where `process.env` exposes the environment variables.
 
 ```ts
-import { fromEnv } from 'emitnlog/logger/environment';
+import { fromEnv } from 'emitnlog/logger';
 
 // Creates logger based on environment variables
 const logger = fromEnv();
@@ -263,7 +263,7 @@ EMITNLOG_LOGGER=console-level
 # Use FileLogger with specified path (Node.js only)
 EMITNLOG_LOGGER=file:/var/log/app.log
 # Use FileLogger with the date prefixed to the specified path (Node.js only)
-EMITNLOG_LOGGER=file:date/var/log/app.log
+EMITNLOG_LOGGER=file:date:/var/log/app.log
 
 # Log level (optional)
 EMITNLOG_LEVEL=debug                   # Set minimum log level
@@ -277,13 +277,12 @@ EMITNLOG_FORMAT=colorful               # Use colored output
 Provide defaults and fallback behavior when environment variables aren't set:
 
 ```ts
-import { createConsoleLogLogger } from 'emitnlog/logger';
-import { fromEnv } from 'emitnlog/logger/environment';
+import { createConsoleLogLogger, fromEnv } from 'emitnlog/logger';
 
 // With fallback options
 const logger = fromEnv({
   level: 'info', // Default level if EMITNLOG_LEVEL not set
-  format: 'unformatted-json', // Default format if EMITNLOG_FORMAT not set
+  format: 'json-compact', // Default format if EMITNLOG_FORMAT not set
   fallbackLogger: () => createConsoleLogLogger(),
 });
 
@@ -307,14 +306,14 @@ A typical application setup that adapts to different environments:
 
 ```bash
 # Development (.env.development)
-EMITNLOG_LOGGER=console
+EMITNLOG_LOGGER=console-log
 EMITNLOG_LEVEL=debug
 EMITNLOG_FORMAT=colorful
 
 # Production (.env.production)
 EMITNLOG_LOGGER=file:/var/log/app.log
 EMITNLOG_LEVEL=warning
-EMITNLOG_FORMAT=json
+EMITNLOG_FORMAT=json-compact
 
 # Testing (.env.test)
 EMITNLOG_LOGGER=console-error
@@ -324,7 +323,7 @@ EMITNLOG_FORMAT=plain
 
 ```ts
 // app.ts - Works in all environments
-import { fromEnv } from 'emitnlog/logger/environment';
+import { fromEnv } from 'emitnlog/logger';
 
 const logger = fromEnv({
   level: 'info', // Reasonable default

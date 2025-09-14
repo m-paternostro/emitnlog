@@ -9,14 +9,11 @@ import { OFF_LOGGER } from './off-logger.ts';
  * The returned logger (a "tee") behaves like a standard logger but duplicates every log operation to each of the
  * underlying loggers.
  *
- * ### Log level synchronization
+ * ### Log level behavior
  *
- * - When the tee logger is created, its `level` is synchronized with the first logger.
- * - When the tee logger's `level` is updated, it updates all underlying loggers.
- * - However, the tee does **not actively keep levels in sync** after that point.
- *
- * Clients should avoid changing the log level on the individual loggers after teeing, as this may lead to inconsistent
- * filtering behavior across outputs.
+ * The tee's `level` is computed from the underlying loggers to be the most permissive among them. It does not expose a
+ * setter and does not attempt to keep child levels in sync. Changing the level of individual child loggers after
+ * composing may lead to different filtering per destination, which is expected.
  *
  * @example
  *

@@ -59,7 +59,7 @@ export const OFF_LOGGER: Logger = Object.freeze({
  *
  * ```ts
  * import type { Logger } from 'emitnlog/logger';
- * import { asNonNullableLogger, withPrefix } from 'emitnlog/logger';
+ * import { withLogger, withPrefix } from 'emitnlog/logger';
  *
  * const calculate = (logger?: Logger) => {
  *   const calculateLogger = withPrefix(withLogger(logger), 'calculate');

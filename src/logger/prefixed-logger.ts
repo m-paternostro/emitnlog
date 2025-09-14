@@ -136,12 +136,12 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @example Level Filtering
  *
  * ```ts
- * import { withPrefix } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withPrefix } from 'emitnlog/logger';
  *
- * const dbLogger = withPrefix(logger, 'DB');
+ * // Underlying logger controls filtering
+ * const base = createConsoleLogLogger('warning');
+ * const dbLogger = withPrefix(base, 'DB');
  *
- * // Level filtering works the same as the underlying logger
- * dbLogger.level = 'warning';
  * dbLogger.d`This debug message won't be logged`;
  * dbLogger.w`This warning will be logged`;
  * // Output: "DB: This warning will be logged"
