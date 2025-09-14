@@ -134,7 +134,11 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
   };
 
   const debounced = options?.debounceDelay !== undefined ? debounce(basicNotify, options.debounceDelay) : undefined;
-  const notify = debounced ?? basicNotify;
+  const notify: (event?: T | (() => T)) => void = debounced
+    ? (event?: T | (() => T)) => {
+        void debounced(event);
+      }
+    : basicNotify;
 
   return {
     close: () => {

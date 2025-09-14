@@ -278,14 +278,31 @@ notifier.notify('hello'); // Works fine
 notifier.notify('bad'); // Error caught by error handler
 ```
 
+You can clear the error handler by passing `undefined`. If an error handler itself throws, it is safely ignored and does not interrupt the notifier flow:
+
+```ts
+// Clear handler
+notifier.onError(undefined);
+
+// Set a handler that throws — its error is ignored internally
+notifier.onError(() => {
+  throw new Error('handler-error');
+});
+
+// This still notifies listeners without breaking
+notifier.notify('event');
+```
+
 ## Event Mapping and Filtering
 
 The `mapOnEvent` function allows you to transform and filter events from existing notifiers, creating new event streams with different types or conditional logic.
 
+Note: If a mapper throws, the error is reported via the source notifier's `onError` handler (if set). Mappers run inside the source listener context.
+
 ### Basic Event Mapping
 
 ```ts
-import { createEventNotifier, mapOnEvent } from 'emitnlog/notifier';
+import { createEventNotifier, mapOnEvent, SKIP_MAPPED_EVENT } from 'emitnlog/notifier';
 
 // Original notifier with raw storage events
 const storageNotifier = createEventNotifier<{ action: string; data: unknown }>();
