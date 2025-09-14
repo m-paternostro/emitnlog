@@ -134,7 +134,7 @@ interface InvocationTrackerOptions {
 }
 
 const tracker = createInvocationTracker<'login' | 'logout'>({
-  tags: [{ service: 'auth', version: '1.0' }],
+  tags: { service: 'auth', version: '1.0' },
   logger: myLogger,
 });
 ```
@@ -637,16 +637,16 @@ const tracker = createInvocationTracker();
 // Track errors with context
 tracker.onErrored((invocation) => {
   console.error(`Operation ${invocation.key.operation} failed:`, {
-    error: invocation.error,
+    error: invocation.stage.error,
     args: invocation.args,
-    duration: invocation.duration,
+    duration: invocation.stage.duration,
     tags: invocation.tags,
   });
 
   // Send to error tracking service
-  errorTracker.captureException(invocation.error, {
+  errorTracker.captureException(invocation.stage.error, {
     tags: invocation.tags,
-    extra: { operation: invocation.key.operation, args: invocation.args, duration: invocation.duration },
+    extra: { operation: invocation.key.operation, args: invocation.args, duration: invocation.stage.duration },
   });
 });
 ```
@@ -674,18 +674,18 @@ const processData = trackFunction('processData', (data) => {
 
 ```ts
 import { createInvocationTracker } from 'emitnlog/tracker';
-import { ConsoleLogger } from 'emitnlog/logger';
+import { createConsoleLogLogger } from 'emitnlog/logger';
 
-const logger = new ConsoleLogger();
+const logger = createConsoleLogLogger();
 const tracker = createInvocationTracker({ logger });
 
 // Automatic logging is enabled
 tracker.onCompleted((invocation) => {
-  logger.i`${invocation.key.operation} completed in ${invocation.duration}ms`;
+  logger.i`${invocation.key.operation} completed in ${invocation.stage.duration}ms`;
 });
 
 tracker.onErrored((invocation) => {
-  logger.e`${invocation.key.operation} failed after ${invocation.duration}ms: ${invocation.error}`;
+  logger.e`${invocation.key.operation} failed after ${invocation.stage.duration}ms: ${invocation.stage.error}`;
 });
 ```
 

@@ -26,7 +26,10 @@ export type InvocationKey<TOperation extends string = string> = {
   readonly operation: TOperation;
 
   /**
-   * A zero-based invocation index, unique within the tracker for this operation.
+   * A zero-based invocation index, unique within the tracker.
+   *
+   * Note: The index is a single counter shared across all operations created by the same tracker instance (it is not
+   * per-operation).
    */
   readonly index: number;
 };

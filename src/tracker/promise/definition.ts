@@ -1,5 +1,6 @@
 import type { Simplify } from 'type-fest';
 
+import type { Logger } from '../../logger/definition.ts';
 import type { OnEvent } from '../../notifier/definition.ts';
 
 /**
@@ -944,3 +945,13 @@ export type PromiseSettledEvent = {
    */
   readonly result?: unknown;
 };
+
+/**
+ * Options for configuring a PromiseTracker.
+ */
+export type PromiseTrackerOptions = { readonly logger?: Logger };
+
+/**
+ * Options for configuring a PromiseVault.
+ */
+export type PromiseVaultOptions = { readonly forgetOnRejection?: boolean } & PromiseTrackerOptions;
