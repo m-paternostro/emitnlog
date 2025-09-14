@@ -5,17 +5,20 @@ describe('CJS Flat imports', () => {
     expect(typeof emitnlog.createConsoleLogLogger).toBe('function');
     expect(typeof emitnlog.fromEnv).toBe('function');
 
-    process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
     {
       const logger = emitnlog.fromEnv();
       expect(logger).toBe(emitnlog.OFF_LOGGER);
     }
-    process.env.EMITNLOG_LOGGER = 'console-log';
+
+    process.env.EMITNLOG_LOGGER = 'file:/tmp/log.txt';
     {
       const logger = emitnlog.fromEnv();
       expect(logger).toBeDefined();
       expect(logger.level).toBe('info');
+      expect(logger.filePath).toBe('/tmp/log.txt');
     }
+
+    delete process.env.EMITNLOG_LOGGER;
   });
 
   test('Notifier exports are available', () => {
@@ -24,6 +27,7 @@ describe('CJS Flat imports', () => {
 
   test('Tracker exports are available', () => {
     expect(typeof emitnlog.createInvocationTracker).toBe('function');
+    expect(typeof emitnlog.createAsyncLocalStorageInvocationStack).toBe('function');
     expect(typeof emitnlog.isAtStage).toBe('function');
     expect(typeof emitnlog.trackMethods).toBe('function');
 
@@ -32,6 +36,6 @@ describe('CJS Flat imports', () => {
 
   test('Utils exports are available', () => {
     expect(typeof emitnlog.createDeferredValue).toBe('function');
-    expect(typeof emitnlog.delay).toBe('function');
+    expect(typeof emitnlog.emptyArray).toBe('function');
   });
 });

@@ -29,30 +29,37 @@ const packagePath = path.join(testsSmokeDir, packageFileName);
 console.log('Installing package in smoke tests directory...');
 execSync(`npm install --no-save ${packagePath}`, { cwd: testsSmokeDir, stdio: 'inherit' });
 
-// Run ESM smoke tests
-console.log('Running ESM smoke tests...');
-try {
-  // Use node directly with explicit experimental flag to make sure ESM tests work
-  execSync('node --experimental-vm-modules ../../node_modules/jest/bin/jest.js', {
-    cwd: path.join(testsSmokeDir, 'esm'),
-    stdio: 'inherit',
-    env: { ...process.env, NODE_OPTIONS: '--experimental-vm-modules' },
-  });
-  console.log('ESM smoke tests passed!');
-} catch (error) {
-  console.error('ESM smoke tests failed!');
-  process.exit(1);
-}
+// Helper function to run tests for a specific environment
+const runEnvironmentTests = (environment) => {
+  console.log(`\n=== Running ${environment.toUpperCase()} Environment Tests ===`);
 
-// Run CJS smoke tests
-console.log('Running CJS smoke tests...');
-try {
-  execSync('npm test', { cwd: path.join(testsSmokeDir, 'cjs'), stdio: 'inherit' });
-  console.log('CJS smoke tests passed!');
-} catch (error) {
-  console.error('CJS smoke tests failed!');
-  process.exit(1);
-}
+  // Run ESM tests
+  console.log(`Running ${environment} ESM smoke tests...`);
+  try {
+    execSync('npm test', {
+      cwd: path.join(testsSmokeDir, environment, 'esm'),
+      stdio: 'inherit',
+      env: { ...process.env },
+    });
+    console.log(`${environment} ESM smoke tests passed!`);
+  } catch (error) {
+    console.error(`${environment} ESM smoke tests failed!`);
+    process.exit(1);
+  }
+
+  // Run CJS tests
+  console.log(`Running ${environment} CJS smoke tests...`);
+  try {
+    execSync('npm test', { cwd: path.join(testsSmokeDir, environment, 'cjs'), stdio: 'inherit' });
+    console.log(`${environment} CJS smoke tests passed!`);
+  } catch (error) {
+    console.error(`${environment} CJS smoke tests failed!`);
+    process.exit(1);
+  }
+};
+
+// Run tests for both environments
+runEnvironmentTests('node');
 
 // Note: We're keeping the tarball in the tests-smoke directory
 // for reference and to make it available for manual testing if needed.

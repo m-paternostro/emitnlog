@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
-import type { InvocationKey } from '../../../src/tracker/index.ts';
-import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/node/index.ts';
+import type { InvocationKey } from '../../../src/tracker/index-node.ts';
+import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/index-node.ts';
 import { delay } from '../../../src/utils/index.ts';
 import { createTestLogger } from '../../jester.setup.ts';
 
