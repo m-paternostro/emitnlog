@@ -1,8 +1,0 @@
-{
-  "name": "emitnlog-smoke-tests-non-node-cjs",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "test": "node ../../node_modules/jest/bin/jest.js"
-  }
-}

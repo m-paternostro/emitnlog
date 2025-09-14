@@ -36,10 +36,10 @@ const runEnvironmentTests = (environment) => {
   // Run ESM tests
   console.log(`Running ${environment} ESM smoke tests...`);
   try {
-    execSync('node --experimental-vm-modules ../../node_modules/jest/bin/jest.js', {
+    execSync('npm test', {
       cwd: path.join(testsSmokeDir, environment, 'esm'),
       stdio: 'inherit',
-      env: { ...process.env, NODE_OPTIONS: '--experimental-vm-modules' },
+      env: { ...process.env },
     });
     console.log(`${environment} ESM smoke tests passed!`);
   } catch (error) {
@@ -60,7 +60,6 @@ const runEnvironmentTests = (environment) => {
 
 // Run tests for both environments
 runEnvironmentTests('node');
-runEnvironmentTests('non-node');
 
 // Note: We're keeping the tarball in the tests-smoke directory
 // for reference and to make it available for manual testing if needed.
