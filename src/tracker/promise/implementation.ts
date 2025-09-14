@@ -1,10 +1,16 @@
 import type { Writable } from 'type-fest';
 
-import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
-import type { PromiseHolder, PromiseSettledEvent, PromiseTracker, PromiseVault } from './definition.ts';
+import type {
+  PromiseHolder,
+  PromiseSettledEvent,
+  PromiseTracker,
+  PromiseTrackerOptions,
+  PromiseVault,
+  PromiseVaultOptions,
+} from './definition.ts';
 
 /**
  * Creates a new promise tracker for monitoring promises and coordinating async operations.
@@ -483,6 +489,3 @@ export const vaultPromises = (options?: PromiseVaultOptions): PromiseVault => {
       )(id, supplier, idMap, !opt?.forget, options?.forgetOnRejection),
   };
 };
-
-type PromiseTrackerOptions = { readonly logger?: Logger };
-type PromiseVaultOptions = { readonly forgetOnRejection?: boolean } & PromiseTrackerOptions;
