@@ -134,5 +134,6 @@ export type EventNotifier<T = void, E = Error> = {
  */
 export type OnEvent<T = void> = (listener: (event: T) => unknown) => { readonly close: () => void };
 
-type IsVoid<T> = [Extract<T, undefined>] extends [never] ? false : true;
-type Notify<T> = IsVoid<T> extends true ? (event?: T | (() => T)) => void : (event: T | (() => T)) => void;
+// eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+type IsExactlyVoid<T> = [T] extends [void] ? ([void] extends [T] ? true : false) : false;
+type Notify<T> = IsExactlyVoid<T> extends true ? (event?: T | (() => T)) => void : (event: T | (() => T)) => void;
