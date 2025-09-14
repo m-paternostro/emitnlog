@@ -29,7 +29,7 @@ import { stringify } from 'emitnlog/utils';
 // Basic usage
 stringify('hello'); // 'hello'
 stringify(123); // '123'
-stringify(new Date()); // '2023-04-21 12:30:45.678'
+stringify(new Date()); // ISO string, e.g., '2023-04-21T12:30:45.678Z'
 
 // Objects with custom options
 const data = {
@@ -48,7 +48,7 @@ stringify(error, { includeStack: true }); // includes stack trace
 
 // Date formatting options
 const now = new Date();
-stringify(now); // '2023-04-21 12:30:45.678' (ISO format without timezone)
+stringify(now); // '2023-04-21T12:30:45.678Z' (ISO 8601 with UTC 'Z')
 stringify(now, { useLocale: true }); // e.g., '4/21/2023, 12:30:45 PM' (depends on user's locale)
 
 // Handles circular references
@@ -61,9 +61,12 @@ stringify(circular); // safely handles the circular reference
 
 ```ts
 interface StringifyOptions {
-  pretty?: boolean; // Pretty-print JSON objects
-  includeStack?: boolean; // Include stack trace for Error objects
-  useLocale?: boolean; // Use locale-specific date formatting
+  includeStack?: boolean; // Include stack trace for Error objects (default: false)
+  pretty?: boolean; // Pretty-print JSON objects (default: false)
+  maxDepth?: number; // Max depth for nested structures; negative disables limit (default: 5)
+  useLocale?: boolean; // Use locale-specific date formatting (default: false)
+  maxArrayElements?: number; // Max array items before truncation; negative disables (default: 100)
+  maxProperties?: number; // Max object properties before truncation; negative disables (default: 50)
 }
 ```
 
@@ -338,11 +341,11 @@ const debouncedFetch = debounce(fetchData, {
 #### debounce Options
 
 ```ts
-interface DebounceOptions<TArgs extends readonly unknown[], TResult> {
-  delay?: number; // Debounce delay in milliseconds
-  leading?: boolean; // Execute immediately on first call
-  waitForPrevious?: boolean; // Wait for previous promise to resolve
-  accumulator?: (previous: TArgs | undefined, current: TArgs) => TArgs; // Combine arguments
+interface DebounceOptions<TArgs extends readonly unknown[]> {
+  delay: number; // Debounce delay in milliseconds
+  leading?: boolean; // Execute immediately on first call (leading edge)
+  waitForPrevious?: boolean; // Wait for previous promise to resolve before executing
+  accumulator?: (previous: TArgs | undefined, current: TArgs) => TArgs; // Combine arguments across calls
 }
 ```
 
@@ -532,10 +535,13 @@ const final = await wait;
 #### Polling Options
 
 ```ts
-interface PollingOptions<T> {
-  interrupt?: (result: T) => boolean; // Stop polling when condition is met
-  timeout?: number; // Maximum polling duration
-  onError?: (error: Error) => void; // Error handler
+interface PollingOptions<T, V> {
+  invokeImmediately?: boolean; // Invoke once immediately instead of waiting for first interval (default: false)
+  timeout?: number; // Maximum polling duration in ms; stops polling on reach
+  timeoutValue?: V; // Value to resolve when timeout occurs (default: undefined)
+  retryLimit?: number; // Max number of invocations before auto-stop
+  interrupt?: (result: T, invocationIndex: number) => boolean; // Return true to stop polling
+  logger?: Logger; // Optional logger to record debug/errors (emitnlog logger)
 }
 ```
 
@@ -552,7 +558,7 @@ async function waitForJobCompletion(jobId: string) {
     {
       interrupt: (status) => status === 'completed' || status === 'failed',
       timeout: 60000, // Stop after 1 minute
-      onError: (error) => console.error('Polling error:', error),
+      logger, // Provide a logger to capture errors
     },
   );
 
@@ -574,7 +580,7 @@ function monitorServiceHealth(serviceUrl: string) {
     5000, // Check every 5 seconds
     {
       interrupt: (isHealthy) => !isHealthy, // Stop when service becomes unhealthy
-      onError: (error) => logger.error('Health check failed:', error),
+      logger, // Use a logger to record errors
     },
   );
 
@@ -606,33 +612,39 @@ Polling stops automatically on timeout or interrupt. Call `close()` to stop earl
 ```ts
 import { startPolling } from 'emitnlog/utils';
 
-// Exponential backoff polling
-let interval = 1000;
-const { wait, close } = startPolling(
-  async () => {
-    const result = await checkCondition();
-    if (!result) {
-      interval = Math.min(interval * 1.5, 10000); // Increase up to 10s
-    }
-    return result;
-  },
-  () => interval, // Dynamic interval
-  { interrupt: (result) => result === true, timeout: 120000 },
-);
+// Limit attempts and stop on interrupt
+const { wait } = startPolling(() => fetchJobStatus(), 1000, {
+  retryLimit: 10,
+  interrupt: (status) => status === 'done',
+  timeout: 60_000,
+});
 
-// Polling with retries
-const { wait, close } = startPolling(
-  async () => {
-    try {
-      return await unstableOperation();
-    } catch (error) {
-      console.log('Operation failed, will retry...');
-      return null; // Continue polling
-    }
-  },
-  2000,
-  { interrupt: (result) => result !== null, timeout: 60000 },
-);
+// Use timeoutValue to signal timeouts explicitly
+const { wait: timedWait } = startPolling(() => checkHealth(), 2000, {
+  timeout: 30_000,
+  timeoutValue: 'timeout' as const,
+});
+```
+
+### Terminal Formatting
+
+Utilities to format strings for terminals (ANSI escape sequences).
+
+```ts
+import { terminalFormatter } from 'emitnlog/utils';
+
+console.log(terminalFormatter.cyan('INFO: ready'));
+console.log(terminalFormatter.indent('Indented', 2));
+```
+
+### Singleton Arrays
+
+Helpers for reusing empty arrays without allocations.
+
+```ts
+import { emptyArray } from 'emitnlog/utils';
+
+const items = emptyArray<number>(); // readonly number[]
 ```
 
 ---

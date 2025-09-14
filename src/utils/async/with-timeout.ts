@@ -6,7 +6,8 @@ import { delay } from './delay.ts';
  *
  * Note: The original promise continues to run in the background even if the timeout occurs. If caching promises,
  * consider caching the original promise instead of the timed one, since it may resolve successfully on a subsequent
- * access.
+ * access. If the original promise is not consumed elsewhere and later rejects, it may trigger an unhandled rejection;
+ * consider attaching a `.catch()` to the original or otherwise observing its outcome.
  *
  * @example
  *
