@@ -1,4 +1,4 @@
-# AGENTS Guidelines for This Repository (emitnlog)
+# Guidelines for `emitnlog`
 
 This repository implements `emitnlog`, a modern, type‑safe library for logging, event notifications, and observability in JavaScript/TypeScript.
 When working on the project interactively with an agent, follow the guidelines below to keep changes clean, consistent, and easy to validate.
@@ -26,7 +26,7 @@ When working on the project interactively with an agent, follow the guidelines b
 | `npm run test:smoke:build` | Build and run the smoke tests.                            |
 | `npm run validate`         | Typecheck → build → format check → lint check (no tests). |
 
-Tip: During active iteration, run `npm run typecheck` and `npm run test` frequently; before handoff, run `npm run validate` and then `npm run postvalidate`.
+Tip: During active iteration, run `npm run typecheck` and `npm run test` frequently; before handoff, run `npm run validate`.
 
 ## 3. Coding Conventions
 
@@ -69,7 +69,19 @@ Tip: During active iteration, run `npm run typecheck` and `npm run test` frequen
 - ESM and CJS bundles (including neutral and Node variants) are produced with `tsup`.
 - When in doubt, favor neutral implementations and avoid Node‑only APIs in shared code paths.
 
-## 7. Process & Workflow
+## 7. Documentation
+
+The user‑facing `README.md` and topic docs under `docs/` are the primary public documentation. As such it is important to always keep it consistent and accurate. Moreover:
+
+- Always review docs whenever behavior, exports, or usage changes. If anything is outdated, update the documents within the same change set.
+- For any new API or feature, ask if the docs should be updated to mention it.
+- Keep the `README.md` simple and direct, adding usage details to the files in `docs/`
+- Describe "how to use", not internals.
+  - Include: what/why/when, quick start, API surface summary, at least one runnable example, and gotchas.
+  - Skip implementation details or information that is not widely applicable
+  - Prefer neutral runtime examples. If Node‑only, clearly label the section.
+
+## 8. Process & Workflow
 
 - Backwards compatibility can be broken only when it clearly simplifies and cleans the design.
 - If anything is unclear, ask clarifying questions before coding.
@@ -79,7 +91,7 @@ Tip: During active iteration, run `npm run typecheck` and `npm run test` frequen
 - Keep changes scoped and surgical; do not over‑refactor or change filenames/styles unnecessarily.
 - Update documentation as needed to keep it consistent and helpful.
 
-## 8. Working With Agents (Codex CLI)
+## 9. Working With Agents
 
 - Exploration:
   - Use a fast code search tool available in the environment (for example `rg` if installed; otherwise `git grep`, `grep -R`, `fd`, etc.). The goal is speed and reliability, not a specific binary.
@@ -93,7 +105,7 @@ Tip: During active iteration, run `npm run typecheck` and `npm run test` frequen
   - If validation fails on format or lint: run `npm run format` and then `npm run lint` (auto‑fixes some issues), make any remaining code changes as needed, and re‑run `npm run validate`.
 - Tests and builds should not introduce external side effects. Keep CI‑friendly by avoiding network, filesystem, or environment coupling unless already supported by the repo.
 
-## 9. Where to Look
+## 10. Where to Look
 
 - Project README: `README.md` and linked files — overview, examples, and links to component docs.
 - Bundling config: `tsup.config.ts` — how ESM/CJS/node bundles are produced.
