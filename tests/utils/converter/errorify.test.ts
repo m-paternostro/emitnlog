@@ -25,7 +25,15 @@ describe('emitnlog.utils.errorify', () => {
     const obj = { code: 500, reason: 'Server error' };
     const result = errorify(obj);
     expect(result).toBeInstanceOf(Error);
-    expect(result.message).toBe('[object Object]');
+    expect(result.message).toBe('{"code":500,"reason":"Server error"}');
+    expect(result.cause).toBe(obj);
+  });
+
+  test('should convert an object into an Error object using the toString method', () => {
+    const obj = { code: 500, reason: 'Server error', toString: () => 'A server error' };
+    const result = errorify(obj);
+    expect(result).toBeInstanceOf(Error);
+    expect(result.message).toBe('A server error');
     expect(result.cause).toBe(obj);
   });
 
