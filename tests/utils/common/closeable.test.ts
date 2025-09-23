@@ -467,41 +467,105 @@ describe('emitnlog.utils.closeable', () => {
   });
 
   describe('asSafeCloseable', () => {
-    test('should wrap sync closeable and not throw', () => {
+    describe('should wrap sync closeable and not throw', () => {
       const throwingCloseable: SyncCloseable = {
         close: () => {
           throw new Error('Sync error');
         },
       };
 
-      const safeCloseable: SyncCloseable = asSafeCloseable(throwingCloseable);
-      const result = safeCloseable.close();
-      expect(result).toBeUndefined();
+      test('should not throw', () => {
+        const safeCloseable: SyncCloseable = asSafeCloseable(throwingCloseable);
+        const result = safeCloseable.close();
+        expect(result).toBeUndefined();
+      });
+
+      test('should handle error', () => {
+        let handledError: unknown;
+        const safeCloseable: SyncCloseable = asSafeCloseable(throwingCloseable, (error) => {
+          handledError = error;
+        });
+
+        const result = safeCloseable.close();
+        expect(result).toBeUndefined();
+        expect(handledError).toBeInstanceOf(Error);
+        expect((handledError as Error).message).toBe('Sync error');
+      });
+
+      test('should handle error with onError throwing', () => {
+        const safeCloseable: SyncCloseable = asSafeCloseable(throwingCloseable, () => {
+          throw new Error('On error error');
+        });
+
+        const result = safeCloseable.close();
+        expect(result).toBeUndefined();
+      });
     });
 
-    test('should wrap async closeable and not reject', async () => {
+    describe('should wrap async closeable and not reject', () => {
       const rejectingCloseable: AsyncCloseable = {
         close: async () => {
           throw new Error('Async error');
         },
       };
 
-      const safeCloseable: AsyncCloseable = asSafeCloseable(rejectingCloseable);
-      const result = safeCloseable.close();
-      expect(result).toBeInstanceOf(Promise);
-      await expect(result).resolves.toBeUndefined();
+      test('should not reject', async () => {
+        const safeCloseable: AsyncCloseable = asSafeCloseable(rejectingCloseable);
+        const result = safeCloseable.close();
+        expect(result).toBeInstanceOf(Promise);
+        await expect(result).resolves.toBeUndefined();
+      });
+
+      test('should handle error', async () => {
+        let handledError: unknown;
+        const safeCloseable: AsyncCloseable = asSafeCloseable(rejectingCloseable, (error) => {
+          handledError = error;
+        });
+
+        const result = safeCloseable.close();
+        expect(result).toBeInstanceOf(Promise);
+
+        expect(handledError).toBeUndefined();
+        await expect(result).resolves.toBeUndefined();
+        expect(handledError).toBeInstanceOf(Error);
+        expect((handledError as Error).message).toBe('Async error');
+      });
+
+      test('should handle error with onError throwing', async () => {
+        const safeCloseable: AsyncCloseable = asSafeCloseable(rejectingCloseable, () => {
+          throw new Error('On error error');
+        });
+
+        const result = safeCloseable.close();
+        expect(result).toBeInstanceOf(Promise);
+        await expect(result).resolves.toBeUndefined();
+      });
     });
 
-    test('should handle sync in async closeables', () => {
+    describe('should handle sync in async closeables', () => {
       const throwingCloseable: AsyncCloseable = {
         close: (): Promise<void> => {
-          throw new Error('Error');
+          throw new Error('Sync in async error');
         },
       };
 
-      const safeCloseable: AsyncCloseable = asSafeCloseable(throwingCloseable);
-      const result: Promise<void> = safeCloseable.close();
-      expect(result).toBeUndefined();
+      test('should not throw', () => {
+        const safeCloseable: AsyncCloseable = asSafeCloseable(throwingCloseable);
+        const result: Promise<void> = safeCloseable.close();
+        expect(result).toBeUndefined();
+      });
+
+      test('should handle error', () => {
+        let handledError: unknown;
+        const safeCloseable: AsyncCloseable = asSafeCloseable(throwingCloseable, (error) => {
+          handledError = error;
+        });
+
+        const result = safeCloseable.close();
+        expect(result).toBeUndefined();
+        expect(handledError).toBeInstanceOf(Error);
+        expect((handledError as Error).message).toBe('Sync in async error');
+      });
     });
   });
 });

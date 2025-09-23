@@ -100,17 +100,29 @@ export const asCloseable = <T extends readonly CloseableLike[]>(...input: T): Cl
   return combined as CloseableAllResult<T>;
 };
 
-export const asSafeCloseable = <C extends Closeable>(closeable: C): C => {
+export const asSafeCloseable = <C extends Closeable>(closeable: C, onError?: (error: unknown) => void): C => {
   const safe = {
     close: () => {
       try {
         const value = closeable.close();
         if (value instanceof Promise) {
-          return value.catch(() => undefined);
+          return value.catch((error: unknown) => {
+            try {
+              onError?.(error);
+            } catch {
+              // ignore
+            }
+            return undefined;
+          });
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        try {
+          onError?.(error);
+        } catch {
+          // ignore
+        }
       }
+
       return undefined;
     },
   };
