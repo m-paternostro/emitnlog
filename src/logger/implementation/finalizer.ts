@@ -1,5 +1,8 @@
 import type { Simplify, Writable } from 'type-fest';
 
+import type { Closeable } from '../../utils/common/closeable.ts';
+import { asCloseable } from '../../utils/common/closeable.ts';
+
 /**
  * Base interface for objects that support resource cleanup operations.
  *
@@ -104,12 +107,10 @@ export const asSingleFinalizer = <Fs extends readonly Finalizer[]>(...finalizers
     };
   }
 
-  const closeables = finalizers.filter((logSink) => logSink.close);
+  const closeables: Closeable[] = finalizers.filter((logSink): logSink is Closeable => !!logSink.close);
   if (closeables.length) {
-    finalizer.close = () => {
-      const promises = closeables.map((logSink) => logSink.close?.()).filter((result) => result instanceof Promise);
-      return promises.length ? Promise.all(promises).then(() => undefined) : undefined;
-    };
+    const combined = asCloseable(...closeables);
+    finalizer.close = () => combined.close();
   }
 
   return finalizer as ForgeFinalizer<Fs>;

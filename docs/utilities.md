@@ -659,7 +659,11 @@ Error handling ensures all resources are closed even if some fail:
 ```ts
 import { closeAll } from 'emitnlog/utils';
 
-const failing = { close: () => { throw new Error('Cleanup failed'); } };
+const failing = {
+  close: () => {
+    throw new Error('Cleanup failed');
+  },
+};
 const working = { close: () => console.log('Cleaned up') };
 
 try {
@@ -670,8 +674,16 @@ try {
 }
 
 // Multiple failures are accumulated
-const failing1 = { close: () => { throw new Error('Error 1'); } };
-const failing2 = { close: async () => { throw new Error('Error 2'); } };
+const failing1 = {
+  close: () => {
+    throw new Error('Error 1');
+  },
+};
+const failing2 = {
+  close: async () => {
+    throw new Error('Error 2');
+  },
+};
 
 try {
   await closeAll(failing1, failing2);
@@ -727,7 +739,9 @@ Wraps closeables to prevent errors during cleanup from propagating, ensuring rob
 import { asSafeCloseable } from 'emitnlog/utils';
 
 const unreliableResource = {
-  close: () => { throw new Error('Cleanup failed'); }
+  close: () => {
+    throw new Error('Cleanup failed');
+  },
 };
 
 // Basic usage - errors are silently swallowed
@@ -750,18 +764,14 @@ import { asCloseable, asSafeCloseable } from 'emitnlog/utils';
 const robustCleanup = asCloseable(
   asSafeCloseable(riskyResource1, logError),
   asSafeCloseable(riskyResource2, logError),
-  asSafeCloseable(riskyResource3, logError)
+  asSafeCloseable(riskyResource3, logError),
 );
 
 await robustCleanup.close(); // Guaranteed to never throw or reject
 
 // In application shutdown
 process.on('SIGTERM', async () => {
-  const cleanup = asCloseable(
-    asSafeCloseable(database),
-    asSafeCloseable(server),
-    asSafeCloseable(logger)
-  );
+  const cleanup = asCloseable(asSafeCloseable(database), asSafeCloseable(server), asSafeCloseable(logger));
 
   await cleanup.close(); // Safe shutdown even if some resources fail
   process.exit(0);
