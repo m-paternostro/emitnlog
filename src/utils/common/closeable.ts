@@ -2,92 +2,113 @@ import { errorify } from '../converter/errorify.ts';
 import { isNotNullable } from './is-not-nullable';
 
 /**
- * A closeable that closes synchronously.
+ * A resource that can be closed synchronously.
+ *
+ * Objects implementing this interface provide a `close()` method that performs cleanup operations immediately and
+ * returns `void`. This is typically used for resources that don't require asynchronous operations during cleanup, such
+ * as event listeners, timers, or simple state cleanup.
  */
 export type SyncCloseable = { readonly close: () => void };
 
 /**
- * A closeable that closes asynchronously.
+ * A resource that can be closed asynchronously.
+ *
+ * Objects implementing this interface provide a `close()` method that returns a `Promise<void>`. This is typically used
+ * for resources that require asynchronous operations during cleanup, such as file handles, database connections, or
+ * network resources.
  */
 export type AsyncCloseable = { readonly close: () => Promise<void> };
 
 /**
- * A closeable that closes either synchronously or asynchronously.
+ * A resource that can be closed either synchronously or asynchronously.
+ *
+ * This union type represents any closeable resource, whether it requires synchronous or asynchronous cleanup. It's the
+ * most flexible type for accepting closeable resources when the cleanup method is not known in advance.
  */
 export type Closeable = SyncCloseable | AsyncCloseable;
 
 /**
  * Closes all provided closeables, returning a promise if at least one closeable is asynchronous.
  *
- * To ensure all closeables are actually closed, this method accumulates all errors thrown or rejected by the individual
- * handling of each closeable. The accumulated errors, if any, are then thrown if the all closeables are synchronous or
- * rejected if at least one closeable is asynchronous.
+ * This function ensures all closeables are properly closed even if some throw errors during cleanup. Errors from
+ * individual closeables are accumulated and then thrown (for synchronous closeables) or rejected (for asynchronous
+ * closeables) after all cleanup operations complete.
  *
- * Note on typing: the return type is `void` or `Promise<void>` depending on what TypeScript can infer about the
- * synchronicity of the provided closeables. In ambiguous cases, the safer `Promise<void>` may be inferred so that
- * callers remember to `await`.
+ * The return type is automatically inferred based on the types of the provided closeables:
  *
- * @example
+ * - All synchronous closeables → returns `void`
+ * - Any asynchronous closeables → returns `Promise<void>`
+ * - Ambiguous types → defaults to `Promise<void>` for safety
+ *
+ * @example Synchronous closeables
  *
  * ```ts
  * import { closeAll } from 'emitnlog/utils';
  *
- * // All sync → returns void
- * const a = { close: () => {} };
- * const b = { close: () => {} };
- * closeAll(a, b);
+ * const fileHandle = { close: () => console.log('File closed') };
+ * const eventListener = { close: () => console.log('Listener removed') };
+ *
+ * closeAll(fileHandle, eventListener); // Returns void immediately
  * ```
  *
- * @example
+ * @example Mixed synchronous and asynchronous closeables
  *
  * ```ts
  * import { closeAll } from 'emitnlog/utils';
  *
- * // Mix of sync and async → returns Promise<void>
- * const a = { close: () => {} };
- * const b = { close: async () => {} };
- * await closeAll(a, b);
+ * const timer = { close: () => clearInterval(timerId) };
+ * const dbConnection = { close: async () => await db.disconnect() };
+ *
+ * await closeAll(timer, dbConnection); // Returns Promise<void>
  * ```
  *
- * @example
+ * @example Error handling with single error
  *
  * ```ts
  * import { closeAll } from 'emitnlog/utils';
  *
- * const a = {
+ * const failing = {
  *   close: () => {
- *     throw new Error('fail');
+ *     throw new Error('Cleanup failed');
  *   },
  * };
- * const b = { close: () => {} };
+ * const working = { close: () => console.log('Cleaned up successfully') };
  *
  * try {
- *   // invokes both `close` methods
- *   closeAll(a, b);
- * } catch (error: Error) {
- *   // error is the error thrown by `a`
+ *   closeAll(failing, working);
+ * } catch (error) {
+ *   console.log(error.message); // 'Cleanup failed'
+ *   // Both closeables were called, but error was thrown after all completed
  * }
  * ```
  *
- * @example
+ * @example Error handling with multiple errors
  *
  * ```ts
- * import { asCloseable, closeAll } from 'emitnlog/utils';
+ * import { closeAll } from 'emitnlog/utils';
  *
- * const a = asCloseable(() => { throw new Error('fail'); });
- * const b = asCloseable(() => Promise.reject('error') });
+ * const failing1 = {
+ *   close: () => {
+ *     throw new Error('First error');
+ *   },
+ * };
+ * const failing2 = {
+ *   close: async () => {
+ *     throw new Error('Second error');
+ *   },
+ * };
  *
  * try {
- *   // invokes both `close` methods
- *   await closeAll(a, b);
+ *   await closeAll(failing1, failing2);
  * } catch (error) {
- *   // error.cause is an array with the errors from a and b
+ *   console.log(error.message); // 'Multiple errors occurred while closing closeables'
+ *   console.log(error.cause); // Array containing both Error objects
  * }
  * ```
  *
- * @param closeables The closeables to close @returns `void` or `Promise<void>` depending on the synchronicity of the
- *   provided closeables
- * @throws An Error if any closeable throws an error.
+ * @param closeables - The closeables to close
+ * @returns `void` if all closeables are synchronous, `Promise<void>` if any are asynchronous
+ * @throws {Error} Single error if only one closeable fails, or aggregate error with `cause` array if multiple fail
  */
 export const closeAll = <T extends readonly Closeable[]>(...closeables: T): CloseAllResult<T> => {
   if (closeables.length === 0) {
@@ -131,37 +152,75 @@ export const closeAll = <T extends readonly Closeable[]>(...closeables: T): Clos
 };
 
 /**
- * Produces a single closeable that, when closed, closes all the specified inputs.
+ * Creates a single closeable that, when closed, closes all the specified inputs.
  *
- * This method can be used to convert a function to a closable or to combine several of these functions, existing
- * closeables and even "partial closeables" (like loggers) into a single closeable. Like {@link closeAll}, then the close
- * method of the returned closeable is invoked, any error throw or rejected by an individual "closeable source" is
- * accumulated and then thrown (or rejected) after all sources are invoked.
+ * This function is useful to create closeables from functions or for combining multiple cleanup operations into a
+ * single closeable object. It accepts various types of inputs including existing closeables, cleanup functions, and
+ * "partial closeables" like loggers with optional `close` methods. When the returned closeable is closed, all inputs
+ * are processed and any errors are accumulated using the same error handling strategy as {@link closeAll}.
  *
- * Note on typing: this function tries to yield a `SyncCloseable` whenever all inputs are known to be synchronous. In
- * ambiguous cases where TypeScript cannot infer synchronicity (e.g., unions or imprecise function types), the safer
- * `AsyncCloseable` may be inferred to encourage callers (and linters) to `await` the result.
+ * The return type is automatically inferred:
  *
- * @example
+ * - All synchronous inputs → returns `SyncCloseable`
+ * - Any asynchronous inputs → returns `AsyncCloseable`
+ * - Ambiguous types → defaults to `AsyncCloseable` for safety
  *
- * ```ts
- * import { asCloseable } from 'emitnlog/utils';
- *
- * const dispose = asCloseable(() => {...});
- * dispose.close();
- * ```
- *
- * @example
+ * @example Converting functions to closeables
  *
  * ```ts
  * import { asCloseable } from 'emitnlog/utils';
  *
- * const c = asCloseable({ close: () => {} }, logger, async () => {});
- * await c.close();
+ * const cleanup1 = () => clearTimeout(timerId);
+ * const cleanup2 = () => removeEventListener('resize', handler);
+ *
+ * const disposer = asCloseable(cleanup1, cleanup2);
+ * disposer.close(); // Calls both cleanup functions
  * ```
  *
- * @param input The closeables or functions to collapse into a single closeable
- * @returns A closeable that, when closed, closes all the specified inputs
+ * @example Combining mixed closeable types
+ *
+ * ```ts
+ * import { asCloseable } from 'emitnlog/utils';
+ *
+ * const syncCloseable = { close: () => console.log('Sync cleanup') };
+ * const asyncFunction = async () => await db.disconnect();
+ * const logger = createLogger(); // Has optional close?: () => void | Promise<void>
+ *
+ * const combined = asCloseable(syncCloseable, asyncFunction, logger);
+ * await combined.close(); // Returns AsyncCloseable due to async input
+ * ```
+ *
+ * @example Error handling
+ *
+ * ```ts
+ * import { asCloseable } from 'emitnlog/utils';
+ *
+ * const failing = () => {
+ *   throw new Error('Cleanup failed');
+ * };
+ * const working = () => console.log('Success');
+ *
+ * const combined = asCloseable(failing, working);
+ *
+ * try {
+ *   combined.close();
+ * } catch (error) {
+ *   console.log(error.message); // 'Cleanup failed'
+ *   // Both functions were called despite the error
+ * }
+ * ```
+ *
+ * @example With empty input
+ *
+ * ```ts
+ * import { asCloseable } from 'emitnlog/utils';
+ *
+ * const noop = asCloseable(); // Creates a no-op closeable
+ * noop.close(); // Does nothing, returns void
+ * ```
+ *
+ * @param input - The closeables, functions, or partial closeables to combine
+ * @returns A closeable that closes all specified inputs when its `close()` method is called
  */
 export const asCloseable = <T extends readonly CloseableLike[]>(...input: T): CloseableAllResult<T> => {
   const closeables: readonly Closeable[] = input
@@ -192,36 +251,85 @@ export const asCloseable = <T extends readonly CloseableLike[]>(...input: T): Cl
 };
 
 /**
- * Wraps a closeable so that errors during `close()` are ignored or captured.
+ * Wraps a closeable to prevent errors during `close()` from propagating.
  *
- * This utility returns a closeable but whose `close()` traps synchronous throws and async rejections. If an error
- * occurs, the optional `onError` callback is invoked and the error is swallowed (the returned value resolves to
- * `undefined`).
+ * This utility creates a "safe" version of a closeable that catches both synchronous throws and asynchronous rejections
+ * during the close operation. If an error occurs, the optional `onError` callback is invoked with the error, and the
+ * error is then swallowed (the close operation completes normally).
  *
- * This is particularly useful together with {@link asCloseable} or {@link closeAll} when you need to ensure that an
- * cleanup never throws.
+ * This is particularly useful for ensuring cleanup operations never fail, which is important in scenarios like
+ * application shutdown, resource cleanup chains, or when combining multiple closeables with {@link asCloseable} or
+ * {@link closeAll}.
  *
- * @example
+ * @example Basic usage
  *
  * ```ts
- * const safe = asSafeCloseable(() => {...}),
- * await safe.close();
+ * import { asSafeCloseable } from 'emitnlog/utils';
+ *
+ * const failing = {
+ *   close: () => {
+ *     throw new Error('Will be ignored');
+ *   },
+ * };
+ * const silent = asSafeCloseable(failing);
+ * silent.close(); // Error is silently swallowed
  * ```
  *
- * @example
+ * @example Basic usage with error handling
  *
  * ```ts
- * const safe = asCloseable(
- *   asSafeCloseable(() => {}),
- *   asSafeCloseable(async () => {}),
+ * import { createConsoleLogLogger } from 'emitnlog/logger';
+ * import { asSafeCloseable } from 'emitnlog/utils';
+ *
+ * const unreliableResource = {
+ *   close: () => {
+ *     throw new Error('Cleanup failed');
+ *   },
+ * };
+ *
+ * const logger = createConsoleLogLogger();
+ * const safeResource = asSafeCloseable(unreliableResource, (error) => {
+ *   logger.w`Cleanup error: ${error}'`;
+ * });
+ *
+ * safeResource.close(); // Never throws, logs warning instead
+ * ```
+ *
+ * @example With asynchronous closeables
+ *
+ * ```ts
+ * import { asSafeCloseable } from 'emitnlog/utils';
+ *
+ * const asyncResource = {
+ *   close: async () => {
+ *     throw new Error('Async cleanup failed');
+ *   },
+ * };
+ *
+ * const safeAsync = asSafeCloseable(asyncResource, (error) => {
+ *   console.error('Async cleanup error:', error);
+ * });
+ *
+ * await safeAsync.close(); // Never rejects, logs error instead
+ * ```
+ *
+ * @example Combining with asCloseable for robust cleanup
+ *
+ * ```ts
+ * import { asCloseable, asSafeCloseable } from 'emitnlog/utils';
+ *
+ * const robustCleanup = asCloseable(
+ *   asSafeCloseable(riskyResource1),
+ *   asSafeCloseable(riskyResource2),
+ *   asSafeCloseable(riskyResource3),
  * );
  *
- * await safe.close();
+ * await robustCleanup.close(); // Guaranteed to not throw/reject
  * ```
  *
- * @param closeable The closeable to wrap
- * @param onError Optional error handler invoked for thrown or rejected errors during `close()`
- * @returns A synchronous or asynchronous closeable that closes the specified input without throwing or rejecting.
+ * @param closeable - The closeable to wrap with error protection
+ * @param onError - Optional callback invoked when an error occurs during close
+ * @returns A closeable that never throws or rejects, matching the sync/async nature of the input
  */
 export const asSafeCloseable = <C extends Closeable>(
   closeable: C,
@@ -282,11 +390,13 @@ type HasAsyncCloseable<T extends readonly CloseableLike[]> = T extends readonly 
         ? true
         : HasPotentiallyAsyncClose<First> extends true
           ? true
-          : First extends () => Promise<unknown>
-            ? true
-            : Rest extends readonly CloseableLike[]
-              ? HasAsyncCloseable<Rest>
-              : false
+          : First extends () => never
+            ? false
+            : First extends () => Promise<unknown>
+              ? true
+              : Rest extends readonly CloseableLike[]
+                ? HasAsyncCloseable<Rest>
+                : false
     : T extends readonly (AsyncCloseable | PartialAsyncCloseable)[]
       ? true
       : T extends readonly (infer U)[]
@@ -294,9 +404,11 @@ type HasAsyncCloseable<T extends readonly CloseableLike[]> = T extends readonly 
           ? true
           : HasPotentiallyAsyncClose<U> extends true
             ? true
-            : U extends () => Promise<unknown>
-              ? true
-              : false
+            : U extends () => never
+              ? false
+              : U extends () => Promise<unknown>
+                ? true
+                : false
         : false;
 
 // Conditional return type

@@ -504,20 +504,22 @@ describe('emitnlog.utils.closeable', () => {
       const func2 = () => 42;
       const func3 = () => null;
       const func4 = () => true;
+      const func5 = () => undefined as never;
 
-      const closeable = asCloseable(func1, func2, func3, func4);
+      const closeable = asCloseable(func1, func2, func3, func4, func5);
       const result: void = closeable.close();
 
       expect(result).toBeUndefined();
     });
 
-    test('should handle functions that return values including', async () => {
+    test('should handle functions that return values including promises', async () => {
       const func1 = () => 'hello';
       const func2 = () => 42;
       const func3 = () => null;
       const func4 = () => Promise.resolve(true);
+      const func5 = () => Promise.resolve(undefined as never);
 
-      const closeable = asCloseable(func1, func2, func3, func4);
+      const closeable = asCloseable(func1, func2, func3, func4, func5);
       const result: Promise<void> = closeable.close();
       expect(result).toBeInstanceOf(Promise);
       await expect(result).resolves.toBeUndefined();
@@ -607,6 +609,126 @@ describe('emitnlog.utils.closeable', () => {
       expect(closeCalled).toBe(true);
       expect(func1).toHaveBeenCalledTimes(1);
       expect(closeableSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('should accumulate sync errors and throw after closing all sources', () => {
+      const err1 = new Error('err1');
+      const err3 = new Error('err3');
+
+      const c1 = asCloseable(() => {
+        throw err1;
+      });
+      const fnOk: () => void = () => undefined;
+      const c3 = asCloseable(() => {
+        throw err3;
+      });
+
+      const s1 = jest.spyOn(c1, 'close');
+      const sOk = jest.fn(fnOk);
+      const s3 = jest.spyOn(c3, 'close');
+
+      const combined = asCloseable(c1, sOk, c3);
+
+      try {
+        combined.close();
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(s1).toHaveBeenCalledTimes(1);
+        expect(sOk).toHaveBeenCalledTimes(1);
+        expect(s3).toHaveBeenCalledTimes(1);
+
+        const thrown = error as Error & { cause?: unknown };
+        expect(thrown).toBeInstanceOf(Error);
+        expect(thrown.message).toBe('Multiple errors occurred while closing closeables');
+
+        const cause = thrown.cause as unknown[] | undefined;
+        expect(Array.isArray(cause)).toBe(true);
+        expect((cause as unknown[]).length).toBe(2);
+        expect((cause as unknown[])[0]).toBeInstanceOf(Error);
+        expect((cause as unknown[])[1]).toBeInstanceOf(Error);
+      }
+    });
+
+    test('should throw single error if only one sync source fails', () => {
+      const err = new Error('boom');
+      const bad = asCloseable(() => {
+        throw err;
+      });
+      const okFn: () => void = jest.fn<() => void>();
+      const sBad = jest.spyOn(bad, 'close');
+
+      const combined = asCloseable(bad, okFn);
+
+      try {
+        combined.close();
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(sBad).toHaveBeenCalledTimes(1);
+        expect(okFn).toHaveBeenCalledTimes(1);
+
+        const thrown = error as Error & { cause?: unknown };
+        expect(thrown).toBe(err);
+      }
+    });
+
+    test('should accumulate mixed sync/async errors and reject after all sources', async () => {
+      const syncErr = new Error('sync-fail');
+      const asyncErr = new Error('async-fail');
+
+      const badSync = asCloseable(() => {
+        throw syncErr;
+      });
+      let okAsyncRan = false;
+      const okAsync = async () => {
+        await delay(1);
+        okAsyncRan = true;
+      };
+      const badAsync = async () => {
+        await delay(1);
+        throw asyncErr;
+      };
+
+      const sBadSync = jest.spyOn(badSync, 'close');
+      const sOkAsync = jest.fn(okAsync);
+      const sBadAsync = jest.fn(badAsync);
+
+      const combined = asCloseable(badSync, sOkAsync, sBadAsync);
+
+      const result = combined.close();
+      expect(result).toBeInstanceOf(Promise);
+
+      // sync executed immediately
+      expect(sBadSync).toHaveBeenCalledTimes(1);
+      expect(okAsyncRan).toBe(false);
+
+      await expect(result).rejects.toThrow('Multiple errors occurred while closing closeables');
+
+      // all sources executed
+      expect(sBadSync).toHaveBeenCalledTimes(1);
+      expect(sOkAsync).toHaveBeenCalledTimes(1);
+      expect(sBadAsync).toHaveBeenCalledTimes(1);
+      expect(okAsyncRan).toBe(true);
+    });
+
+    test('should reject with single error when only one async source fails', async () => {
+      const asyncErr = new Error('only-async-fail');
+
+      const okSync: () => void = jest.fn<() => void>();
+      const badAsync: () => Promise<void> = async () => {
+        await delay(1);
+        throw asyncErr;
+      };
+
+      const sBadAsync = jest.fn(badAsync);
+
+      const combined = asCloseable(okSync, sBadAsync);
+      const result = combined.close();
+      expect(result).toBeInstanceOf(Promise);
+
+      await expect(result).rejects.toBe(asyncErr);
+
+      expect(okSync).toHaveBeenCalledTimes(1);
+      expect(sBadAsync).toHaveBeenCalledTimes(1);
     });
   });
 
