@@ -4,6 +4,7 @@ import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { appendPrefix, withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
+import { closeAll } from '../../utils/common/closeable.ts';
 import { generateRandomString } from '../../utils/common/generate-random-string.ts';
 import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type {
@@ -102,12 +103,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
       if (!closed) {
         trackerLogger.d`closing tracker`;
         closed = true;
-
-        invokedNotifier.close();
-        startedNotifier.close();
-        completedNotifier.close();
-        erroredNotifier.close();
-        stack.close();
+        closeAll(invokedNotifier, startedNotifier, completedNotifier, erroredNotifier, stack);
       }
     },
 

@@ -104,10 +104,10 @@ export const asSingleFinalizer = <Fs extends readonly Finalizer[]>(...finalizers
     };
   }
 
-  const closables = finalizers.filter((logSink) => logSink.close);
-  if (closables.length) {
+  const closeables = finalizers.filter((logSink) => logSink.close);
+  if (closeables.length) {
     finalizer.close = () => {
-      const promises = closables.map((logSink) => logSink.close?.()).filter((result) => result instanceof Promise);
+      const promises = closeables.map((logSink) => logSink.close?.()).filter((result) => result instanceof Promise);
       return promises.length ? Promise.all(promises).then(() => undefined) : undefined;
     };
   }
