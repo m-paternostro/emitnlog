@@ -16,6 +16,10 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [withTimeout](#withtimeout)
   - [createDeferredValue](#createdeferredvalue)
   - [startPolling](#startpolling)
+- [Resource Management](#resource-management)
+  - [closeAll](#closeall)
+  - [asCloseable](#ascloseable)
+  - [asSafeCloseable](#assafecloseable)
 
 ## Data Utilities
 
@@ -623,6 +627,154 @@ const { wait } = startPolling(() => fetchJobStatus(), 1000, {
 const { wait: timedWait } = startPolling(() => checkHealth(), 2000, {
   timeout: 30_000,
   timeoutValue: 'timeout' as const,
+});
+```
+
+## Resource Management
+
+Utilities for managing resource lifecycle and cleanup operations with robust error handling.
+
+### closeAll
+
+Closes multiple resources at once, handling both synchronous and asynchronous closeables with error accumulation.
+
+```ts
+import { closeAll } from 'emitnlog/utils';
+
+// Synchronous resources
+const timer = { close: () => clearInterval(timerId) };
+const listener = { close: () => removeEventListener('click', handler) };
+
+closeAll(timer, listener); // Returns void immediately
+
+// Mixed sync and async resources
+const dbConnection = { close: async () => await db.disconnect() };
+const fileHandle = { close: () => fs.closeSync(fd) };
+
+await closeAll(dbConnection, fileHandle); // Returns Promise<void>
+```
+
+Error handling ensures all resources are closed even if some fail:
+
+```ts
+import { closeAll } from 'emitnlog/utils';
+
+const failing = {
+  close: () => {
+    throw new Error('Cleanup failed');
+  },
+};
+const working = { close: () => console.log('Cleaned up') };
+
+try {
+  closeAll(failing, working);
+} catch (error) {
+  console.log(error.message); // 'Cleanup failed'
+  // Both close methods were called despite the error
+}
+
+// Multiple failures are accumulated
+const failing1 = {
+  close: () => {
+    throw new Error('Error 1');
+  },
+};
+const failing2 = {
+  close: async () => {
+    throw new Error('Error 2');
+  },
+};
+
+try {
+  await closeAll(failing1, failing2);
+} catch (error) {
+  console.log(error.message); // 'Multiple errors occurred while closing closeables'
+  console.log(error.cause); // Array with both Error objects
+}
+```
+
+### asCloseable
+
+Converts functions and combines multiple cleanup operations into a single closeable resource.
+
+```ts
+import { asCloseable } from 'emitnlog/utils';
+
+// Convert cleanup functions to closeable
+const cleanup1 = () => clearTimeout(timerId);
+const cleanup2 = () => removeEventListener('resize', handler);
+
+const disposer = asCloseable(cleanup1, cleanup2);
+disposer.close(); // Calls both cleanup functions
+
+// Combine different types of closeables
+const syncResource = { close: () => console.log('Sync cleanup') };
+const asyncFunction = async () => await db.disconnect();
+const logger = createLogger(); // Has optional close method
+
+const combined = asCloseable(syncResource, asyncFunction, logger);
+await combined.close(); // Returns AsyncCloseable due to async input
+```
+
+Works with various input types including partial closeables like loggers:
+
+```ts
+import { asCloseable } from 'emitnlog/utils';
+import { createConsoleLogLogger } from 'emitnlog/logger';
+
+const logger = createConsoleLogLogger();
+const cleanup = () => clearAllTimers();
+const resource = { close: async () => await cleanup() };
+
+// Automatically infers return type based on inputs
+const combined = asCloseable(logger, cleanup, resource);
+// Returns AsyncCloseable because logger.close can be async
+```
+
+### asSafeCloseable
+
+Wraps closeables to prevent errors during cleanup from propagating, ensuring robust resource management.
+
+```ts
+import { asSafeCloseable } from 'emitnlog/utils';
+
+const unreliableResource = {
+  close: () => {
+    throw new Error('Cleanup failed');
+  },
+};
+
+// Basic usage - errors are silently swallowed
+const silent = asSafeCloseable(unreliableResource);
+silent.close(); // Never throws
+
+// With error handling callback
+const withLogging = asSafeCloseable(unreliableResource, (error) => {
+  console.warn('Cleanup error:', error.message);
+});
+withLogging.close(); // Logs warning but doesn't throw
+```
+
+Perfect for ensuring cleanup operations never fail in critical sections:
+
+```ts
+import { asCloseable, asSafeCloseable } from 'emitnlog/utils';
+
+// Create a robust cleanup chain that never fails
+const robustCleanup = asCloseable(
+  asSafeCloseable(riskyResource1, logError),
+  asSafeCloseable(riskyResource2, logError),
+  asSafeCloseable(riskyResource3, logError),
+);
+
+await robustCleanup.close(); // Guaranteed to never throw or reject
+
+// In application shutdown
+process.on('SIGTERM', async () => {
+  const cleanup = asCloseable(asSafeCloseable(database), asSafeCloseable(server), asSafeCloseable(logger));
+
+  await cleanup.close(); // Safe shutdown even if some resources fail
+  process.exit(0);
 });
 ```
 
