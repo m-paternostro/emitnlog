@@ -1,8 +1,24 @@
+import { isNotNullable } from './is-not-nullable';
+
 export type SyncCloseable = { readonly close: () => void };
 export type AsyncCloseable = { readonly close: () => Promise<void> };
 export type Closeable = SyncCloseable | AsyncCloseable;
 
-type CloseableLike = SyncCloseable | AsyncCloseable | (() => unknown);
+type PartialSyncCloseable = Partial<SyncCloseable>;
+type PartialAsyncCloseable = Partial<AsyncCloseable>;
+type CloseableLike = SyncCloseable | PartialSyncCloseable | AsyncCloseable | PartialAsyncCloseable | (() => unknown);
+
+// Helper type to check if a type has a close method that could return Promise<void>
+type HasPotentiallyAsyncClose<T> = T extends { close?: (...args: unknown[]) => infer R }
+  ? [R] extends [Promise<void>]
+    ? true
+    : // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+      [R] extends [void]
+      ? false
+      : [R] extends [void | Promise<void>]
+        ? true
+        : false
+  : false;
 
 // Type helper to determine if any closeable is async
 type HasAsyncCloseable<T extends readonly CloseableLike[]> = T extends readonly []
@@ -10,19 +26,25 @@ type HasAsyncCloseable<T extends readonly CloseableLike[]> = T extends readonly 
   : T extends readonly [infer First, ...infer Rest]
     ? First extends AsyncCloseable
       ? true
-      : First extends () => Promise<unknown>
+      : First extends PartialAsyncCloseable
         ? true
-        : Rest extends readonly CloseableLike[]
-          ? HasAsyncCloseable<Rest>
-          : false
-    : T extends readonly AsyncCloseable[]
+        : HasPotentiallyAsyncClose<First> extends true
+          ? true
+          : First extends () => Promise<unknown>
+            ? true
+            : Rest extends readonly CloseableLike[]
+              ? HasAsyncCloseable<Rest>
+              : false
+    : T extends readonly (AsyncCloseable | PartialAsyncCloseable)[]
       ? true
       : T extends readonly (infer U)[]
-        ? U extends AsyncCloseable
+        ? U extends AsyncCloseable | PartialAsyncCloseable
           ? true
-          : U extends () => Promise<unknown>
+          : HasPotentiallyAsyncClose<U> extends true
             ? true
-            : false
+            : U extends () => Promise<unknown>
+              ? true
+              : false
         : false;
 
 // Conditional return type
@@ -49,24 +71,30 @@ export const closeAll = <T extends readonly Closeable[]>(...closeables: T): Clos
   return undefined as CloseAllResult<T>;
 };
 
-// Returns a closeable that combines all specified closeables or close functions
+// Returns a single closeable that combines all specified closeables or close functions
 export const asCloseable = <T extends readonly CloseableLike[]>(...input: T): CloseableAllResult<T> => {
-  const closeables: readonly Closeable[] = input.map((i) => {
-    if (typeof i === 'function') {
-      const closeable: Closeable = {
-        close: () => {
-          const value = i();
-          if (value instanceof Promise) {
-            return value.then(() => undefined);
-          }
-          return undefined;
-        },
-      };
-      return closeable;
-    }
+  const closeables: readonly Closeable[] = input
+    .map((i): Closeable | undefined => {
+      if (typeof i === 'function') {
+        const closeable: Closeable = {
+          close: () => {
+            const value = i();
+            if (value instanceof Promise) {
+              return value.then(() => undefined);
+            }
+            return undefined;
+          },
+        };
+        return closeable;
+      }
 
-    return i;
-  });
+      if (!i.close) {
+        return undefined;
+      }
+
+      return i as Closeable;
+    })
+    .filter(isNotNullable);
 
   const combined: Closeable = { close: () => closeAll(...closeables) };
   return combined as CloseableAllResult<T>;

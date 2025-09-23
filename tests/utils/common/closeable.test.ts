@@ -3,6 +3,8 @@
 
 import { describe, expect, jest, test } from '@jest/globals';
 
+import type { implementation, Logger } from '../../../src/logger/index.ts';
+import { emitter } from '../../../src/logger/index.ts';
 import type { AsyncCloseable, Closeable, SyncCloseable } from '../../../src/utils/index.ts';
 import { asCloseable, asSafeCloseable, closeAll, delay } from '../../../src/utils/index.ts';
 
@@ -408,6 +410,59 @@ describe('emitnlog.utils.closeable', () => {
       expect(result).toBeInstanceOf(Promise);
       await expect(result).resolves.toBeUndefined();
       expect(called).toBe(true);
+    });
+
+    test('should handle loggers', () => {
+      let closeCalled = false;
+      const logger: Logger = emitter.createLogger('info', {
+        sink: () => undefined,
+        close: () => {
+          closeCalled = true;
+        },
+      });
+
+      const func1: () => void = jest.fn<() => void>();
+      const closeable: SyncCloseable = { close: () => undefined };
+      const closeableSpy = jest.spyOn(closeable, 'close');
+
+      const combined = asCloseable(logger, closeable, func1);
+
+      expect(closeCalled).toBe(false);
+      expect(func1).toHaveBeenCalledTimes(0);
+      expect(closeableSpy).toHaveBeenCalledTimes(0);
+
+      const result: Promise<void> = combined.close();
+      expect(result).toBeUndefined();
+      expect(closeCalled).toBe(true);
+      expect(func1).toHaveBeenCalledTimes(1);
+      expect(closeableSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('should handle loggers with sync close', () => {
+      let closeCalled = false;
+      const logger: implementation.SyncFinalizer<Logger> = emitter.createLogger('info', {
+        sink: () => undefined,
+        flush: () => undefined,
+        close: () => {
+          closeCalled = true;
+        },
+      });
+
+      const func1: () => void = jest.fn<() => void>();
+      const closeable: SyncCloseable = { close: () => undefined };
+      const closeableSpy = jest.spyOn(closeable, 'close');
+
+      const combined = asCloseable(logger, closeable, func1);
+
+      expect(closeCalled).toBe(false);
+      expect(func1).toHaveBeenCalledTimes(0);
+      expect(closeableSpy).toHaveBeenCalledTimes(0);
+
+      const result: void = combined.close();
+      expect(result).toBeUndefined();
+      expect(closeCalled).toBe(true);
+      expect(func1).toHaveBeenCalledTimes(1);
+      expect(closeableSpy).toHaveBeenCalledTimes(1);
     });
   });
 
