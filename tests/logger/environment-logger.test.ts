@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
 import * as factory from '../../src/logger/factory.ts';
-import { type LogLevel, OFF_LOGGER } from '../../src/logger/index.ts';
+import type { LogLevel } from '../../src/logger/index.ts';
+import { OFF_LOGGER } from '../../src/logger/index.ts';
 import { fromEnv } from '../../src/logger/node/environment-logger.ts';
 import type { FileLoggerOptions } from '../../src/logger/node/factory.ts';
 import * as nodeFactory from '../../src/logger/node/factory.ts';
