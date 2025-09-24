@@ -186,30 +186,46 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
 
         if (maxDepth < 0 || depth < maxDepth) {
           try {
-            let keys = Object.keys(val);
+            const keys = Object.keys(val);
             if (!keys.length) {
               return '{}';
             }
 
+            const prepareValue = (key: string) => {
+              const v = (val as Record<string, unknown>)[key];
+              return prepare(v, depth + 1, seen);
+            };
+
             if (maxProperties >= 0 && keys.length > maxProperties) {
-              const originalLength = keys.length;
-              keys = keys.slice(0, maxProperties);
+              const length = keys.length;
               const truncatedObj: Record<string, unknown> = {};
-              for (let i = 0; i < maxProperties; i++) {
+
+              let max = maxProperties;
+              for (let i = 0; i < max; i++) {
                 const key = keys[i];
-                truncatedObj[key] = (val as Record<string, unknown>)[key];
+                try {
+                  truncatedObj[key] = prepareValue(key);
+                } catch {
+                  if (max < length) {
+                    max++;
+                  }
+                }
               }
 
-              const truncatedKey = `...(${originalLength - maxProperties})`;
-              keys.push(truncatedKey);
-              truncatedObj[truncatedKey] = '...';
-
-              val = truncatedObj;
+              if (length > max) {
+                const truncatedKey = `...(${length - max})`;
+                truncatedObj[truncatedKey] = '...';
+              }
+              return truncatedObj;
             }
 
             const result: Record<string, unknown> = {};
             for (const key of keys) {
-              result[key] = prepare((val as Record<string, unknown>)[key], depth + 1, seen);
+              try {
+                result[key] = prepareValue(key);
+              } catch {
+                // ignore
+              }
             }
             return result;
           } catch {
