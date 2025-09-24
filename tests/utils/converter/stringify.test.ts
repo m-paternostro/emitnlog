@@ -303,6 +303,33 @@ describe('emitnlog.utils.stringify', () => {
     });
   });
 
+  describe('throwing property', () => {
+    const obj = {
+      a: 1,
+      b: 2,
+      get c() {
+        throw new Error('test');
+      },
+      d: 4,
+      e: 5,
+    } as const;
+
+    test('should handle objects with throwing properties', () => {
+      const result = stringify(obj);
+      expect(result).toEqual('{"a":1,"b":2,"d":4,"e":5}');
+    });
+
+    test('should handle objects with throwing properties with truncate option', () => {
+      expect(stringify(obj, { maxProperties: 3 })).toEqual('{"a":1,"b":2,"d":4,"...(1)":"..."}');
+      expect(stringify(obj, { maxProperties: 4 })).toEqual('{"a":1,"b":2,"d":4,"e":5}');
+    });
+
+    test('should not include the throwing property with truncate option', () => {
+      const result = stringify(obj, { maxProperties: 2 });
+      expect(result).toEqual('{"a":1,"b":2,"...(3)":"..."}');
+    });
+  });
+
   describe('combined truncation scenarios', () => {
     test('should handle objects containing large arrays', () => {
       const obj = {
