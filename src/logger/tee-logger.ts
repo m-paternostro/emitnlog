@@ -1,5 +1,6 @@
 import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from './definition.ts';
-import { asSingleFinalizer, type ForgeFinalizer, type MergeFinalizer } from './implementation/finalizer.ts';
+import type { ForgeFinalizer, MergeFinalizer } from './implementation/finalizer.ts';
+import { asSingleFinalizer } from './implementation/finalizer.ts';
 import { HIGHEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
