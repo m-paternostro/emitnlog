@@ -33,6 +33,18 @@ describe('emitnlog.utils.stringify', () => {
     expect(stringify(error)).toBe('Something went wrong');
   });
 
+  test('should stringify Error objects without message with name', () => {
+    const error = new Error();
+    error.name = 'Error Name';
+    expect(stringify(error)).toBe('Error Name');
+  });
+
+  test('should stringify Error objects without message and without name', () => {
+    const error = new Error();
+    error.name = '';
+    expect(stringify(error)).toBe('[unknown error]');
+  });
+
   test('should handle Error objects with stack traces when includeStack is true', () => {
     const error = new Error('Test error');
     const result = stringify(error, { includeStack: true });
@@ -106,10 +118,16 @@ describe('emitnlog.utils.stringify', () => {
     expect(mapResult).toContain('key1');
     expect(mapResult).toContain('value1');
 
+    const noDepthMapResult = stringify(map, { maxDepth: 0 });
+    expect(noDepthMapResult).toBe('Map(2)');
+
     const setResult = stringify(set);
     expect(setResult).toContain('1');
     expect(setResult).toContain('2');
     expect(setResult).toContain('3');
+
+    const noDepthSetResult = stringify(set, { maxDepth: 0 });
+    expect(noDepthSetResult).toBe('Set(3)');
   });
 
   test('should handle Map objects with circular references', () => {

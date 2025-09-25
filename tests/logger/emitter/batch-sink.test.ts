@@ -124,7 +124,7 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
       expect(capturedLogs[0].message).toBe('After close');
     });
 
-    test('should handle zero flushDelayMs (no batching)', () => {
+    test('should handle zero flushDelayMs (no batching)', async () => {
       const batchedSink = emitter.batchSink(mockSink, { maxBufferSize: 100, flushDelayMs: 0 });
 
       batchedSink.sink('info', 'Message 1', []);
@@ -132,6 +132,15 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
 
       // Should pass through immediately
       expect(capturedLogs).toHaveLength(2);
+
+      expect(flushMock).toHaveBeenCalledTimes(0);
+      await batchedSink.flush();
+      expect(flushMock).toHaveBeenCalledTimes(1);
+
+      expect(closeMock).toHaveBeenCalledTimes(0);
+      await batchedSink.close();
+      expect(flushMock).toHaveBeenCalledTimes(1);
+      expect(closeMock).toHaveBeenCalledTimes(1);
     });
 
     test('should preserve args in batched logs', () => {
@@ -244,6 +253,33 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
       expect(capturedLogs).toHaveLength(3);
 
       jest.useRealTimers();
+    });
+
+    test('flush should forward buffered logs and call underlying flush', async () => {
+      const batchedSink = emitter.batchSizeSink(mockSink, 3);
+
+      batchedSink.sink('info', 'Message 1', []);
+      batchedSink.sink('info', 'Message 2', []);
+
+      expect(capturedLogs).toHaveLength(0);
+
+      await batchedSink.flush();
+
+      expect(capturedLogs.map((log) => log.message)).toEqual(['Message 1', 'Message 2']);
+      expect(flushMock).toHaveBeenCalledTimes(1);
+    });
+
+    test('close should flush remaining logs and call underlying close', async () => {
+      const batchedSink = emitter.batchSizeSink(mockSink, 3);
+
+      batchedSink.sink('info', 'Message 1', []);
+
+      expect(capturedLogs).toHaveLength(0);
+
+      await batchedSink.close();
+
+      expect(capturedLogs.map((log) => log.message)).toEqual(['Message 1']);
+      expect(closeMock).toHaveBeenCalledTimes(1);
     });
   });
 
