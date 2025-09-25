@@ -45,6 +45,34 @@ describe('emitnlog.tracker.cross-invocation', () => {
       expect(invocations[1].parentKey?.id).toBe(invocations[0].key.id);
     });
 
+    test('should track parent-child relationships for nested synchronous calls on errored invocations', () => {
+      const invocations: InvocationAtStage<'errored'>[] = [];
+      tracker.onErrored((invocation) => invocations.push(invocation));
+
+      const childFn = tracker.track('child', (x: number): number => {
+        throw new Error(`${x}`);
+      });
+      const parentFn = tracker.track('parent', (x: number) => childFn(x) + 1);
+
+      try {
+        parentFn(5);
+      } catch (error) {
+        expect((error as Error).message).toBe('5');
+      }
+
+      expect(invocations).toHaveLength(2);
+
+      // First invocation should be child with parent as parentKey
+      expect(invocations[0].key.operation).toBe('child');
+      expect(invocations[0].parentKey).toBeDefined();
+      expect(invocations[0].parentKey?.operation).toBe('parent');
+      expect(invocations[0].parentKey?.id).toBe(invocations[1].key.id);
+
+      // Second invocation should be parent with no parentKey
+      expect(invocations[1].key.operation).toBe('parent');
+      expect(invocations[1].parentKey).toBeUndefined();
+    });
+
     test('should track multi-level nesting (3+ levels deep)', () => {
       const invocations: InvocationAtStage<'started'>[] = [];
       tracker.onStarted((invocation) => invocations.push(invocation));

@@ -90,6 +90,33 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).toContain('Test in nested directory');
   });
 
+  test('should prefix file name with timestamp when datePrefix is true', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const fakeNow = new Date(2024, 0, 2, 3, 4, 5);
+      jest.setSystemTime(fakeNow);
+
+      const baseFile = path.join(testDir, 'prefixed.log');
+      const logger = createFileLogger(baseFile, { datePrefix: true, flushDelayMs: 0 });
+
+      const expectedPrefix = '20240102-030405_';
+      const prefixedName = path.basename(logger.filePath);
+      expect(prefixedName).toBe(`${expectedPrefix}prefixed.log`);
+
+      logger.info('Prefixed entry');
+      await logger.close();
+
+      const files = await fs.readdir(path.dirname(logger.filePath));
+      expect(files).toContain(prefixedName);
+
+      const content = await readLogFile(logger.filePath);
+      expect(content).toContain('Prefixed entry');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('should accept options object in constructor', async () => {
     const logger = createFileLogger(testLogFile, { level: 'warning', format: 'colorful' });
     expect(logger.level).toBe('warning');

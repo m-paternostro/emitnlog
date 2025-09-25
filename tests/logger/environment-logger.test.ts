@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 
+import { fromEnv as neutralFromEnv } from '../../src/logger/environment/environment-logger.ts';
 import * as factory from '../../src/logger/factory.ts';
 import type { LogLevel } from '../../src/logger/index.ts';
 import { OFF_LOGGER } from '../../src/logger/index.ts';
@@ -480,6 +481,43 @@ describe('emitnlog.logger.environment-logger', () => {
         expect(logger).toBe(fallbackLogger);
         expect(fallbackLoggerSpy).toHaveBeenCalledWith('alert', 'json-compact');
       });
+    });
+  });
+
+  describe('neutral fromEnv', () => {
+    test('should return OFF_LOGGER when no environment variables are set and no options provided', () => {
+      const logger = neutralFromEnv();
+      expect(logger).toBe(OFF_LOGGER);
+    });
+
+    test('should pass level and format to fallbackLogger', () => {
+      const fallbackLogger = createTestLogger();
+      const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
+
+      process.env.EMITNLOG_LEVEL = 'warning';
+      process.env.EMITNLOG_FORMAT = 'json-compact';
+
+      neutralFromEnv({ level: 'info', format: 'plain', fallbackLogger: fallbackLoggerSpy });
+
+      expect(fallbackLoggerSpy).toHaveBeenCalledWith('warning', 'json-compact');
+    });
+
+    test('should create console-log logger when EMITNLOG_LOGGER is "console-log"', () => {
+      process.env.EMITNLOG_LOGGER = 'console-log';
+      neutralFromEnv();
+      expect(factory.createConsoleLogLogger).toHaveBeenCalledWith(undefined, undefined);
+      expect(factory.createConsoleErrorLogger).not.toHaveBeenCalled();
+      expect(factory.createConsoleByLevelLogger).not.toHaveBeenCalled();
+      expect(nodeFactory.createFileLogger).not.toHaveBeenCalled();
+    });
+
+    test('should create FileLogger when EMITNLOG_LOGGER starts with "file:"', () => {
+      process.env.EMITNLOG_LOGGER = 'file:/path/to/log.txt';
+      expect(neutralFromEnv()).toBe(OFF_LOGGER);
+      expect(factory.createConsoleLogLogger).not.toHaveBeenCalled();
+      expect(factory.createConsoleErrorLogger).not.toHaveBeenCalled();
+      expect(factory.createConsoleByLevelLogger).not.toHaveBeenCalled();
+      expect(nodeFactory.createFileLogger).not.toHaveBeenCalled();
     });
   });
 

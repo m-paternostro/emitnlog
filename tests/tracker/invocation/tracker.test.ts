@@ -319,6 +319,50 @@ describe('emitnlog.tracker', () => {
       taggedTracker.close();
     });
 
+    test('should merge tracker-level and operation-level tags on errored invocations', () => {
+      const invocations: InvocationAtStage<'started' | 'errored'>[] = [];
+      const trackerTags: Tags = { service: 'auth', feature: 'signup' };
+      const operationTags: Tags = [
+        { name: 'feature', value: 'signup' },
+        { name: 'feature', value: 'login' },
+      ];
+
+      const taggedTracker = createInvocationTracker({ tags: trackerTags });
+      taggedTracker.onInvoked((invocation) => {
+        if (isAtStage(invocation, 'started') || isAtStage(invocation, 'errored')) {
+          invocations.push(invocation);
+        }
+      });
+
+      const fn = taggedTracker.track(
+        'test',
+        (a: number) => {
+          throw new Error(`${a}`);
+        },
+        { tags: operationTags },
+      );
+
+      try {
+        fn(5);
+      } catch (error) {
+        expect((error as Error).message).toBe('5');
+      }
+
+      expect(invocations).toHaveLength(2); // 1 started, 1 errored
+      expect(invocations[0].tags).toEqual([
+        { name: 'feature', value: 'login' },
+        { name: 'feature', value: 'signup' },
+        { name: 'service', value: 'auth' },
+      ]);
+      expect(invocations[1].stage.type).toBe('errored');
+      expect(invocations[1].tags).toBe(invocations[0].tags);
+
+      taggedTracker.close();
+
+      const doIt = () => true;
+      expect(taggedTracker.track('doIt', doIt)).toBe(doIt);
+    });
+
     test('should support changing the tags content', async () => {
       const invocations: InvocationAtStage<'started' | 'completed'>[] = [];
       const trackerTags: Record<string, string> = { service: 'auth1' };
