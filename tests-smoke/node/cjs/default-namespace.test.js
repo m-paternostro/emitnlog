@@ -8,6 +8,7 @@ describe('CJS namespace imports', () => {
     expect(typeof logging.createConsoleLogLogger).toBe('function');
     expect(typeof logging.createFileLogger).toBe('function');
     expect(typeof logging.fromEnv).toBe('function');
+    expect(typeof logging.requestLogger).toBe('function');
 
     {
       const logger = logging.fromEnv();
