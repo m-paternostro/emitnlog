@@ -10,6 +10,7 @@ A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rf
 - [Traditional Logging](#traditional-logging)
 - [Available Loggers](#available-loggers)
 - [File Logging (Node.js)](#file-logging-nodejs)
+- [HTTP Request Logging (Node.js)](#http-request-logging-nodejs)
 - [Environment-Driven Configuration](#environment-driven-configuration)
 - [Tee Logger](#tee-logger)
 - [Prefixed Logger](#prefixed-logger)
@@ -231,6 +232,19 @@ createFileLogger(
   format?: LogFormat,
   options?: BaseLoggerOptions
 ): Logger
+```
+
+## HTTP Request Logging (Node.js)
+
+Use `requestLogger(logger, options?)` for a drop-in Express-compatible middleware that logs request lifecycle events with configurable levels.
+
+```ts
+import express from 'express';
+import { createConsoleLogLogger, requestLogger } from 'emitnlog/logger';
+
+const app = express();
+const logger = createConsoleLogLogger('debug');
+app.use(requestLogger(logger));
 ```
 
 ## Environment-Driven Configuration

@@ -4,6 +4,8 @@ describe('CJS neutral flat imports', () => {
   test('Logger exports are available', () => {
     expect(typeof emitnlog.createConsoleLogLogger).toBe('function');
     expect(typeof emitnlog.fromEnv).toBe('function');
+    expect(emitnlog.createFileLogger).toBeUndefined;
+    expect(emitnlog.requestLogger).toBeUndefined;
 
     {
       const logger = emitnlog.fromEnv();

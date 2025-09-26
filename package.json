@@ -19,60 +19,60 @@
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/esm/index.d.ts",
+        "types": "./dist/esm-node/index.d.ts",
         "node": "./dist/esm-node/index.js",
         "default": "./dist/esm/index.js"
       },
       "require": {
-        "types": "./dist/cjs/index.d.cts",
+        "types": "./dist/cjs-node/index.d.cts",
         "node": "./dist/cjs-node/index.cjs",
         "default": "./dist/cjs/index.cjs"
       }
     },
     "./logger": {
       "import": {
-        "types": "./dist/esm/logger/index.d.ts",
+        "types": "./dist/esm-node/logger/index.d.ts",
         "node": "./dist/esm-node/logger/index.js",
         "default": "./dist/esm/logger/index.js"
       },
       "require": {
-        "types": "./dist/cjs/logger/index.d.cts",
+        "types": "./dist/cjs-node/logger/index.d.cts",
         "node": "./dist/cjs-node/logger/index.cjs",
         "default": "./dist/cjs/logger/index.cjs"
       }
     },
     "./notifier": {
       "import": {
-        "types": "./dist/esm/notifier/index.d.ts",
+        "types": "./dist/esm-node/notifier/index.d.ts",
         "node": "./dist/esm-node/notifier/index.js",
         "default": "./dist/esm/notifier/index.js"
       },
       "require": {
-        "types": "./dist/cjs/notifier/index.d.cts",
+        "types": "./dist/cjs-node/notifier/index.d.cts",
         "node": "./dist/cjs-node/notifier/index.cjs",
         "default": "./dist/cjs/notifier/index.cjs"
       }
     },
     "./tracker": {
       "import": {
-        "types": "./dist/esm/tracker/index.d.ts",
+        "types": "./dist/esm-node/tracker/index.d.ts",
         "node": "./dist/esm-node/tracker/index.js",
         "default": "./dist/esm/tracker/index.js"
       },
       "require": {
-        "types": "./dist/cjs/tracker/index.d.cts",
+        "types": "./dist/cjs-node/tracker/index.d.cts",
         "node": "./dist/cjs-node/tracker/index.cjs",
         "default": "./dist/cjs/tracker/index.cjs"
       }
     },
     "./utils": {
       "import": {
-        "types": "./dist/esm/utils/index.d.ts",
+        "types": "./dist/esm-node/utils/index.d.ts",
         "node": "./dist/esm-node/utils/index.js",
         "default": "./dist/esm/utils/index.js"
       },
       "require": {
-        "types": "./dist/cjs/utils/index.d.cts",
+        "types": "./dist/cjs-node/utils/index.d.cts",
         "node": "./dist/cjs-node/utils/index.cjs",
         "default": "./dist/cjs/utils/index.cjs"
       }

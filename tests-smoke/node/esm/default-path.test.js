@@ -1,4 +1,4 @@
-import { createConsoleLogLogger, createFileLogger, fromEnv, OFF_LOGGER } from 'emitnlog/logger';
+import { createConsoleLogLogger, createFileLogger, fromEnv, requestLogger, OFF_LOGGER } from 'emitnlog/logger';
 import { createEventNotifier } from 'emitnlog/notifier';
 import {
   createAsyncLocalStorageInvocationStack,
@@ -14,6 +14,7 @@ describe('ESM path imports', () => {
     expect(typeof createConsoleLogLogger).toBe('function');
     expect(typeof createFileLogger).toBe('function');
     expect(typeof fromEnv).toBe('function');
+    expect(typeof requestLogger).toBe('function');
 
     {
       const logger = fromEnv();

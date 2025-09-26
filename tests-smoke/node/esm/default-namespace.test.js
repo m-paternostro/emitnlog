@@ -4,7 +4,9 @@ import { expect, test, describe } from '@jest/globals';
 describe('ESM namespace imports', () => {
   test('Logger exports are available', () => {
     expect(typeof logging.createConsoleLogLogger).toBe('function');
+    expect(typeof logging.createFileLogger).toBe('function');
     expect(typeof logging.fromEnv).toBe('function');
+    expect(typeof logging.requestLogger).toBe('function');
 
     {
       const logger = logging.fromEnv();

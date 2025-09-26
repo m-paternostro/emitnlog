@@ -4,6 +4,8 @@ describe('CJS neutral namespace imports', () => {
   test('Logger exports are available', () => {
     expect(typeof logging.createConsoleLogLogger).toBe('function');
     expect(typeof logging.fromEnv).toBe('function');
+    expect(logging.createFileLogger).toBeUndefined;
+    expect(logging.requestLogger).toBeUndefined;
 
     {
       const logger = logging.fromEnv();

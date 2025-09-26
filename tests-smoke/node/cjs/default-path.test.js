@@ -1,4 +1,4 @@
-const { createConsoleLogLogger, createFileLogger, fromEnv, OFF_LOGGER } = require('emitnlog/logger');
+const { createConsoleLogLogger, createFileLogger, fromEnv, requestLogger, OFF_LOGGER } = require('emitnlog/logger');
 const { createEventNotifier } = require('emitnlog/notifier');
 const {
   createAsyncLocalStorageInvocationStack,
@@ -13,6 +13,7 @@ describe('CJS path imports', () => {
     expect(typeof createConsoleLogLogger).toBe('function');
     expect(typeof createFileLogger).toBe('function');
     expect(typeof fromEnv).toBe('function');
+    expect(typeof requestLogger).toBe('function');
 
     {
       const logger = fromEnv();
