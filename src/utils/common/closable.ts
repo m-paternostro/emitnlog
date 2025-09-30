@@ -119,13 +119,13 @@ export type Closable = SyncClosable | AsyncClosable;
  * @returns `void` if all closables are synchronous, `Promise<void>` if any are asynchronous
  * @throws {Error} Single error if only one closable fails, or aggregate error with `cause` array if multiple fail
  */
-export const closeAll = <T extends readonly Closable[]>(...closables: T): CloseAllResult<T> => {
+export const closeAll = <T extends readonly ClosableLike[]>(...closables: T): CloseAllResult<T> => {
   if (closables.length === 0) {
     return undefined as CloseAllResult<T>;
   }
 
   if (closables.length === 1) {
-    return closables[0].close() as CloseAllResult<T>;
+    return closables[0].close?.() as CloseAllResult<T>;
   }
 
   const errors: Error[] = [];
@@ -146,7 +146,7 @@ export const closeAll = <T extends readonly Closable[]>(...closables: T): CloseA
   };
 
   const promises: Promise<void>[] = closables
-    .map((closable, index): unknown => asSafeClosable(closable, onError(index)).close())
+    .map((closable, index): unknown => closable.close && asSafeClosable(closable as Closable, onError(index)).close())
     .filter((result): result is Promise<void> => result instanceof Promise);
 
   if (promises.length) {
@@ -229,7 +229,7 @@ export const closeAll = <T extends readonly Closable[]>(...closables: T): CloseA
  * @param input - One or more functions, closables, or partial closables to wrap
  * @returns A closable that closes all specified inputs when `close()` is called
  */
-export const asClosable = <T extends readonly ClosableLike[]>(...input: T): ClosableAllResult<T> => {
+export const asClosable = <T extends readonly ClosableInput[]>(...input: T): ClosableAllResult<T> => {
   const closables: readonly Closable[] = input
     .map((i): Closable | undefined => {
       if (typeof i === 'function') {
@@ -398,7 +398,7 @@ export const asSafeClosable = <C extends Closable>(
  *
  * Useful for ensuring cleanup logic is always executed, even in complex control flows with multiple return points.
  */
-export type Closer = Closable & { readonly add: <T extends Closable>(closable: T) => T };
+export type Closer = Closable & { readonly add: <T extends ClosableLike>(closable: T) => T };
 
 /**
  * Creates a `Closer` that manages a group of closables as a single unit, simplifying resource management— especially in
@@ -446,10 +446,10 @@ export type Closer = Closable & { readonly add: <T extends Closable>(closable: T
  * @returns A `Closer` that can register and close closables as a group
  */
 export const createCloser = (...input: readonly Closable[]): Closer => {
-  const closables = new Set<Closable>(input);
+  const closables = new Set<ClosableLike>(input);
 
   const closer: Closer = {
-    add: <T extends Closable>(closable: T): T => {
+    add: (closable) => {
       closables.add(closable);
       return closable;
     },
@@ -472,7 +472,8 @@ export const createCloser = (...input: readonly Closable[]): Closer => {
 
 type PartialSyncClosable = Partial<SyncClosable>;
 type PartialAsyncClosable = Partial<AsyncClosable>;
-type ClosableLike = SyncClosable | PartialSyncClosable | AsyncClosable | PartialAsyncClosable | (() => unknown);
+type ClosableLike = SyncClosable | PartialSyncClosable | AsyncClosable | PartialAsyncClosable;
+type ClosableInput = SyncClosable | PartialSyncClosable | AsyncClosable | PartialAsyncClosable | (() => unknown);
 
 // Helper type to check if a type has a close method that could return Promise<void>
 type HasPotentiallyAsyncClose<T> = T extends { close?: (...args: unknown[]) => infer R }
@@ -487,7 +488,7 @@ type HasPotentiallyAsyncClose<T> = T extends { close?: (...args: unknown[]) => i
   : false;
 
 // Type helper to determine if any closable is async
-type HasAsyncClosable<T extends readonly ClosableLike[]> = T extends readonly []
+type HasAsyncClosable<T extends readonly ClosableInput[]> = T extends readonly []
   ? false
   : T extends readonly [infer First, ...infer Rest]
     ? First extends AsyncClosable
@@ -500,7 +501,7 @@ type HasAsyncClosable<T extends readonly ClosableLike[]> = T extends readonly []
             ? false
             : First extends () => Promise<unknown>
               ? true
-              : Rest extends readonly ClosableLike[]
+              : Rest extends readonly ClosableInput[]
                 ? HasAsyncClosable<Rest>
                 : false
     : T extends readonly (AsyncClosable | PartialAsyncClosable)[]
@@ -519,7 +520,7 @@ type HasAsyncClosable<T extends readonly ClosableLike[]> = T extends readonly []
 
 // Conditional return type
 // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-type CloseAllResult<T extends readonly ClosableLike[]> = HasAsyncClosable<T> extends true ? Promise<void> : void;
+type CloseAllResult<T extends readonly ClosableInput[]> = HasAsyncClosable<T> extends true ? Promise<void> : void;
 
-type ClosableAllResult<T extends readonly ClosableLike[]> =
+type ClosableAllResult<T extends readonly ClosableInput[]> =
   HasAsyncClosable<T> extends true ? AsyncClosable : SyncClosable;
