@@ -1,7 +1,7 @@
 import type { Simplify, Writable } from 'type-fest';
 
-import type { Closeable } from '../../utils/common/closeable.ts';
-import { asCloseable } from '../../utils/common/closeable.ts';
+import type { Closable } from '../../utils/common/closable.ts';
+import { asClosable } from '../../utils/common/closable.ts';
 
 /**
  * Base interface for objects that support resource cleanup operations.
@@ -107,9 +107,9 @@ export const asSingleFinalizer = <Fs extends readonly Finalizer[]>(...finalizers
     };
   }
 
-  const closeables: Closeable[] = finalizers.filter((logSink): logSink is Closeable => !!logSink.close);
-  if (closeables.length) {
-    const combined = asCloseable(...closeables);
+  const closables: Closable[] = finalizers.filter((logSink): logSink is Closable => !!logSink.close);
+  if (closables.length) {
+    const combined = asClosable(...closables);
     finalizer.close = () => combined.close();
   }
 

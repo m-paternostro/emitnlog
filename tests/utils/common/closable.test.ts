@@ -5,21 +5,21 @@ import { describe, expect, jest, test } from '@jest/globals';
 
 import type { implementation, Logger } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
-import type { AsyncCloseable, Closeable, SyncCloseable } from '../../../src/utils/index.ts';
-import { asCloseable, asSafeCloseable, closeAll, delay } from '../../../src/utils/index.ts';
+import type { AsyncClosable, Closable, SyncClosable } from '../../../src/utils/index.ts';
+import { asClosable, asSafeClosable, closeAll, delay } from '../../../src/utils/index.ts';
 
-describe('emitnlog.utils.closeable', () => {
+describe('emitnlog.utils.closable', () => {
   describe('closeAll', () => {
-    test('should close all sync closeables synchronously', () => {
-      const closeable1 = { close: (): void => undefined };
-      const closeable2: Closeable = { close: () => undefined };
-      const closeable3: Closeable = { close: () => undefined };
+    test('should close all sync closables synchronously', () => {
+      const closable1 = { close: (): void => undefined };
+      const closable2: Closable = { close: () => undefined };
+      const closable3: Closable = { close: () => undefined };
 
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
-      const spy3 = jest.spyOn(closeable3, 'close');
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
 
-      const result: void = closeAll(closeable1, closeable2, closeable3);
+      const result: void = closeAll(closable1, closable2, closable3);
       expect(result).not.toBeInstanceOf(Promise);
 
       expect(spy1).toHaveBeenCalledTimes(1);
@@ -27,16 +27,16 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy3).toHaveBeenCalledTimes(1);
     });
 
-    test('should close all async closeables and return Promise', async () => {
-      const closeable1 = { close: () => Promise.resolve() };
-      const closeable2: AsyncCloseable = { close: async () => undefined };
-      const closeable3: AsyncCloseable = { close: async () => undefined };
+    test('should close all async closables and return Promise', async () => {
+      const closable1 = { close: () => Promise.resolve() };
+      const closable2: AsyncClosable = { close: async () => undefined };
+      const closable3: AsyncClosable = { close: async () => undefined };
 
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
-      const spy3 = jest.spyOn(closeable3, 'close');
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
 
-      const result: Promise<void> = closeAll(closeable1, closeable2, closeable3);
+      const result: Promise<void> = closeAll(closable1, closable2, closable3);
       expect(result).toBeInstanceOf(Promise);
 
       expect(spy1).toHaveBeenCalledTimes(1);
@@ -50,30 +50,30 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy3).toHaveBeenCalledTimes(1);
     });
 
-    test('should handle mixed sync and async closeables and return Promise', async () => {
-      const closeable1 = { close: () => Promise.resolve() };
-      const closeable2: Closeable = { close: () => undefined };
+    test('should handle mixed sync and async closables and return Promise', async () => {
+      const closable1 = { close: () => Promise.resolve() };
+      const closable2: Closable = { close: () => undefined };
 
       let asyncClosed = false;
-      const closeable3: AsyncCloseable = {
+      const closable3: AsyncClosable = {
         close: async () => {
           await delay(1);
           asyncClosed = true;
         },
       };
       let syncClosed = false;
-      const closeable4: SyncCloseable = {
+      const closable4: SyncClosable = {
         close: () => {
           syncClosed = true;
         },
       };
 
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
-      const spy3 = jest.spyOn(closeable3, 'close');
-      const spy4 = jest.spyOn(closeable4, 'close');
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
+      const spy4 = jest.spyOn(closable4, 'close');
 
-      const result: Promise<void> = closeAll(closeable1, closeable2, closeable3, closeable4);
+      const result: Promise<void> = closeAll(closable1, closable2, closable3, closable4);
       expect(result).toBeInstanceOf(Promise);
 
       expect(spy1).toHaveBeenCalledTimes(1);
@@ -98,39 +98,39 @@ describe('emitnlog.utils.closeable', () => {
       expect(result).not.toBeInstanceOf(Promise);
     });
 
-    test('should handle single sync closeable', () => {
-      const closeable = { close: () => undefined };
-      const spy = jest.spyOn(closeable, 'close');
+    test('should handle single sync closable', () => {
+      const closable = { close: () => undefined };
+      const spy = jest.spyOn(closable, 'close');
 
-      const result: void = closeAll(closeable);
+      const result: void = closeAll(closable);
       expect(result).not.toBeInstanceOf(Promise);
       expect(result).toBeUndefined();
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    test('should handle single async closeable', async () => {
-      const closeable: AsyncCloseable = { close: () => Promise.resolve() };
-      const spy = jest.spyOn(closeable, 'close');
+    test('should handle single async closable', async () => {
+      const closable: AsyncClosable = { close: () => Promise.resolve() };
+      const spy = jest.spyOn(closable, 'close');
 
-      const result: Promise<void> = closeAll(closeable);
+      const result: Promise<void> = closeAll(closable);
       expect(result).toBeInstanceOf(Promise);
 
       expect(spy).toHaveBeenCalledTimes(1);
       await result;
     });
 
-    test('should handle single unknown closeable', async () => {
+    test('should handle single unknown closable', async () => {
       let closed = false;
-      const closeable: AsyncCloseable = {
+      const closable: AsyncClosable = {
         close: async () => {
           await delay(1);
           closed = true;
         },
       };
 
-      const spy = jest.spyOn(closeable, 'close');
+      const spy = jest.spyOn(closable, 'close');
 
-      const result: Promise<void> = closeAll(closeable);
+      const result: Promise<void> = closeAll(closable);
       expect(result).toBeInstanceOf(Promise);
       expect(spy).toHaveBeenCalledTimes(1);
 
@@ -145,13 +145,13 @@ describe('emitnlog.utils.closeable', () => {
       const err1 = new Error('err1');
       const err3 = new Error('err3');
 
-      const c1: SyncCloseable = {
+      const c1: SyncClosable = {
         close: () => {
           throw err1;
         },
       };
-      const c2: SyncCloseable = { close: () => undefined };
-      const c3: SyncCloseable = {
+      const c2: SyncClosable = { close: () => undefined };
+      const c3: SyncClosable = {
         close: () => {
           throw err3;
         },
@@ -172,7 +172,7 @@ describe('emitnlog.utils.closeable', () => {
 
         const thrown = error as Error & { cause?: unknown };
         expect(thrown).toBeInstanceOf(Error);
-        expect(thrown.message).toBe('Multiple errors occurred while closing closeables');
+        expect(thrown.message).toBe('Multiple errors occurred while closing closables');
 
         const cause = thrown.cause as unknown[] | undefined;
         expect(Array.isArray(cause)).toBe(true);
@@ -182,14 +182,14 @@ describe('emitnlog.utils.closeable', () => {
       }
     });
 
-    test('should throw single error if only one sync closeable fails', () => {
+    test('should throw single error if only one sync closable fails', () => {
       const err = new Error('boom');
-      const c1: SyncCloseable = {
+      const c1: SyncClosable = {
         close: () => {
           throw err;
         },
       };
-      const c2: SyncCloseable = { close: () => undefined };
+      const c2: SyncClosable = { close: () => undefined };
 
       const s1 = jest.spyOn(c1, 'close');
       const s2 = jest.spyOn(c2, 'close');
@@ -206,28 +206,28 @@ describe('emitnlog.utils.closeable', () => {
       }
     });
 
-    test('should accumulate mixed sync/async errors and reject after all closeables', async () => {
+    test('should accumulate mixed sync/async errors and reject after all closables', async () => {
       const syncErr = new Error('sync-fail');
       const asyncErr = new Error('async-fail');
 
       let asyncOkDone = false;
-      const c1: SyncCloseable = {
+      const c1: SyncClosable = {
         close: () => {
           throw syncErr;
         },
       };
-      const c2: AsyncCloseable = {
+      const c2: AsyncClosable = {
         close: async () => {
           await delay(1);
         },
       };
-      const c3: AsyncCloseable = {
+      const c3: AsyncClosable = {
         close: async () => {
           await delay(1);
           throw asyncErr;
         },
       };
-      const c4: SyncCloseable = { close: () => undefined };
+      const c4: SyncClosable = { close: () => undefined };
 
       const s1 = jest.spyOn(c1, 'close');
       const s2 = jest.spyOn(c2, 'close');
@@ -235,7 +235,7 @@ describe('emitnlog.utils.closeable', () => {
       const s4 = jest.spyOn(c4, 'close');
 
       // Track that the successful async completed
-      const c2Wrapped: AsyncCloseable = {
+      const c2Wrapped: AsyncClosable = {
         close: async () => {
           await c2.close();
           asyncOkDone = true;
@@ -250,7 +250,7 @@ describe('emitnlog.utils.closeable', () => {
       expect(s4).toHaveBeenCalledTimes(1);
       expect(asyncOkDone).toBe(false);
 
-      await expect(promise).rejects.toThrow('Multiple errors occurred while closing closeables');
+      await expect(promise).rejects.toThrow('Multiple errors occurred while closing closables');
 
       // All should have been invoked once
       expect(s1).toHaveBeenCalledTimes(1);
@@ -265,8 +265,8 @@ describe('emitnlog.utils.closeable', () => {
     test('should reject with single error when only one async fails', async () => {
       const asyncErr = new Error('only-async-fail');
 
-      const c1: SyncCloseable = { close: () => undefined };
-      const c2: AsyncCloseable = {
+      const c1: SyncClosable = { close: () => undefined };
+      const c2: AsyncClosable = {
         close: async () => {
           await delay(1);
           throw asyncErr;
@@ -286,14 +286,14 @@ describe('emitnlog.utils.closeable', () => {
     });
   });
 
-  describe('asCloseable', () => {
-    test('should create sync closeable from sync closeables', () => {
-      const closeable1 = { close: () => undefined };
-      const closeable2: SyncCloseable = { close: () => undefined };
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
+  describe('asClosable', () => {
+    test('should create sync closable from sync closables', () => {
+      const closable1 = { close: () => undefined };
+      const closable2: SyncClosable = { close: () => undefined };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
 
-      const combined = asCloseable(closeable1, closeable2);
+      const combined = asClosable(closable1, closable2);
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
 
@@ -305,13 +305,13 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy2).toHaveBeenCalledTimes(1);
     });
 
-    test('should create async closeable from async closeables', async () => {
-      const closeable1 = { close: () => Promise.resolve() };
-      const closeable2: AsyncCloseable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
+    test('should create async closable from async closables', async () => {
+      const closable1 = { close: () => Promise.resolve() };
+      const closable2: AsyncClosable = { close: () => Promise.resolve() };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
 
-      const combined = asCloseable(closeable1, closeable2);
+      const combined = asClosable(closable1, closable2);
 
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
@@ -327,37 +327,37 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy2).toHaveBeenCalledTimes(1);
     });
 
-    test('should create async closeable from mixed sync and async closeables', async () => {
-      const closeable1 = { close: () => Promise.resolve() };
-      const closeable2: Closeable = { close: () => undefined };
+    test('should create async closable from mixed sync and async closables', async () => {
+      const closable1 = { close: () => Promise.resolve() };
+      const closable2: Closable = { close: () => undefined };
 
       let asyncClosed = false;
-      const closeable3: AsyncCloseable = {
+      const closable3: AsyncClosable = {
         close: async () => {
           await delay(1);
           asyncClosed = true;
         },
       };
       let syncClosed = false;
-      const closeable4: SyncCloseable = {
+      const closable4: SyncClosable = {
         close: () => {
           syncClosed = true;
         },
       };
 
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
-      const spy3 = jest.spyOn(closeable3, 'close');
-      const spy4 = jest.spyOn(closeable4, 'close');
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
+      const spy4 = jest.spyOn(closable4, 'close');
 
-      const closeable = asCloseable(closeable1, closeable2, closeable3, closeable4);
+      const closable = asClosable(closable1, closable2, closable3, closable4);
 
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
       expect(spy3).toHaveBeenCalledTimes(0);
       expect(spy4).toHaveBeenCalledTimes(0);
 
-      const result: Promise<void> = closeable.close();
+      const result: Promise<void> = closable.close();
       expect(result).toBeInstanceOf(Promise);
 
       expect(spy1).toHaveBeenCalledTimes(1);
@@ -377,32 +377,32 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy4).toHaveBeenCalledTimes(1);
     });
 
-    test('should create closeable from sync functions', () => {
+    test('should create closable from sync functions', () => {
       const func1: () => void = jest.fn<() => void>();
       const func2: () => void = jest.fn<() => void>();
 
-      const closeable = asCloseable(func1, func2);
+      const closable = asClosable(func1, func2);
 
       expect(func1).toHaveBeenCalledTimes(0);
       expect(func2).toHaveBeenCalledTimes(0);
 
-      const result: void = closeable.close();
+      const result: void = closable.close();
 
       expect(result).toBeUndefined();
       expect(func1).toHaveBeenCalledTimes(1);
       expect(func2).toHaveBeenCalledTimes(1);
     });
 
-    test('should create closeable from async functions', async () => {
+    test('should create closable from async functions', async () => {
       const func1: () => Promise<void> = jest.fn<() => Promise<void>>(() => Promise.resolve());
       const func2: () => Promise<void> = jest.fn<() => Promise<void>>(() => Promise.resolve());
 
-      const closeable = asCloseable(func1, func2);
+      const closable = asClosable(func1, func2);
 
       expect(func1).toHaveBeenCalledTimes(0);
       expect(func2).toHaveBeenCalledTimes(0);
 
-      const result: Promise<void> = closeable.close();
+      const result: Promise<void> = closable.close();
       expect(result).toBeInstanceOf(Promise);
       expect(func1).toHaveBeenCalledTimes(1);
       expect(func2).toHaveBeenCalledTimes(1);
@@ -412,23 +412,23 @@ describe('emitnlog.utils.closeable', () => {
       expect(func2).toHaveBeenCalledTimes(1);
     });
 
-    test('should create closeable from a mix of sync closeables and sync functions', () => {
+    test('should create closable from a mix of sync closables and sync functions', () => {
       const func1: () => void = jest.fn<() => void>();
       const func2: () => void = jest.fn<() => void>();
 
-      const closeable1 = { close: () => undefined };
-      const closeable2: SyncCloseable = { close: () => undefined };
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
+      const closable1 = { close: () => undefined };
+      const closable2: SyncClosable = { close: () => undefined };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
 
-      const closeable = asCloseable(closeable1, func1, closeable2, func2);
+      const closable = asClosable(closable1, func1, closable2, func2);
 
       expect(func1).toHaveBeenCalledTimes(0);
       expect(func2).toHaveBeenCalledTimes(0);
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
 
-      const result: void = closeable.close();
+      const result: void = closable.close();
 
       expect(result).toBeUndefined();
       expect(func1).toHaveBeenCalledTimes(1);
@@ -437,23 +437,23 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy2).toHaveBeenCalledTimes(1);
     });
 
-    test('should create closeable from a mix of async closeables and async functions', async () => {
+    test('should create closable from a mix of async closables and async functions', async () => {
       const func1: () => Promise<void> = jest.fn<() => Promise<void>>();
       const func2: () => Promise<void> = jest.fn<() => Promise<void>>();
 
-      const closeable1 = { close: () => Promise.resolve() };
-      const closeable2: AsyncCloseable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
+      const closable1 = { close: () => Promise.resolve() };
+      const closable2: AsyncClosable = { close: () => Promise.resolve() };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
 
-      const closeable = asCloseable(closeable1, func1, closeable2, func2);
+      const closable = asClosable(closable1, func1, closable2, func2);
 
       expect(func1).toHaveBeenCalledTimes(0);
       expect(func2).toHaveBeenCalledTimes(0);
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
 
-      const result: Promise<void> = closeable.close();
+      const result: Promise<void> = closable.close();
       expect(result).toBeInstanceOf(Promise);
       expect(func1).toHaveBeenCalledTimes(1);
       expect(func2).toHaveBeenCalledTimes(1);
@@ -468,23 +468,23 @@ describe('emitnlog.utils.closeable', () => {
       expect(spy2).toHaveBeenCalledTimes(1);
     });
 
-    test('should create closeable from mixed functions and closeables', async () => {
+    test('should create closable from mixed functions and closables', async () => {
       const func1: () => void = jest.fn<() => void>();
       const func2: () => Promise<void> = jest.fn<() => Promise<void>>();
 
-      const closeable1: Closeable = { close: () => undefined };
-      const closeable2: Closeable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closeable1, 'close');
-      const spy2 = jest.spyOn(closeable2, 'close');
+      const closable1: Closable = { close: () => undefined };
+      const closable2: Closable = { close: () => Promise.resolve() };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
 
-      const closeable = asCloseable(closeable1, func1, closeable2, func2);
+      const closable = asClosable(closable1, func1, closable2, func2);
 
       expect(func1).toHaveBeenCalledTimes(0);
       expect(func2).toHaveBeenCalledTimes(0);
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
 
-      const result: Promise<void> = closeable.close();
+      const result: Promise<void> = closable.close();
       expect(result).toBeInstanceOf(Promise);
       expect(func1).toHaveBeenCalledTimes(1);
       expect(func2).toHaveBeenCalledTimes(1);
@@ -506,8 +506,8 @@ describe('emitnlog.utils.closeable', () => {
       const func4 = () => true;
       const func5 = () => undefined as never;
 
-      const closeable = asCloseable(func1, func2, func3, func4, func5);
-      const result: void = closeable.close();
+      const closable = asClosable(func1, func2, func3, func4, func5);
+      const result: void = closable.close();
 
       expect(result).toBeUndefined();
     });
@@ -519,15 +519,15 @@ describe('emitnlog.utils.closeable', () => {
       const func4 = () => Promise.resolve(true);
       const func5 = () => Promise.resolve(undefined as never);
 
-      const closeable = asCloseable(func1, func2, func3, func4, func5);
-      const result: Promise<void> = closeable.close();
+      const closable = asClosable(func1, func2, func3, func4, func5);
+      const result: Promise<void> = closable.close();
       expect(result).toBeInstanceOf(Promise);
       await expect(result).resolves.toBeUndefined();
     });
 
     test('should handle empty input', () => {
-      const closeable = asCloseable();
-      const result: void = closeable.close();
+      const closable = asClosable();
+      const result: void = closable.close();
       expect(result).toBeUndefined();
     });
 
@@ -537,8 +537,8 @@ describe('emitnlog.utils.closeable', () => {
         called = true;
       };
 
-      const closeable = asCloseable(func);
-      const result: void = closeable.close();
+      const closable = asClosable(func);
+      const result: void = closable.close();
       expect(result).toBeUndefined();
       expect(called).toBe(true);
     });
@@ -549,10 +549,10 @@ describe('emitnlog.utils.closeable', () => {
         called = true;
       };
 
-      const closeable = asCloseable(func);
+      const closable = asClosable(func);
       expect(called).toBe(false);
 
-      const result: Promise<void> = closeable.close();
+      const result: Promise<void> = closable.close();
       expect(result).toBeInstanceOf(Promise);
       await expect(result).resolves.toBeUndefined();
       expect(called).toBe(true);
@@ -568,20 +568,20 @@ describe('emitnlog.utils.closeable', () => {
       });
 
       const func1: () => void = jest.fn<() => void>();
-      const closeable: SyncCloseable = { close: () => undefined };
-      const closeableSpy = jest.spyOn(closeable, 'close');
+      const closable: SyncClosable = { close: () => undefined };
+      const closableSpy = jest.spyOn(closable, 'close');
 
-      const combined = asCloseable(logger, closeable, func1);
+      const combined = asClosable(logger, closable, func1);
 
       expect(closeCalled).toBe(false);
       expect(func1).toHaveBeenCalledTimes(0);
-      expect(closeableSpy).toHaveBeenCalledTimes(0);
+      expect(closableSpy).toHaveBeenCalledTimes(0);
 
       const result: Promise<void> = combined.close();
       expect(result).toBeUndefined();
       expect(closeCalled).toBe(true);
       expect(func1).toHaveBeenCalledTimes(1);
-      expect(closeableSpy).toHaveBeenCalledTimes(1);
+      expect(closableSpy).toHaveBeenCalledTimes(1);
     });
 
     test('should handle loggers with sync close', () => {
@@ -595,31 +595,31 @@ describe('emitnlog.utils.closeable', () => {
       });
 
       const func1: () => void = jest.fn<() => void>();
-      const closeable: SyncCloseable = { close: () => undefined };
-      const closeableSpy = jest.spyOn(closeable, 'close');
+      const closable: SyncClosable = { close: () => undefined };
+      const closableSpy = jest.spyOn(closable, 'close');
 
-      const combined = asCloseable(logger, closeable, func1);
+      const combined = asClosable(logger, closable, func1);
 
       expect(closeCalled).toBe(false);
       expect(func1).toHaveBeenCalledTimes(0);
-      expect(closeableSpy).toHaveBeenCalledTimes(0);
+      expect(closableSpy).toHaveBeenCalledTimes(0);
 
       const result: void = combined.close();
       expect(result).toBeUndefined();
       expect(closeCalled).toBe(true);
       expect(func1).toHaveBeenCalledTimes(1);
-      expect(closeableSpy).toHaveBeenCalledTimes(1);
+      expect(closableSpy).toHaveBeenCalledTimes(1);
     });
 
     test('should accumulate sync errors and throw after closing all sources', () => {
       const err1 = new Error('err1');
       const err3 = new Error('err3');
 
-      const c1 = asCloseable(() => {
+      const c1 = asClosable(() => {
         throw err1;
       });
       const fnOk: () => void = () => undefined;
-      const c3 = asCloseable(() => {
+      const c3 = asClosable(() => {
         throw err3;
       });
 
@@ -627,7 +627,7 @@ describe('emitnlog.utils.closeable', () => {
       const sOk = jest.fn(fnOk);
       const s3 = jest.spyOn(c3, 'close');
 
-      const combined = asCloseable(c1, sOk, c3);
+      const combined = asClosable(c1, sOk, c3);
 
       try {
         combined.close();
@@ -639,7 +639,7 @@ describe('emitnlog.utils.closeable', () => {
 
         const thrown = error as Error & { cause?: unknown };
         expect(thrown).toBeInstanceOf(Error);
-        expect(thrown.message).toBe('Multiple errors occurred while closing closeables');
+        expect(thrown.message).toBe('Multiple errors occurred while closing closables');
 
         const cause = thrown.cause as unknown[] | undefined;
         expect(Array.isArray(cause)).toBe(true);
@@ -651,13 +651,13 @@ describe('emitnlog.utils.closeable', () => {
 
     test('should throw single error if only one sync source fails', () => {
       const err = new Error('boom');
-      const bad = asCloseable(() => {
+      const bad = asClosable(() => {
         throw err;
       });
       const okFn: () => void = jest.fn<() => void>();
       const sBad = jest.spyOn(bad, 'close');
 
-      const combined = asCloseable(bad, okFn);
+      const combined = asClosable(bad, okFn);
 
       try {
         combined.close();
@@ -675,7 +675,7 @@ describe('emitnlog.utils.closeable', () => {
       const syncErr = new Error('sync-fail');
       const asyncErr = new Error('async-fail');
 
-      const badSync = asCloseable(() => {
+      const badSync = asClosable(() => {
         throw syncErr;
       });
       let okAsyncRan = false;
@@ -692,7 +692,7 @@ describe('emitnlog.utils.closeable', () => {
       const sOkAsync = jest.fn(okAsync);
       const sBadAsync = jest.fn(badAsync);
 
-      const combined = asCloseable(badSync, sOkAsync, sBadAsync);
+      const combined = asClosable(badSync, sOkAsync, sBadAsync);
 
       const result = combined.close();
       expect(result).toBeInstanceOf(Promise);
@@ -701,7 +701,7 @@ describe('emitnlog.utils.closeable', () => {
       expect(sBadSync).toHaveBeenCalledTimes(1);
       expect(okAsyncRan).toBe(false);
 
-      await expect(result).rejects.toThrow('Multiple errors occurred while closing closeables');
+      await expect(result).rejects.toThrow('Multiple errors occurred while closing closables');
 
       // all sources executed
       expect(sBadSync).toHaveBeenCalledTimes(1);
@@ -721,7 +721,7 @@ describe('emitnlog.utils.closeable', () => {
 
       const sBadAsync = jest.fn(badAsync);
 
-      const combined = asCloseable(okSync, sBadAsync);
+      const combined = asClosable(okSync, sBadAsync);
       const result = combined.close();
       expect(result).toBeInstanceOf(Promise);
 
@@ -732,63 +732,63 @@ describe('emitnlog.utils.closeable', () => {
     });
   });
 
-  describe('asSafeCloseable', () => {
-    describe('should wrap sync closeable and not throw', () => {
-      const throwingCloseable: SyncCloseable = {
+  describe('asSafeClosable', () => {
+    describe('should wrap sync closable and not throw', () => {
+      const throwingClosable: SyncClosable = {
         close: () => {
           throw new Error('Sync error');
         },
       };
 
       test('should not throw', () => {
-        const safeCloseable = asSafeCloseable(throwingCloseable);
-        const result: void = safeCloseable.close();
+        const safeClosable = asSafeClosable(throwingClosable);
+        const result: void = safeClosable.close();
         expect(result).toBeUndefined();
       });
 
       test('should handle error', () => {
         let handledError: unknown;
-        const safeCloseable = asSafeCloseable(throwingCloseable, (error) => {
+        const safeClosable = asSafeClosable(throwingClosable, (error) => {
           handledError = error;
         });
 
-        const result: void = safeCloseable.close();
+        const result: void = safeClosable.close();
         expect(result).toBeUndefined();
         expect(handledError).toBeInstanceOf(Error);
         expect((handledError as Error).message).toBe('Sync error');
       });
 
       test('should handle error with onError throwing', () => {
-        const safeCloseable = asSafeCloseable(throwingCloseable, () => {
+        const safeClosable = asSafeClosable(throwingClosable, () => {
           throw new Error('On error error');
         });
 
-        const result: void = safeCloseable.close();
+        const result: void = safeClosable.close();
         expect(result).toBeUndefined();
       });
     });
 
-    describe('should wrap async closeable and not reject', () => {
-      const rejectingCloseable: AsyncCloseable = {
+    describe('should wrap async closable and not reject', () => {
+      const rejectingClosable: AsyncClosable = {
         close: async () => {
           throw new Error('Async error');
         },
       };
 
       test('should not reject', async () => {
-        const safeCloseable = asSafeCloseable(rejectingCloseable);
-        const result: Promise<void> = safeCloseable.close();
+        const safeClosable = asSafeClosable(rejectingClosable);
+        const result: Promise<void> = safeClosable.close();
         expect(result).toBeInstanceOf(Promise);
         await expect(result).resolves.toBeUndefined();
       });
 
       test('should handle error', async () => {
         let handledError: unknown;
-        const safeCloseable = asSafeCloseable(rejectingCloseable, (error) => {
+        const safeClosable = asSafeClosable(rejectingClosable, (error) => {
           handledError = error;
         });
 
-        const result: Promise<void> = safeCloseable.close();
+        const result: Promise<void> = safeClosable.close();
         expect(result).toBeInstanceOf(Promise);
 
         expect(handledError).toBeUndefined();
@@ -798,36 +798,36 @@ describe('emitnlog.utils.closeable', () => {
       });
 
       test('should handle error with onError throwing', async () => {
-        const safeCloseable = asSafeCloseable(rejectingCloseable, () => {
+        const safeClosable = asSafeClosable(rejectingClosable, () => {
           throw new Error('On error error');
         });
 
-        const result: Promise<void> = safeCloseable.close();
+        const result: Promise<void> = safeClosable.close();
         expect(result).toBeInstanceOf(Promise);
         await expect(result).resolves.toBeUndefined();
       });
     });
 
-    describe('should handle sync in async closeables', () => {
-      const throwingCloseable: AsyncCloseable = {
+    describe('should handle sync in async closables', () => {
+      const throwingClosable: AsyncClosable = {
         close: (): Promise<void> => {
           throw new Error('Sync in async error');
         },
       };
 
       test('should not throw', () => {
-        const safeCloseable = asSafeCloseable(throwingCloseable);
-        const result: Promise<void> = safeCloseable.close();
+        const safeClosable = asSafeClosable(throwingClosable);
+        const result: Promise<void> = safeClosable.close();
         expect(result).toBeUndefined();
       });
 
       test('should handle error', () => {
         let handledError: unknown;
-        const safeCloseable = asSafeCloseable(throwingCloseable, (error) => {
+        const safeClosable = asSafeClosable(throwingClosable, (error) => {
           handledError = error;
         });
 
-        const result: Promise<void> = safeCloseable.close();
+        const result: Promise<void> = safeClosable.close();
         expect(result).toBeUndefined();
         expect(handledError).toBeInstanceOf(Error);
         expect((handledError as Error).message).toBe('Sync in async error');

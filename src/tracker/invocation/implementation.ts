@@ -4,7 +4,7 @@ import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { appendPrefix, withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
-import { closeAll } from '../../utils/common/closeable.ts';
+import { closeAll } from '../../utils/common/closable.ts';
 import { generateRandomString } from '../../utils/common/generate-random-string.ts';
 import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type {
