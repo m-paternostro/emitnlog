@@ -123,7 +123,7 @@ describe('emitnlog.utils.closable', () => {
 
     test('should handle single unknown closable', async () => {
       let closed = false;
-      const closable: AsyncClosable = {
+      const closable: Closable = {
         close: async () => {
           await delay(1);
           closed = true;
@@ -310,6 +310,28 @@ describe('emitnlog.utils.closable', () => {
     test('should create async closable from async closables', async () => {
       const closable1 = { close: () => Promise.resolve() };
       const closable2: AsyncClosable = { close: () => Promise.resolve() };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+
+      const combined = asClosable(closable1, closable2);
+
+      expect(spy1).toHaveBeenCalledTimes(0);
+      expect(spy2).toHaveBeenCalledTimes(0);
+
+      const result: Promise<void> = combined.close();
+      expect(result).toBeInstanceOf(Promise);
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+
+      await result;
+
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+    });
+
+    test('should create async closable from async closables', async () => {
+      const closable1: Closable = { close: () => void 0 };
+      const closable2: Closable = { close: () => Promise.resolve() };
       const spy1 = jest.spyOn(closable1, 'close');
       const spy2 = jest.spyOn(closable2, 'close');
 

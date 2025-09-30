@@ -261,7 +261,6 @@ export const asClosable = <T extends readonly ClosableInput[]>(...input: T): Clo
       }
 
       closed = true;
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       return closeAll(...closables);
     },
   };
@@ -352,7 +351,7 @@ export const asClosable = <T extends readonly ClosableInput[]>(...input: T): Clo
 export const asSafeClosable = <C extends Closable>(
   closable: C,
   onError?: (error: unknown) => void,
-): HasPotentiallyAsyncClose<C> extends true ? AsyncClosable : SyncClosable => {
+): MayBeAsyncClose<C> extends true ? AsyncClosable : SyncClosable => {
   let closed = false;
   const safe = {
     close: () => {
@@ -385,7 +384,7 @@ export const asSafeClosable = <C extends Closable>(
     },
   };
 
-  return safe as HasPotentiallyAsyncClose<C> extends true ? AsyncClosable : SyncClosable;
+  return safe as MayBeAsyncClose<C> extends true ? AsyncClosable : SyncClosable;
 };
 
 /**
@@ -462,7 +461,6 @@ export const createCloser = (...input: readonly Closable[]): Closer => {
       const array = Array.from(closables).reverse();
       closables.clear();
 
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       return closeAll(...array);
     },
   };
@@ -476,51 +474,27 @@ type ClosableLike = SyncClosable | PartialSyncClosable | AsyncClosable | Partial
 type ClosableInput = SyncClosable | PartialSyncClosable | AsyncClosable | PartialAsyncClosable | (() => unknown);
 
 // Helper type to check if a type has a close method that could return Promise<void>
-type HasPotentiallyAsyncClose<T> = T extends { close?: (...args: unknown[]) => infer R }
-  ? [R] extends [Promise<void>]
-    ? true
-    : // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-      [R] extends [void]
-      ? false
-      : [R] extends [void | Promise<void>]
-        ? true
-        : false
-  : false;
+type MayBeAsyncClose<T> = [Extract<CloseReturnType<T>, Promise<unknown>>] extends [never] ? false : true;
+
+type CloseFn<T> = T extends { close?: infer C } ? C : never;
+type CloseReturnType<T> = CloseFn<T> extends (...args: unknown[]) => infer R ? R : never;
+
+type ElementsOf<T extends readonly unknown[]> = T[number];
+type FunctionReturnsPromise<T> = Extract<ReturnType<Extract<T, (...args: unknown[]) => unknown>>, Promise<unknown>>;
+type CloseReturnsPromise<T> = Extract<CloseReturnType<Extract<T, ClosableLike>>, Promise<unknown>>;
 
 // Type helper to determine if any closable is async
-type HasAsyncClosable<T extends readonly ClosableInput[]> = T extends readonly []
+type OneMayBeAsyncClose<T extends readonly ClosableInput[]> = [ElementsOf<T>] extends [never]
   ? false
-  : T extends readonly [infer First, ...infer Rest]
-    ? First extends AsyncClosable
-      ? true
-      : First extends PartialAsyncClosable
-        ? true
-        : HasPotentiallyAsyncClose<First> extends true
-          ? true
-          : First extends () => never
-            ? false
-            : First extends () => Promise<unknown>
-              ? true
-              : Rest extends readonly ClosableInput[]
-                ? HasAsyncClosable<Rest>
-                : false
-    : T extends readonly (AsyncClosable | PartialAsyncClosable)[]
-      ? true
-      : T extends readonly (infer U)[]
-        ? U extends AsyncClosable | PartialAsyncClosable
-          ? true
-          : HasPotentiallyAsyncClose<U> extends true
-            ? true
-            : U extends () => never
-              ? false
-              : U extends () => Promise<unknown>
-                ? true
-                : false
-        : false;
+  : [FunctionReturnsPromise<ElementsOf<T>>] extends [never]
+    ? [CloseReturnsPromise<ElementsOf<T>>] extends [never]
+      ? false
+      : true
+    : true;
 
 // Conditional return type
 // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-type CloseAllResult<T extends readonly ClosableInput[]> = HasAsyncClosable<T> extends true ? Promise<void> : void;
+type CloseAllResult<T extends readonly ClosableInput[]> = OneMayBeAsyncClose<T> extends true ? Promise<void> : void;
 
 type ClosableAllResult<T extends readonly ClosableInput[]> =
-  HasAsyncClosable<T> extends true ? AsyncClosable : SyncClosable;
+  OneMayBeAsyncClose<T> extends true ? AsyncClosable : SyncClosable;
