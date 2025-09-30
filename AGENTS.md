@@ -6,7 +6,8 @@ When working on the project interactively with an agent, follow the guidelines b
 ## 1. Repo Overview
 
 - Zero dependencies, ESM‑first library with CJS bundles produced by `tsup`.
-- Targets neutral JavaScript runtimes; Node.js specifics are kept separate and bundled.
+- Node dependencies are clearly identified in code `src/**/node/**`
+- Targets node JavaScript runtimes offering `neutral` options (see `package.json`).
 - `tsc` performs type checking only (no emit). JS conversion is done by `tsup`.
 - Source lives under `src/`; tests live under `tests/` and use Jest; "smoke tests" live under `tests-smoke` and also use Jest.
 
@@ -34,10 +35,19 @@ Tip: During active iteration, run `npm run typecheck` and `npm run test` frequen
   - Type safety is required; NEVER use `any`.
   - Keep code clean, precise, and idiomatic TypeScript consistent with existing patterns.
   - Minimize exports: only export what is truly needed.
+  - Prefer readonly structures:
+    - APIs should normally use readonly structure.
+    - Most arrays should be `readonly`
+    - Only the method/function that creates a readonly structure can modify it.
+    - When creating a readonly structure, use `import type { Writable } from 'type-fest'` to temporarily convert it to writable
+    - Code that uses a readonly structure (created by a different code) should treat it as a immutable, frozen JavaScript object.
+  - Prefer members (like `const foo = (...) =>`) over functions (`function foo(...) {...}`)
+  - Prefer `type` over `interface`, unless creating a type that requires `this`.
   - Prefer reusing utilities from `src/utils`. If a utility complicates the code, flag it for discussion (it might need improvement or removal).
+  - The default value for optional boolean properties should be `false`.
 - Style and design:
   - Follow the project’s logging, testing, and naming conventions.
-  - Keep duplication low; adhere to established design patterns in adjacent code.
+  - Keep duplication very low (both within and cross files); adhere to established design patterns in adjacent code.
 - Comments and docs:
   - Line comments are only for non‑obvious design decisions; avoid restating the method name or obvious behavior.
   - Exported APIs should have JSDoc unless trivially self‑explanatory.
@@ -65,8 +75,8 @@ Tip: During active iteration, run `npm run typecheck` and `npm run test` frequen
 
 ## 6. Runtime Targets
 
-- Primary target is neutral runtimes. Node.js specifics can be used but must be clearly separated and bundled appropriately.
-- ESM and CJS bundles (including neutral and Node variants) are produced with `tsup`.
+- Primary target is node runtimes. Neutral specifics can be used - they are bundled and exported appropriately.
+- ESM and CJS bundles (including Node and neutral variants) are produced with `tsup`.
 - When in doubt, favor neutral implementations and avoid Node‑only APIs in shared code paths.
 
 ## 7. Documentation
