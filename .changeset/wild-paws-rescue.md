@@ -2,4 +2,4 @@
 'emitnlog': patch
 ---
 
-Adds "closeable" utilities: `closeAll`, `asCloseable`, `asSafeCloseable`
+Adds "closable" utilities: `closeAll`, `asClosable`, `asSafeClosable`, `createCloser`

@@ -16,10 +16,14 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [withTimeout](#withtimeout)
   - [createDeferredValue](#createdeferredvalue)
   - [startPolling](#startpolling)
-- [Resource Management](#resource-management)
+- [Lifecycle Management](#lifecycle-management)
   - [closeAll](#closeall)
-  - [asCloseable](#ascloseable)
-  - [asSafeCloseable](#assafecloseable)
+  - [asClosable](#asclosable)
+  - [asSafeClosable](#assafeclosable)
+  - [createCloser](#createcloser)
+- [QoL](#qol)
+  - [Terminal Formatting](#terminal-formatting)
+  - [Empty Array](#empty-array)
 
 ## Data Utilities
 
@@ -630,13 +634,13 @@ const { wait: timedWait } = startPolling(() => checkHealth(), 2000, {
 });
 ```
 
-## Resource Management
+## Lifecycle Management
 
-Utilities for managing resource lifecycle and cleanup operations with robust error handling.
+Utilities for managing lifecycle and cleanup operations with robust error handling.
 
 ### closeAll
 
-Closes multiple resources at once, handling both synchronous and asynchronous closeables with error accumulation.
+Closes multiple resources at once, handling both synchronous and asynchronous closables with error accumulation.
 
 ```ts
 import { closeAll } from 'emitnlog/utils';
@@ -688,38 +692,38 @@ const failing2 = {
 try {
   await closeAll(failing1, failing2);
 } catch (error) {
-  console.log(error.message); // 'Multiple errors occurred while closing closeables'
+  console.log(error.message); // 'Multiple errors occurred while closing closables'
   console.log(error.cause); // Array with both Error objects
 }
 ```
 
-### asCloseable
+### asClosable
 
-Converts functions and combines multiple cleanup operations into a single closeable resource.
+Converts functions and combines multiple cleanup operations into a single closable resource.
 
 ```ts
-import { asCloseable } from 'emitnlog/utils';
+import { asClosable } from 'emitnlog/utils';
 
-// Convert cleanup functions to closeable
+// Convert cleanup functions to closable
 const cleanup1 = () => clearTimeout(timerId);
 const cleanup2 = () => removeEventListener('resize', handler);
 
-const disposer = asCloseable(cleanup1, cleanup2);
+const disposer = asClosable(cleanup1, cleanup2);
 disposer.close(); // Calls both cleanup functions
 
-// Combine different types of closeables
+// Combine different types of closables
 const syncResource = { close: () => console.log('Sync cleanup') };
 const asyncFunction = async () => await db.disconnect();
 const logger = createLogger(); // Has optional close method
 
-const combined = asCloseable(syncResource, asyncFunction, logger);
-await combined.close(); // Returns AsyncCloseable due to async input
+const combined = asClosable(syncResource, asyncFunction, logger);
+await combined.close(); // Returns AsyncClosable due to async input
 ```
 
-Works with various input types including partial closeables like loggers:
+Works with various input types including partial closables like loggers:
 
 ```ts
-import { asCloseable } from 'emitnlog/utils';
+import { asClosable } from 'emitnlog/utils';
 import { createConsoleLogLogger } from 'emitnlog/logger';
 
 const logger = createConsoleLogLogger();
@@ -727,16 +731,16 @@ const cleanup = () => clearAllTimers();
 const resource = { close: async () => await cleanup() };
 
 // Automatically infers return type based on inputs
-const combined = asCloseable(logger, cleanup, resource);
-// Returns AsyncCloseable because logger.close can be async
+const combined = asClosable(logger, cleanup, resource);
+// Returns AsyncClosable because logger.close can be async
 ```
 
-### asSafeCloseable
+### asSafeClosable
 
-Wraps closeables to prevent errors during cleanup from propagating, ensuring robust resource management.
+Wraps closables to prevent errors during cleanup from propagating, ensuring robust resource management.
 
 ```ts
-import { asSafeCloseable } from 'emitnlog/utils';
+import { asSafeClosable } from 'emitnlog/utils';
 
 const unreliableResource = {
   close: () => {
@@ -745,11 +749,11 @@ const unreliableResource = {
 };
 
 // Basic usage - errors are silently swallowed
-const silent = asSafeCloseable(unreliableResource);
+const silent = asSafeClosable(unreliableResource);
 silent.close(); // Never throws
 
 // With error handling callback
-const withLogging = asSafeCloseable(unreliableResource, (error) => {
+const withLogging = asSafeClosable(unreliableResource, (error) => {
   console.warn('Cleanup error:', error.message);
 });
 withLogging.close(); // Logs warning but doesn't throw
@@ -758,25 +762,56 @@ withLogging.close(); // Logs warning but doesn't throw
 Perfect for ensuring cleanup operations never fail in critical sections:
 
 ```ts
-import { asCloseable, asSafeCloseable } from 'emitnlog/utils';
+import { asClosable, asSafeClosable } from 'emitnlog/utils';
 
 // Create a robust cleanup chain that never fails
-const robustCleanup = asCloseable(
-  asSafeCloseable(riskyResource1, logError),
-  asSafeCloseable(riskyResource2, logError),
-  asSafeCloseable(riskyResource3, logError),
+const robustCleanup = asClosable(
+  asSafeClosable(riskyResource1, logError),
+  asSafeClosable(riskyResource2, logError),
+  asSafeClosable(riskyResource3, logError),
 );
 
 await robustCleanup.close(); // Guaranteed to never throw or reject
 
 // In application shutdown
 process.on('SIGTERM', async () => {
-  const cleanup = asCloseable(asSafeCloseable(database), asSafeCloseable(server), asSafeCloseable(logger));
+  const cleanup = asClosable(asSafeClosable(database), asSafeClosable(server), asSafeClosable(logger));
 
   await cleanup.close(); // Safe shutdown even if some resources fail
   process.exit(0);
 });
 ```
+
+### createCloser
+
+Creates a dynamic closable that can accumulate other closables and clean them all up with a single call.
+
+This utility is ideal for situations where resources are initialized conditionally or across different parts of a function. Instead of manually tracking and closing each one, `createCloser()` gives you a single object to register them with. When you're done, just call `closer.close()` to release everything—safely and in reverse order.
+
+It complements [asClosable](#asclosable), which is used to combine existing closables into one. In contrast, `createCloser` gives you a mutable container that grows over time. It also preserves the type of each closable added, which helps maintain type safety in complex setups.
+
+```ts
+import { createCloser, asClosable } from 'emitnlog/utils';
+
+const closer = createCloser();
+
+const db = closer.add(asClosable(() => disconnect()));
+const logger = closer.add(createLogger());
+
+// Add more closables later if needed
+if (enableMetrics) {
+  closer.add(asClosable(() => shutdownMetrics()));
+}
+
+// At the end (or on error), close all resources
+await closer.close(); // Closes in reverse order: metrics, logger, db
+```
+
+If `close()` is called multiple times, previously registered closables are not invoked again. Any new closables added after the first `close()` will still be tracked and closed on subsequent calls.
+
+Errors thrown during closing are accumulated and reported consistently using the same strategy as [closeAll](#closeall).
+
+## QoL
 
 ### Terminal Formatting
 
@@ -789,9 +824,9 @@ console.log(terminalFormatter.cyan('INFO: ready'));
 console.log(terminalFormatter.indent('Indented', 2));
 ```
 
-### Singleton Arrays
+### Empty Array
 
-Helpers for reusing empty arrays without allocations.
+Helper for reusing empty arrays without extra allocations.
 
 ```ts
 import { emptyArray } from 'emitnlog/utils';

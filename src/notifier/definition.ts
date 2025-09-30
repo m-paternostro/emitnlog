@@ -1,3 +1,5 @@
+import type { SyncClosable } from '../utils/common/closable.ts';
+
 /**
  * A type-safe event notifier that manages event listeners and notifications.
  *
@@ -31,7 +33,7 @@ export type EventNotifier<T = void, E = Error> = {
    * ```
    *
    * @param listener A function that will be called with the notified event
-   * @returns A closeable to unregister the listener (all listeners are unregistered when the notifier is closed).
+   * @returns A closable to unregister the listener (all listeners are unregistered when the notifier is closed).
    */
   readonly onEvent: OnEvent<T>;
 
@@ -131,8 +133,10 @@ export type EventNotifier<T = void, E = Error> = {
  * A type-safe event subscription that can be closed.
  *
  * @template T The type of events this subscription will handle
+ * @param listener A function that will be called with the notified event
+ * @returns A closable to unregister the listener (all listeners are unregistered when the notifier is closed).
  */
-export type OnEvent<T = void> = (listener: (event: T) => unknown) => { readonly close: () => void };
+export type OnEvent<T = void> = (listener: (event: T) => unknown) => SyncClosable;
 
 // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
 type IsExactlyVoid<T> = [T] extends [void] ? ([void] extends [T] ? true : false) : false;

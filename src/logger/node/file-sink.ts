@@ -190,6 +190,10 @@ export const fileSink = (
     },
 
     async close(): Promise<void> {
+      if (closed) {
+        return;
+      }
+
       closed = true;
       await writeQueue;
     },
