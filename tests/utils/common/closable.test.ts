@@ -6,7 +6,7 @@ import { describe, expect, jest, test } from '@jest/globals';
 import type { implementation, Logger } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
 import type { AsyncClosable, Closable, SyncClosable } from '../../../src/utils/index.ts';
-import { asClosable, asSafeClosable, closeAll, delay } from '../../../src/utils/index.ts';
+import { asClosable, asSafeClosable, closeAll, createCloser, delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.closable', () => {
   describe('closeAll', () => {
@@ -832,6 +832,443 @@ describe('emitnlog.utils.closable', () => {
         expect(handledError).toBeInstanceOf(Error);
         expect((handledError as Error).message).toBe('Sync in async error');
       });
+    });
+  });
+
+  describe('createCloser', () => {
+    test('should create closer with initial closables', () => {
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: AsyncClosable = { close: () => Promise.resolve() };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+
+      const closer = createCloser(closable1, closable2);
+      expect(closer).toHaveProperty('add');
+      expect(closer).toHaveProperty('close');
+
+      // Initial closables should not be called yet
+      expect(spy1).toHaveBeenCalledTimes(0);
+      expect(spy2).toHaveBeenCalledTimes(0);
+    });
+
+    test('should add closables and return them', () => {
+      const closer = createCloser();
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: AsyncClosable = { close: () => Promise.resolve() };
+
+      const returned1 = closer.add(closable1);
+      const returned2 = closer.add(closable2);
+
+      expect(returned1).toBe(closable1);
+      expect(returned2).toBe(closable2);
+    });
+
+    test('should close all added closables in reverse order', () => {
+      const callOrder: number[] = [];
+      const closable1: SyncClosable = {
+        close: () => {
+          callOrder.push(1);
+        },
+      };
+      const closable2: SyncClosable = {
+        close: () => {
+          callOrder.push(2);
+        },
+      };
+      const closable3: SyncClosable = {
+        close: () => {
+          callOrder.push(3);
+        },
+      };
+
+      const closer = createCloser();
+      closer.add(closable1);
+      closer.add(closable2);
+      closer.add(closable3);
+
+      const result = closer.close();
+      expect(result).toBeUndefined();
+      expect(callOrder).toEqual([3, 2, 1]);
+    });
+
+    test('should close all initial closables in reverse order', () => {
+      const callOrder: number[] = [];
+      const closable1: SyncClosable = {
+        close: () => {
+          callOrder.push(1);
+        },
+      };
+      const closable2: SyncClosable = {
+        close: () => {
+          callOrder.push(2);
+        },
+      };
+      const closable3: SyncClosable = {
+        close: () => {
+          callOrder.push(3);
+        },
+      };
+
+      const closer = createCloser(closable1, closable2, closable3);
+      const result = closer.close();
+      expect(result).toBeUndefined();
+      expect(callOrder).toEqual([3, 2, 1]);
+    });
+
+    test('should close mixed initial and added closables in reverse order', () => {
+      const callOrder: number[] = [];
+      const closable1: SyncClosable = {
+        close: () => {
+          callOrder.push(1);
+        },
+      };
+      const closable2: SyncClosable = {
+        close: () => {
+          callOrder.push(2);
+        },
+      };
+      const closable3: SyncClosable = {
+        close: () => {
+          callOrder.push(3);
+        },
+      };
+      const closable4: SyncClosable = {
+        close: () => {
+          callOrder.push(4);
+        },
+      };
+
+      const closer = createCloser(closable1, closable2);
+      closer.add(closable3);
+      closer.add(closable4);
+
+      const result = closer.close();
+      expect(result).toBeUndefined();
+      expect(callOrder).toEqual([4, 3, 2, 1]);
+    });
+
+    test('should handle empty closer', () => {
+      const closer = createCloser();
+      const result = closer.close();
+      expect(result).toBeUndefined();
+    });
+
+    test('should handle closer with single closable', () => {
+      const closable: SyncClosable = { close: () => undefined };
+      const spy = jest.spyOn(closable, 'close');
+
+      const closer = createCloser(closable);
+      const result = closer.close();
+      expect(result).toBeUndefined();
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    test('should handle async closables and return Promise', async () => {
+      const closable1: AsyncClosable = { close: () => Promise.resolve() };
+      const closable2: AsyncClosable = { close: () => Promise.resolve() };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+
+      const closer = createCloser(closable1, closable2);
+      const result = closer.close();
+      expect(result).toBeInstanceOf(Promise);
+
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+
+      await result;
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+    });
+
+    test('should handle mixed sync and async closables', async () => {
+      let asyncClosed = false;
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: AsyncClosable = {
+        close: async () => {
+          await delay(1);
+          asyncClosed = true;
+        },
+      };
+      const closable3: SyncClosable = { close: () => undefined };
+
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
+
+      const closer = createCloser(closable1, closable2, closable3);
+      const result = closer.close();
+      expect(result).toBeInstanceOf(Promise);
+
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+      expect(spy3).toHaveBeenCalledTimes(1);
+
+      expect(asyncClosed).toBe(false);
+      await result;
+      expect(asyncClosed).toBe(true);
+    });
+
+    test('should clear closables after close', () => {
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: SyncClosable = { close: () => undefined };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+
+      const closer = createCloser(closable1);
+      closer.add(closable2);
+
+      // First close
+      const result1 = closer.close();
+      expect(result1).toBeUndefined();
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+
+      // Second close should not call the same closables
+      const result2 = closer.close();
+      expect(result2).toBeUndefined();
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+    });
+
+    test('should allow adding closables after close', () => {
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: SyncClosable = { close: () => undefined };
+      const closable3: SyncClosable = { close: () => undefined };
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
+
+      const closer = createCloser(closable1);
+      const result1 = closer.close();
+      expect(result1).toBeUndefined();
+
+      // Add new closable after close
+      closer.add(closable2);
+      closer.add(closable3);
+
+      // Close again should only call the new closables
+      const result2 = closer.close();
+      expect(result2).toBeUndefined();
+      expect(spy1).toHaveBeenCalledTimes(1); // Only called once
+      expect(spy2).toHaveBeenCalledTimes(1);
+      expect(spy3).toHaveBeenCalledTimes(1);
+    });
+
+    test('should accumulate errors and throw after closing all', () => {
+      const err1 = new Error('err1');
+      const err2 = new Error('err2');
+
+      const closable1: SyncClosable = {
+        close: () => {
+          throw err1;
+        },
+      };
+      const closable2: SyncClosable = { close: () => undefined };
+      const closable3: SyncClosable = {
+        close: () => {
+          throw err2;
+        },
+      };
+
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
+
+      const closer = createCloser(closable1, closable2, closable3);
+
+      try {
+        const result = closer.close();
+        expect(result).toBeUndefined();
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(spy1).toHaveBeenCalledTimes(1);
+        expect(spy2).toHaveBeenCalledTimes(1);
+        expect(spy3).toHaveBeenCalledTimes(1);
+
+        const thrown = error as Error & { cause?: unknown };
+        expect(thrown).toBeInstanceOf(Error);
+        expect(thrown.message).toBe('Multiple errors occurred while closing closables');
+
+        const cause = thrown.cause as unknown[] | undefined;
+        expect(Array.isArray(cause)).toBe(true);
+        expect((cause as unknown[]).length).toBe(2);
+        expect((cause as unknown[])[0]).toBeInstanceOf(Error);
+        expect((cause as unknown[])[1]).toBeInstanceOf(Error);
+      }
+    });
+
+    test('should throw single error if only one closable fails', () => {
+      const err = new Error('boom');
+      const closable1: SyncClosable = {
+        close: () => {
+          throw err;
+        },
+      };
+      const closable2: SyncClosable = { close: () => undefined };
+
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+
+      const closer = createCloser(closable1, closable2);
+
+      try {
+        const result = closer.close();
+        expect(result).toBeUndefined();
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(spy1).toHaveBeenCalledTimes(1);
+        expect(spy2).toHaveBeenCalledTimes(1);
+
+        const thrown = error as Error & { cause?: unknown };
+        expect(thrown).toBe(err);
+      }
+    });
+
+    test('should accumulate mixed sync/async errors and reject after all closables', async () => {
+      const syncErr = new Error('sync-fail');
+      const asyncErr = new Error('async-fail');
+
+      let asyncOkDone = false;
+      const closable1: SyncClosable = {
+        close: () => {
+          throw syncErr;
+        },
+      };
+      const closable2: AsyncClosable = {
+        close: async () => {
+          await delay(1);
+        },
+      };
+      const closable3: AsyncClosable = {
+        close: async () => {
+          await delay(1);
+          throw asyncErr;
+        },
+      };
+      const closable4: SyncClosable = { close: () => undefined };
+
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+      const spy3 = jest.spyOn(closable3, 'close');
+      const spy4 = jest.spyOn(closable4, 'close');
+
+      // Track that the successful async completed
+      const closable2Wrapped: AsyncClosable = {
+        close: async () => {
+          await closable2.close();
+          asyncOkDone = true;
+        },
+      };
+
+      const closer = createCloser(closable1, closable2Wrapped, closable3, closable4);
+      const promise = closer.close();
+      expect(promise).toBeInstanceOf(Promise);
+
+      // Sync ones ran immediately
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy4).toHaveBeenCalledTimes(1);
+      expect(asyncOkDone).toBe(false);
+
+      await expect(promise).rejects.toThrow('Multiple errors occurred while closing closables');
+
+      // All should have been invoked once
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+      expect(spy3).toHaveBeenCalledTimes(1);
+      expect(spy4).toHaveBeenCalledTimes(1);
+
+      // Successful async completed
+      expect(asyncOkDone).toBe(true);
+    });
+
+    test('should reject with single error when only one async fails', async () => {
+      const asyncErr = new Error('only-async-fail');
+
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: AsyncClosable = {
+        close: async () => {
+          await delay(1);
+          throw asyncErr;
+        },
+      };
+
+      const spy1 = jest.spyOn(closable1, 'close');
+      const spy2 = jest.spyOn(closable2, 'close');
+
+      const closer = createCloser(closable1, closable2);
+      const promise = closer.close();
+      expect(promise).toBeInstanceOf(Promise);
+
+      await expect(promise).rejects.toBe(asyncErr);
+
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
+    });
+
+    test('should preserve closable types when adding', () => {
+      const closer = createCloser();
+      const syncClosable: SyncClosable = { close: () => undefined };
+      const asyncClosable: AsyncClosable = { close: () => Promise.resolve() };
+
+      const returnedSync = closer.add(syncClosable);
+      const returnedAsync = closer.add(asyncClosable);
+
+      // Type should be preserved
+      expect(returnedSync).toBe(syncClosable);
+      expect(returnedAsync).toBe(asyncClosable);
+
+      // Should be able to call close on the returned closables
+      const syncResult: void = returnedSync.close();
+      const asyncResult: Promise<void> = returnedAsync.close();
+
+      expect(syncResult).toBeUndefined();
+      expect(asyncResult).toBeInstanceOf(Promise);
+    });
+
+    test('should work with functions as closables', async () => {
+      const func1: () => void = jest.fn<() => void>();
+      const func2: () => Promise<void> = jest.fn<() => Promise<void>>(() => Promise.resolve());
+
+      const closer = createCloser();
+      closer.add(asClosable(func1));
+      closer.add(asClosable(func2));
+
+      expect(func1).toHaveBeenCalledTimes(0);
+      expect(func2).toHaveBeenCalledTimes(0);
+
+      const result = closer.close();
+      expect(result).toBeInstanceOf(Promise);
+
+      expect(func1).toHaveBeenCalledTimes(1);
+      expect(func2).toHaveBeenCalledTimes(1);
+
+      await result;
+    });
+
+    test('should work with loggers', () => {
+      let closeCalled = false;
+      const logger: Logger = emitter.createLogger('info', {
+        sink: () => undefined,
+        close: () => {
+          closeCalled = true;
+        },
+      });
+
+      const closable: SyncClosable = { close: () => undefined };
+      const closableSpy = jest.spyOn(closable, 'close');
+
+      const closer = createCloser();
+      closer.add(asClosable(logger));
+      closer.add(closable);
+
+      expect(closeCalled).toBe(false);
+      expect(closableSpy).toHaveBeenCalledTimes(0);
+
+      const result = closer.close();
+      expect(result).toBeUndefined();
+      expect(closeCalled).toBe(true);
+      expect(closableSpy).toHaveBeenCalledTimes(1);
     });
   });
 });
