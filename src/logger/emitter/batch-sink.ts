@@ -170,6 +170,10 @@ export const batchSink = (logSink: LogSink, options?: BatchSinkOptions): AsyncFi
     },
 
     async close(): Promise<void> {
+      if (isClosing) {
+        return;
+      }
+
       isClosing = true;
       debouncedFlush.cancel(true);
       flushBuffer(true);
