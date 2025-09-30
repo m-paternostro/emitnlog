@@ -7,6 +7,9 @@ import { isNotNullable } from './is-not-nullable';
  * Objects implementing this interface provide a `close()` method that performs cleanup operations immediately and
  * returns `void`. This is typically used for resources that don't require asynchronous operations during cleanup, such
  * as event listeners, timers, or simple state cleanup.
+ *
+ * The closeable protocol expects that a single invocation of close is sufficient to perform all required operations
+ * (such as releasing resources), and that additional calls to close are safe and have no effect.
  */
 export type SyncCloseable = { readonly close: () => void };
 
@@ -16,6 +19,9 @@ export type SyncCloseable = { readonly close: () => void };
  * Objects implementing this interface provide a `close()` method that returns a `Promise<void>`. This is typically used
  * for resources that require asynchronous operations during cleanup, such as file handles, database connections, or
  * network resources.
+ *
+ * The closeable protocol expects that a single invocation of close is sufficient to perform all required operations
+ * (such as releasing resources), and that additional calls to close are safe and have no effect.
  */
 export type AsyncCloseable = { readonly close: () => Promise<void> };
 
@@ -24,6 +30,9 @@ export type AsyncCloseable = { readonly close: () => Promise<void> };
  *
  * This union type represents any closeable resource, whether it requires synchronous or asynchronous cleanup. It's the
  * most flexible type for accepting closeable resources when the cleanup method is not known in advance.
+ *
+ * The closeable protocol expects that a single invocation of close is sufficient to perform all required operations
+ * (such as releasing resources), and that additional calls to close are safe and have no effect.
  */
 export type Closeable = SyncCloseable | AsyncCloseable;
 
@@ -152,42 +161,49 @@ export const closeAll = <T extends readonly Closeable[]>(...closeables: T): Clos
 };
 
 /**
- * Creates a single closeable that, when closed, closes all the specified inputs.
+ * Creates a single closeable from one or more cleanup operations.
  *
- * This function is useful to create closeables from functions or for combining multiple cleanup operations into a
- * single closeable object. It accepts various types of inputs including existing closeables, cleanup functions, and
- * "partial closeables" like loggers with optional `close` methods. When the returned closeable is closed, all inputs
- * are processed and any errors are accumulated using the same error handling strategy as {@link closeAll}.
+ * This function serves two purposes:
  *
- * The return type is automatically inferred:
+ * 1. It transforms individual cleanup functions (or objects with optional `close` methods) into proper closeables.
+ * 2. It groups multiple such inputs into a single closeable that performs all cleanup steps in order.
  *
- * - All synchronous inputs → returns `SyncCloseable`
- * - Any asynchronous inputs → returns `AsyncCloseable`
- * - Ambiguous types → defaults to `AsyncCloseable` for safety
+ * All inputs are normalized to proper closeables and closed when the returned `close()` is invoked. Errors are
+ * accumulated and handled using the same strategy as {@link closeAll}.
  *
- * @example Converting functions to closeables
+ * The returned closeable guarantees:
+ *
+ * - It can be called only once (subsequent calls are no-ops).
+ * - The return type of `close()` matches the most flexible input:
+ *
+ *   - All synchronous inputs → returns `SyncCloseable`
+ *   - Any asynchronous input → returns `AsyncCloseable`
+ *   - Ambiguous → defaults to `AsyncCloseable` for safety
+ *
+ * See {@link createCloser} for a more convenient way to create a "live closeable" that can be used to accumulate
+ * closeables as they are instantiated.
+ *
+ * @example Creating a closeable from a single function
  *
  * ```ts
  * import { asCloseable } from 'emitnlog/utils';
  *
- * const cleanup1 = () => clearTimeout(timerId);
- * const cleanup2 = () => removeEventListener('resize', handler);
- *
- * const disposer = asCloseable(cleanup1, cleanup2);
- * disposer.close(); // Calls both cleanup functions
+ * const timerCleanup = () => clearTimeout(timerId);
+ * const closeable = asCloseable(timerCleanup);
+ * closeable.close(); // Runs the cleanup
  * ```
  *
- * @example Combining mixed closeable types
+ * @example Combining multiple cleanup steps
  *
  * ```ts
  * import { asCloseable } from 'emitnlog/utils';
  *
- * const syncCloseable = { close: () => console.log('Sync cleanup') };
- * const asyncFunction = async () => await db.disconnect();
- * const logger = createLogger(); // Has optional close?: () => void | Promise<void>
+ * const db = { close: async () => await disconnect() };
+ * const file = { close: () => console.log('Closed file') };
+ * const cleanup = () => console.log('Manual cleanup');
  *
- * const combined = asCloseable(syncCloseable, asyncFunction, logger);
- * await combined.close(); // Returns AsyncCloseable due to async input
+ * const combined = asCloseable(db, file, cleanup);
+ * await combined.close(); // Closes all in order
  * ```
  *
  * @example Error handling
@@ -210,17 +226,8 @@ export const closeAll = <T extends readonly Closeable[]>(...closeables: T): Clos
  * }
  * ```
  *
- * @example With empty input
- *
- * ```ts
- * import { asCloseable } from 'emitnlog/utils';
- *
- * const noop = asCloseable(); // Creates a no-op closeable
- * noop.close(); // Does nothing, returns void
- * ```
- *
- * @param input - The closeables, functions, or partial closeables to combine
- * @returns A closeable that closes all specified inputs when its `close()` method is called
+ * @param input - One or more functions, closeables, or partial closeables to wrap
+ * @returns A closeable that closes all specified inputs when `close()` is called
  */
 export const asCloseable = <T extends readonly CloseableLike[]>(...input: T): CloseableAllResult<T> => {
   const closeables: readonly Closeable[] = input
@@ -246,7 +253,18 @@ export const asCloseable = <T extends readonly CloseableLike[]>(...input: T): Cl
     })
     .filter(isNotNullable);
 
-  const combined: Closeable = { close: () => closeAll(...closeables) };
+  let closed = false;
+  const combined: Closeable = {
+    close: () => {
+      if (closed) {
+        return undefined;
+      }
+
+      closed = true;
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+      return closeAll(...closeables);
+    },
+  };
   return combined as CloseableAllResult<T>;
 };
 
@@ -335,8 +353,14 @@ export const asSafeCloseable = <C extends Closeable>(
   closeable: C,
   onError?: (error: unknown) => void,
 ): HasPotentiallyAsyncClose<C> extends true ? AsyncCloseable : SyncCloseable => {
+  let closed = false;
   const safe = {
     close: () => {
+      if (closed) {
+        return undefined;
+      }
+
+      closed = true;
       try {
         const value = closeable.close();
         if (value instanceof Promise) {
@@ -362,6 +386,88 @@ export const asSafeCloseable = <C extends Closeable>(
   };
 
   return safe as HasPotentiallyAsyncClose<C> extends true ? AsyncCloseable : SyncCloseable;
+};
+
+/**
+ * A container for managing multiple closeables with a single `close()` call.
+ *
+ * This utility type represents a composite closeable that accumulates other closeables over time via the `add()`
+ * method. Once `close()` is called, all registered closeables are closed in reverse order, and the internal collection
+ * is cleared. Any subsequent calls to `add()` are still allowed, but the already-closed closeables will not be invoked
+ * again.
+ *
+ * Useful for ensuring cleanup logic is always executed, even in complex control flows with multiple return points.
+ */
+export type Closer = Closeable & { readonly add: <T extends Closeable>(closeable: T) => T };
+
+/**
+ * Creates a `Closer` that manages a group of closeables as a single unit, simplifying resource management— especially
+ * in functions with multiple return points or error paths.
+ *
+ * The returned object allows you to register closeables via `add()`, and later invoke `close()` once to clean them all
+ * up. Closeables are executed in reverse order of registration (last in, first closed), which is useful when resources
+ * depend on each other.
+ *
+ * After `close()` is called:
+ *
+ * - The internal list is cleared, so previously added closeables won't be called again.
+ * - Further `add()` calls are still allowed and track newly added closeables.
+ * - A subsequent call to `close()` will only affect those new closeables.
+ *
+ * Any errors thrown or rejected by the closeables are accumulated and handled using the same strategy as
+ * {@link closeAll}.
+ *
+ * The difference between this utility and {@link asCloseable} is that the object returned here is a "live closeable"
+ * that can be used to accumulate closeables as they are instantiated, whereas `asCloseable` is meant to be a "one time"
+ * utility that produces a single closeable. Additionally, `closer.add(...)` preserves and returns the original
+ * closeable’s type, making it easier to work with typed resources.
+ *
+ * @example Basic usage
+ *
+ * ```ts
+ * import type { Logger } from 'emitnlog/logger';
+ * import { createConsoleByLevelLogger } from 'emitnlog/logger';
+ * import { asCloseable, createCloser } from 'emitnlog/utils';
+ *
+ * const closer = createCloser();
+ *
+ * if (enableDB) {
+ *   const db: DB = closer.add(asCloseable(() => disconnect()));
+ *   ...
+ * }
+ *
+ * const logger: Logger = closer.add(createConsoleByLevelLogger());
+ *
+ * // When needed...
+ * await closer.close(); // Closes logger first, then db
+ * ```
+ *
+ * @param input - Optional initial set of closeables
+ * @returns A `Closer` that can register and close closeables as a group
+ */
+export const createCloser = (...input: readonly Closeable[]): Closer => {
+  const closeables = new Set<Closeable>(input);
+
+  const closer: Closer = {
+    add: <T extends Closeable>(closeable: T): T => {
+      closeables.add(closeable);
+      return closeable;
+    },
+
+    close: () => {
+      if (!closeables.size) {
+        return undefined;
+      }
+
+      const array = Array.from(closeables).reverse();
+      closeables.clear();
+
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+      return closeAll(...array);
+    },
+  };
+
+  return closer;
 };
 
 type PartialSyncCloseable = Partial<SyncCloseable>;
