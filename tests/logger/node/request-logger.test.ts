@@ -3,7 +3,7 @@ import { afterEach, describe, expect, jest, test } from '@jest/globals';
 import { EventEmitter } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { requestLogger } from '../../../src/logger/index-node.ts';
+import { OFF_LOGGER, requestLogger } from '../../../src/logger/index-node.ts';
 import { createMemoryLogger } from '../../jester.setup.ts';
 
 type RequestLike = IncomingMessage & { path?: string };
@@ -51,6 +51,24 @@ describe('emitnlog.logger.node.requestLogger', () => {
 
     expect(close.level).toBe('debug');
     expect(close.message).toMatch(/^http: closed 0\|GET:\/users after \d+(?:\.\d+)?ms$/);
+  });
+
+  test('does not log anything when logger is OFF_LOGGER', () => {
+    const middleware = requestLogger(OFF_LOGGER);
+
+    const req = createRequest({ method: 'GET', path: '/users' });
+    const { emitter: resEmitter, response: res } = createResponse();
+    const next = jest.fn();
+
+    middleware(req, res, next);
+    expect(next).toHaveBeenCalledTimes(1);
+
+    resEmitter.emit('finish');
+    resEmitter.emit('end');
+    resEmitter.emit('close');
+
+    // no-op middleware
+    expect(requestLogger(OFF_LOGGER)).toBe(middleware);
   });
 
   describe('supports partial information on request', () => {
