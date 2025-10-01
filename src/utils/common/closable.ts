@@ -11,7 +11,12 @@ import { isNotNullable } from './is-not-nullable.ts';
  * The closable protocol expects that a single invocation of close is sufficient to perform all required operations
  * (such as releasing resources), and that additional calls to close are safe and have no effect.
  */
-export type SyncClosable = { readonly close: () => void };
+export type SyncClosable = {
+  /**
+   * Performs synchronous cleanup operations, returning immediately after invoked.
+   */
+  readonly close: () => void;
+};
 
 /**
  * A resource that can be closed asynchronously.
@@ -23,7 +28,12 @@ export type SyncClosable = { readonly close: () => void };
  * The closable protocol expects that a single invocation of close is sufficient to perform all required operations
  * (such as releasing resources), and that additional calls to close are safe and have no effect.
  */
-export type AsyncClosable = { readonly close: () => Promise<void> };
+export type AsyncClosable = {
+  /**
+   * Performs asynchronous cleanup operations, returning a promise that resolves when the cleanup is complete.
+   */
+  readonly close: () => Promise<void>;
+};
 
 /**
  * A resource that can be closed either synchronously or asynchronously.
