@@ -188,7 +188,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           try {
             const keys = Object.keys(val);
             if (!keys.length) {
-              return '{}';
+              return {};
             }
 
             const prepareValue = (key: string) => {
