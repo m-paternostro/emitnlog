@@ -255,13 +255,23 @@ describe('emitnlog.utils.stringify', () => {
     });
 
     test('should respect custom maxArrayElements option', () => {
-      const array = Array.from({ length: 20 }, (_, i) => i);
+      const array = Array.from({ length: 21 }, (_, i) => i);
       const result = stringify(array, { maxArrayElements: 5 });
 
       expect(result).toContain('0');
       expect(result).toContain('4');
-      expect(result).toContain('...(15)');
-      expect(result).not.toContain('19');
+      expect(result).toContain('...(16)');
+      expect(result).not.toContain('5');
+    });
+
+    test('should respect custom maxArrayElements and excludeArrayTruncationElement options', () => {
+      const array = Array.from({ length: 21 }, (_, i) => i);
+      const result = stringify(array, { maxArrayElements: 5, excludeArrayTruncationElement: true });
+
+      expect(result).toContain('0');
+      expect(result).toContain('4');
+      expect(result).not.toContain('...(16)');
+      expect(result).not.toContain('5');
     });
 
     test('should respect 0 maxArrayElements option', () => {
@@ -298,6 +308,7 @@ describe('emitnlog.utils.stringify', () => {
       expect(result).toContain('prop0');
       expect(result).toContain('prop49');
       expect(result).toContain('...(30)');
+      expect(result).not.toContain('prop50');
       expect(result).not.toContain('prop79');
     });
 
@@ -317,6 +328,18 @@ describe('emitnlog.utils.stringify', () => {
       expect(result).toContain('prop0');
       expect(result).toContain('prop2');
       expect(result).toContain('...(12)');
+      expect(result).not.toContain('prop3');
+      expect(result).not.toContain('prop14');
+    });
+
+    test('should respect custom maxProperties and excludeObjectTruncationProperty options', () => {
+      const obj = Object.fromEntries(Array.from({ length: 15 }, (_, i) => [`prop${i}`, i]));
+      const result = stringify(obj, { maxProperties: 3, excludeObjectTruncationProperty: true });
+
+      expect(result).toContain('prop0');
+      expect(result).toContain('prop2');
+      expect(result).not.toContain('...(12)');
+      expect(result).not.toContain('prop3');
       expect(result).not.toContain('prop14');
     });
 

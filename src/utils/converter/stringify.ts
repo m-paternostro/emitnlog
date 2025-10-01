@@ -26,8 +26,8 @@ export type StringifyOptions = {
   readonly maxDepth?: number;
 
   /**
-   * Format dates using the local locale instead of ISO format. When true, uses `toLocaleString()` instead of
-   * `toISOString()`
+   * When true, uses `toLocaleString()` instead of `toISOString()` to format dates using the local locale instead of the
+   * default ISO format.
    *
    * @default false
    */
@@ -42,12 +42,32 @@ export type StringifyOptions = {
   readonly maxArrayElements?: number;
 
   /**
+   * When true, excludes the array truncation element.
+   *
+   * By default, stringify adds a truncation element like `'...(4)'` to indicate that an array has been truncated due to
+   * the `maxArrayElements` option.
+   *
+   * @default false
+   */
+  readonly excludeArrayTruncationElement?: boolean;
+
+  /**
    * Maximum number of object properties to show before truncating. Use a negative number to disable the object property
    * limit.
    *
    * @default 50
    */
   readonly maxProperties?: number;
+
+  /**
+   * When true, excludes the object truncation property.
+   *
+   * By default, stringify adds a truncation property like `'...(4)':'...'` to indicate that an object has been
+   * truncated due to the `maxProperties` option.
+   *
+   * @default false
+   */
+  readonly excludeObjectTruncationProperty?: boolean;
 };
 
 /**
@@ -165,7 +185,9 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           if (maxDepth < 0 || depth < maxDepth) {
             if (maxArrayElements >= 0 && val.length > maxArrayElements) {
               const truncatedArray = val.slice(0, maxArrayElements);
-              truncatedArray.push(`...(${val.length - maxArrayElements})`);
+              if (!options?.excludeArrayTruncationElement) {
+                truncatedArray.push(`...(${val.length - maxArrayElements})`);
+              }
               val = truncatedArray;
             }
 
@@ -212,7 +234,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
                 }
               }
 
-              if (length > max) {
+              if (length > max && !options?.excludeObjectTruncationProperty) {
                 const truncatedKey = `...(${length - max})`;
                 truncatedObj[truncatedKey] = '...';
               }
