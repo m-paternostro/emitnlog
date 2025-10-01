@@ -3,9 +3,14 @@ import { expect, jest } from '@jest/globals';
 import type { Logger, LogLevel } from '../src/logger/index.ts';
 import { asExtendedLogger, emitter, implementation } from '../src/logger/index.ts';
 
-/*
- * Utilities to make using Jester easier.
+/**
+ * Fails a test with a given message.
+ *
+ * @param message The message to fail the test with.
  */
+export const fail = (message: string) => {
+  expect(message).toBe(true);
+};
 
 /**
  * Flushes all promises in the microtask queue on tests that are using Jest `jest.useFakeTimers()`.
