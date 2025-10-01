@@ -141,6 +141,15 @@ describe('emitnlog.utils.stringify', () => {
     expect(stringify(circularMap, { maxDepth: -1 })).toBe('{"key1":{"ref":"[Circular Reference]"}}');
   });
 
+  test('should handle empty objects', () => {
+    const client = {
+      clientInfo: { name: 'hello', version: '1.0.0' },
+      clientCapabilities: { sampling: {}, elicitation: {}, roots: { listChanged: true } },
+    };
+
+    expect(stringify(client)).toBe(JSON.stringify(client));
+  });
+
   test('should handle Set objects with circular references', () => {
     const circularSet = new Set();
     const setObj: Record<string, unknown> = {};
