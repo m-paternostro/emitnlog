@@ -397,7 +397,20 @@ export const asSafeClosable = <C extends Closable>(
  *
  * Useful for ensuring cleanup logic is always executed, even in complex control flows with multiple return points.
  */
-export type Closer = Closable & { readonly add: <T extends ClosableLike>(closable: T) => T };
+export type Closer = Closable & {
+  /**
+   * Adds a closable to be handled when the closer is closed.
+   *
+   * @param closable
+   * @returns The closable
+   */
+  readonly add: <T extends ClosableLike>(closable: T) => T;
+
+  /**
+   * The number of closables that have not been closed.
+   */
+  readonly size: number;
+};
 
 /**
  * Creates a `Closer` that manages a group of closables as a single unit, simplifying resource management— especially in
@@ -451,6 +464,10 @@ export const createCloser = (...input: readonly Closable[]): Closer => {
     add: (closable) => {
       closables.add(closable);
       return closable;
+    },
+
+    get size() {
+      return closables.size;
     },
 
     close: () => {

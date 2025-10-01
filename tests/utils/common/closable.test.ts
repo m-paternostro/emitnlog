@@ -975,7 +975,9 @@ describe('emitnlog.utils.closable', () => {
 
     test('should handle empty closer', () => {
       const closer = createCloser();
+      expect(closer.size).toBe(0);
       const result = closer.close();
+      expect(closer.size).toBe(0);
       expect(result).toBeUndefined();
     });
 
@@ -984,7 +986,9 @@ describe('emitnlog.utils.closable', () => {
       const spy = jest.spyOn(closable, 'close');
 
       const closer = createCloser(closable);
+      expect(closer.size).toBe(1);
       const result = closer.close();
+      expect(closer.size).toBe(0);
       expect(result).toBeUndefined();
       expect(spy).toHaveBeenCalledTimes(1);
     });
@@ -1066,15 +1070,19 @@ describe('emitnlog.utils.closable', () => {
       const spy3 = jest.spyOn(closable3, 'close');
 
       const closer = createCloser(closable1);
+      expect(closer.size).toBe(1);
       const result1 = closer.close();
+      expect(closer.size).toBe(0);
       expect(result1).toBeUndefined();
 
       // Add new closable after close
       closer.add(closable2);
       closer.add(closable3);
+      expect(closer.size).toBe(2);
 
       // Close again should only call the new closables
       const result2 = closer.close();
+      expect(closer.size).toBe(0);
       expect(result2).toBeUndefined();
       expect(spy1).toHaveBeenCalledTimes(1); // Only called once
       expect(spy2).toHaveBeenCalledTimes(1);
@@ -1102,12 +1110,13 @@ describe('emitnlog.utils.closable', () => {
       const spy3 = jest.spyOn(closable3, 'close');
 
       const closer = createCloser(closable1, closable2, closable3);
+      expect(closer.size).toBe(3);
 
       try {
-        const result = closer.close();
-        expect(result).toBeUndefined();
+        void closer.close();
         expect(true).toBe(false);
       } catch (error) {
+        expect(closer.size).toBe(0);
         expect(spy1).toHaveBeenCalledTimes(1);
         expect(spy2).toHaveBeenCalledTimes(1);
         expect(spy3).toHaveBeenCalledTimes(1);
