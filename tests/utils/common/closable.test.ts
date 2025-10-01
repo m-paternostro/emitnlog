@@ -7,6 +7,7 @@ import type { implementation, Logger } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
 import type { AsyncClosable, Closable, SyncClosable } from '../../../src/utils/index.ts';
 import { asClosable, asSafeClosable, closeAll, createCloser, delay } from '../../../src/utils/index.ts';
+import { fail } from '../../jester.setup.ts';
 
 describe('emitnlog.utils.closable', () => {
   const NOT_CLOSABLE: { a: number; close?: () => void } = { a: 1 };
@@ -179,8 +180,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         closeAll(c1, c2, c3);
-        // should not reach
-        expect(true).toBe(false);
+        fail('close all should throw');
       } catch (error) {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(s2).toHaveBeenCalledTimes(1);
@@ -212,7 +212,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         closeAll(c1, c2);
-        expect(true).toBe(false);
+        fail('close all should throw');
       } catch (error) {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(s2).toHaveBeenCalledTimes(1);
@@ -686,7 +686,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         combined.close();
-        expect(true).toBe(false);
+        fail('close should throw');
       } catch (error) {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(sOk).toHaveBeenCalledTimes(1);
@@ -716,7 +716,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         combined.close();
-        expect(true).toBe(false);
+        fail('close should throw');
       } catch (error) {
         expect(sBad).toHaveBeenCalledTimes(1);
         expect(okFn).toHaveBeenCalledTimes(1);
@@ -1145,7 +1145,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         void closer.close();
-        expect(true).toBe(false);
+        fail('close should throw');
       } catch (error) {
         expect(closer.size).toBe(0);
         expect(spy1).toHaveBeenCalledTimes(1);
@@ -1179,9 +1179,8 @@ describe('emitnlog.utils.closable', () => {
       const closer = createCloser(closable1, closable2);
 
       try {
-        const result = closer.close();
-        expect(result).toBeUndefined();
-        expect(true).toBe(false);
+        void closer.close();
+        fail('close should throw');
       } catch (error) {
         expect(spy1).toHaveBeenCalledTimes(1);
         expect(spy2).toHaveBeenCalledTimes(1);
