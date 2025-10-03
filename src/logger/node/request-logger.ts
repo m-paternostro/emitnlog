@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import type { Logger, LogLevel } from '../definition.ts';
+import { OFF_LOGGER } from '../off-logger.ts';
 import { withPrefix } from '../prefixed-logger.ts';
 
 type RequestHandler = (req: IncomingMessage & { path?: string }, res: ServerResponse, next: () => void) => void;
@@ -88,6 +89,10 @@ export type RequestLoggerOptions = {
  *   routers.
  */
 export const requestLogger = (logger: Logger, options?: RequestLoggerOptions): RequestHandler => {
+  if (logger === OFF_LOGGER) {
+    return NO_OP_REQUEST_HANDLER;
+  }
+
   const config = {
     ...{
       prefix: 'http',
@@ -147,3 +152,7 @@ export const requestLogger = (logger: Logger, options?: RequestLoggerOptions): R
     next();
   };
 };
+
+const NO_OP_REQUEST_HANDLER: RequestHandler = Object.freeze((_req, _res, next): void => {
+  next();
+});
