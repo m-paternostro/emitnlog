@@ -1,5 +1,35 @@
 # emitnlog
 
+## 0.9.0
+
+### Minor Changes
+
+- 4fe6732: This change includes some significant improvements to the logger implementation and a breaking change for users.
+
+  Breaking changes:
+  - Class-based loggers removed: `ConsoleLogger`, `ConsoleErrorLogger`, and `FileLogger` are no longer available. Users should use the factory functions instead:
+    - `createConsoleLogLogger`
+    - `createConsoleErrorLogger`
+    - `createConsoleByLevelLogger`
+    - `createFileLogger`
+  - BaseLogger must now be imported using the `implementation` namespace (`import { implementation } from 'emitnlog/logger';`)
+
+  See the [logger.md](docs/logger.md) file for more details.
+
+- da019f3: This change includes some significant improvements to the packing of the project and a breaking change for users.
+
+  Users no longer need to explicitly import from the `node` subpath. The correct runtime variant (neutral or Node-specific) is now automatically resolved based on the environment. This simplifies usage but may affect setups that previously relied on manually selecting the Node export.
+
+### Patch Changes
+
+- 13c0de8: Utils small improvements: sync utilities docs with code; improve JSDoc
+- a09ffee: Enforce notify return and more accurate void check
+- 350928d: `stringify` now ignores object keys that throw error when accessed
+- 593e547: `errorify` now uses `stringify` to compute the error message.
+- 8073a17: Add `requestLogger`, a drop-in Express-compatible middleware that logs request lifecycle events.
+- 987c35e: Tracker small improvements: clarify invocation index, export promise option types, and fix docs
+- 19c4d53: Adds "closable" utilities: `closeAll`, `asClosable`, `asSafeClosable`, `createCloser`
+
 ## 0.8.0
 
 ### Minor Changes
