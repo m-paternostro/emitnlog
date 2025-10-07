@@ -329,6 +329,339 @@ describe('emitnlog.tracker.promise.holder', () => {
       await promise2;
       expect(holder.size).toBe(0);
     });
+
+    test('should wait for specific IDs only', async () => {
+      const holder = holdPromises();
+
+      let resolve1: (value: string) => void;
+      let resolve2: (value: string) => void;
+      let resolve3: (value: string) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+      const promise2 = new Promise<string>((resolve) => {
+        resolve2 = resolve;
+      });
+      const promise3 = new Promise<string>((resolve) => {
+        resolve3 = resolve;
+      });
+
+      void holder.track('op1', () => promise1);
+      void holder.track('op2', () => promise2);
+      void holder.track('op3', () => promise3);
+
+      expect(holder.size).toBe(3);
+
+      // Wait only for op2
+      const waitPromise = holder.wait('op2');
+
+      // Resolve op1 first (not waited)
+      resolve1!('result1');
+      await Promise.resolve();
+      expect(holder.size).toBe(2);
+
+      // waitPromise should not complete yet
+      let waitCompleted = false;
+      void waitPromise.then(() => {
+        waitCompleted = true;
+      });
+
+      await Promise.resolve();
+      expect(waitCompleted).toBe(false);
+
+      // Resolve op2 (waited)
+      resolve2!('result2');
+      await waitPromise;
+
+      // Should complete after op2 resolves
+      expect(waitCompleted).toBe(true);
+      expect(holder.size).toBe(1); // Only op3 remains
+
+      // Clean up
+      resolve3!('result3');
+      await promise3;
+      expect(holder.size).toBe(0);
+    });
+
+    test('should wait for multiple specific IDs', async () => {
+      const holder = holdPromises();
+
+      let resolve1: (value: string) => void;
+      let resolve2: (value: string) => void;
+      let resolve3: (value: string) => void;
+      let resolve4: (value: string) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+      const promise2 = new Promise<string>((resolve) => {
+        resolve2 = resolve;
+      });
+      const promise3 = new Promise<string>((resolve) => {
+        resolve3 = resolve;
+      });
+      const promise4 = new Promise<string>((resolve) => {
+        resolve4 = resolve;
+      });
+
+      void holder.track('op1', () => promise1);
+      void holder.track('op2', () => promise2);
+      void holder.track('op3', () => promise3);
+      void holder.track('op4', () => promise4);
+
+      expect(holder.size).toBe(4);
+
+      // Wait only for op2 and op4
+      const waitPromise = holder.wait('op2', 'op4');
+
+      // Resolve op1 and op3 (not waited)
+      resolve1!('result1');
+      resolve3!('result3');
+      await Promise.resolve();
+      expect(holder.size).toBe(2); // op2 and op4 remain
+
+      // waitPromise should not complete yet
+      let waitCompleted = false;
+      void waitPromise.then(() => {
+        waitCompleted = true;
+      });
+
+      await Promise.resolve();
+      expect(waitCompleted).toBe(false);
+
+      // Resolve op2
+      resolve2!('result2');
+      await Promise.resolve();
+      expect(waitCompleted).toBe(false); // Still waiting for op4
+
+      // Resolve op4
+      resolve4!('result4');
+      await waitPromise;
+
+      // Should complete after both op2 and op4 resolve
+      expect(waitCompleted).toBe(true);
+      expect(holder.size).toBe(0); // All operations complete
+    });
+
+    test('should ignore unknown IDs when waiting', async () => {
+      const holder = holdPromises();
+
+      let resolve1: (value: string) => void;
+      let resolve2: (value: string) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+      const promise2 = new Promise<string>((resolve) => {
+        resolve2 = resolve;
+      });
+
+      void holder.track('op1', () => promise1);
+      void holder.track('op2', () => promise2);
+
+      expect(holder.size).toBe(2);
+
+      // Wait for op1 and some unknown IDs
+      const waitPromise = holder.wait('op1', 'unknown-op', 'another-unknown');
+
+      // Resolve op2 first (not waited)
+      resolve2!('result2');
+      await Promise.resolve();
+      expect(holder.size).toBe(1);
+
+      // waitPromise should not complete yet
+      let waitCompleted = false;
+      void waitPromise.then(() => {
+        waitCompleted = true;
+      });
+
+      await Promise.resolve();
+      expect(waitCompleted).toBe(false);
+
+      // Resolve op1 (the only known ID that was waited)
+      resolve1!('result1');
+      await waitPromise;
+
+      // Should complete after op1 resolves (unknown IDs ignored)
+      expect(waitCompleted).toBe(true);
+      expect(holder.size).toBe(0);
+    });
+
+    test('should complete immediately when waiting for only unknown IDs', async () => {
+      const holder = holdPromises();
+
+      let resolve1: (value: string) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+
+      void holder.track('op1', () => promise1);
+      expect(holder.size).toBe(1);
+
+      // Wait for only unknown IDs
+      await holder.wait('unknown1', 'unknown2');
+
+      // Should complete immediately
+      expect(holder.size).toBe(1); // op1 still tracked
+
+      // Clean up
+      resolve1!('result1');
+      await promise1;
+      expect(holder.size).toBe(0);
+    });
+
+    test('should emit onSettled for waited promises only when waiting for specific IDs', async () => {
+      const holder = holdPromises();
+      const events: PromiseSettledEvent[] = [];
+
+      holder.onSettled((event) => {
+        events.push(event);
+      });
+
+      let resolve1: (value: string) => void;
+      let resolve2: (value: string) => void;
+      let resolve3: (value: string) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+      const promise2 = new Promise<string>((resolve) => {
+        resolve2 = resolve;
+      });
+      const promise3 = new Promise<string>((resolve) => {
+        resolve3 = resolve;
+      });
+
+      void holder.track('op1', () => promise1);
+      void holder.track('op2', () => promise2);
+      void holder.track('op3', () => promise3);
+
+      expect(holder.size).toBe(3);
+      expect(events).toHaveLength(0);
+
+      // Wait only for op2
+      const waitPromise = holder.wait('op2');
+
+      // Resolve op1 first (not waited but should still emit event)
+      resolve1!('result1');
+      await Promise.resolve();
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ label: 'op1', result: 'result1' });
+
+      // Resolve op3 (not waited but should still emit event)
+      resolve3!('result3');
+      await Promise.resolve();
+      expect(events).toHaveLength(2);
+      expect(events[1]).toMatchObject({ label: 'op3', result: 'result3' });
+
+      // Resolve op2 (waited - should emit event)
+      resolve2!('result2');
+      await waitPromise;
+
+      expect(events).toHaveLength(3);
+      expect(events[2]).toMatchObject({ label: 'op2', result: 'result2' });
+    });
+
+    test('should emit onSettled for all promises that settle, regardless of wait selection', async () => {
+      const holder = holdPromises();
+      const events: PromiseSettledEvent[] = [];
+
+      holder.onSettled((event) => {
+        events.push(event);
+      });
+
+      let resolve1: (value: string) => void;
+      let resolve2: (value: string) => void;
+      let resolve3: (value: string) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+      const promise2 = new Promise<string>((resolve) => {
+        resolve2 = resolve;
+      });
+      const promise3 = new Promise<string>((resolve) => {
+        resolve3 = resolve;
+      });
+
+      void holder.track('waited-op', () => promise1);
+      void holder.track('not-waited-op1', () => promise2);
+      void holder.track('not-waited-op2', () => promise3);
+
+      expect(holder.size).toBe(3);
+
+      // Wait only for waited-op
+      const waitPromise = holder.wait('waited-op');
+
+      // Resolve all promises
+      resolve1!('waited-result');
+      resolve2!('not-waited-result1');
+      resolve3!('not-waited-result2');
+
+      await waitPromise;
+
+      // All promises should have emitted events
+      expect(events).toHaveLength(3);
+
+      const waitedEvent = events.find((e) => e.label === 'waited-op');
+      const notWaited1Event = events.find((e) => e.label === 'not-waited-op1');
+      const notWaited2Event = events.find((e) => e.label === 'not-waited-op2');
+
+      expect(waitedEvent).toMatchObject({ label: 'waited-op', result: 'waited-result' });
+      expect(notWaited1Event).toMatchObject({ label: 'not-waited-op1', result: 'not-waited-result1' });
+      expect(notWaited2Event).toMatchObject({ label: 'not-waited-op2', result: 'not-waited-result2' });
+
+      expect(holder.size).toBe(0);
+    });
+
+    test('should handle rejections when waiting for specific IDs', async () => {
+      const holder = holdPromises();
+      const events: PromiseSettledEvent[] = [];
+
+      holder.onSettled((event) => {
+        events.push(event);
+      });
+
+      let resolve1: (value: string) => void;
+      let reject2: (error: Error) => void;
+
+      const promise1 = new Promise<string>((resolve) => {
+        resolve1 = resolve;
+      });
+      const promise2 = new Promise<string>((_, reject) => {
+        reject2 = reject;
+      });
+
+      void holder.track('success-op', () => promise1);
+      const rejectedPromise = holder.track('failing-op', () => promise2);
+
+      // Handle rejection
+      rejectedPromise.catch(() => {
+        // Expected rejection
+      });
+
+      expect(holder.size).toBe(2);
+
+      // Wait only for failing-op
+      const waitPromise = holder.wait('failing-op');
+
+      // Reject the promise
+      const error = new Error('operation failed');
+      reject2!(error);
+
+      await waitPromise; // Should complete even though the promise rejected
+
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({ label: 'failing-op', rejected: true, result: error });
+      expect(holder.size).toBe(1); // success-op still tracked
+
+      // Clean up
+      resolve1!('success');
+      await promise1;
+      expect(holder.size).toBe(0);
+    });
   });
 
   describe('logging integration', () => {

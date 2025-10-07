@@ -3,6 +3,7 @@ import type { Writable } from 'type-fest';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
+import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type {
   PromiseHolder,
   PromiseSettledEvent,
@@ -110,13 +111,13 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
 
     onSettled: onSettledNotifier.onEvent,
 
-    wait: async () => {
+    wait: () => {
       if (!promises.size) {
-        return;
+        return Promise.resolve();
       }
 
       logger.d`waiting for ${promises.size} promises to settle`;
-      await Promise.allSettled(promises);
+      return Promise.allSettled(promises).then(() => undefined);
     },
 
     track: <T>(
@@ -361,7 +362,18 @@ export const holdPromises = (options?: PromiseTrackerOptions): PromiseHolder => 
 
     onSettled: tracker.onSettled,
 
-    wait: tracker.wait,
+    wait: (...ids: readonly string[]) => {
+      if (!ids.length) {
+        return tracker.wait();
+      }
+
+      const filteredPromises = ids.map((id) => idMap.get(id)).filter(isNotNullable);
+      if (!filteredPromises.length) {
+        return Promise.resolve();
+      }
+
+      return Promise.allSettled(filteredPromises).then(() => undefined);
+    },
 
     has: (id: string) => idMap.has(id),
 
@@ -467,7 +479,18 @@ export const vaultPromises = (options?: PromiseVaultOptions): PromiseVault => {
 
     onSettled: tracker.onSettled,
 
-    wait: tracker.wait,
+    wait: (...ids: readonly string[]) => {
+      if (!ids.length) {
+        return tracker.wait();
+      }
+
+      const filteredPromises = ids.map((id) => idMap.get(id)).filter(isNotNullable);
+      if (!filteredPromises.length) {
+        return Promise.resolve();
+      }
+
+      return Promise.allSettled(filteredPromises).then(() => undefined);
+    },
 
     has: (id: string) => idMap.has(id),
 

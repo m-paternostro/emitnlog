@@ -317,51 +317,7 @@ export type PromiseTracker = {
  * ```
  */
 export type PromiseHolder = Simplify<
-  Omit<PromiseTracker, 'track'> & {
-    /**
-     * Checks if an operation with the given ID is currently cached (ongoing).
-     *
-     * Returns `true` if a promise with the specified ID is currently in progress. Once the operation completes
-     * (resolves or rejects), the cache entry is automatically removed and this method will return `false`.
-     *
-     * This method is useful for conditional logic, debugging, or monitoring cache state without triggering any
-     * operations.
-     *
-     * @example Conditional operation execution
-     *
-     * ```ts
-     * import { holdPromises } from 'emitnlog/tracker';
-     *
-     * const holder = holdPromises();
-     *
-     * if (!holder.has('expensive-calc')) {
-     *   console.log('Starting expensive calculation...');
-     * } else {
-     *   console.log('Calculation already in progress...');
-     * }
-     *
-     * const result = await holder.track('expensive-calc', () => performCalculation());
-     * ```
-     *
-     * @example Cache monitoring
-     *
-     * ```ts
-     * import { holdPromises } from 'emitnlog/tracker';
-     *
-     * const holder = holdPromises();
-     *
-     * // Start some operations
-     * holder.track('op1', () => longRunningTask1());
-     * holder.track('op2', () => longRunningTask2());
-     *
-     * console.log(`Active operations: op1=${holder.has('op1')}, op2=${holder.has('op2')}`);
-     * ```
-     *
-     * @param id The operation ID to check
-     * @returns True if the operation is currently cached/ongoing, false otherwise
-     */
-    readonly has: (id: string) => boolean;
-
+  Omit<PromiseTracker, 'track' | 'wait'> & {
     /**
      * Caches and tracks an async operation by its unique ID, ensuring it runs only once per ID.
      *
@@ -417,6 +373,108 @@ export type PromiseHolder = Simplify<
      * @returns The promise from the supplier (cached or fresh)
      */
     track<T>(id: string, supplier: () => Promise<T>): Promise<T>;
+
+    /**
+     * Checks if an operation with the given ID is currently cached (ongoing).
+     *
+     * Returns `true` if a promise with the specified ID is currently in progress. Once the operation completes
+     * (resolves or rejects), the cache entry is automatically removed and this method will return `false`.
+     *
+     * This method is useful for conditional logic, debugging, or monitoring cache state without triggering any
+     * operations.
+     *
+     * @example Conditional operation execution
+     *
+     * ```ts
+     * import { holdPromises } from 'emitnlog/tracker';
+     *
+     * const holder = holdPromises();
+     *
+     * if (!holder.has('expensive-calc')) {
+     *   console.log('Starting expensive calculation...');
+     * } else {
+     *   console.log('Calculation already in progress...');
+     * }
+     *
+     * const result = await holder.track('expensive-calc', () => performCalculation());
+     * ```
+     *
+     * @example Cache monitoring
+     *
+     * ```ts
+     * import { holdPromises } from 'emitnlog/tracker';
+     *
+     * const holder = holdPromises();
+     *
+     * // Start some operations
+     * holder.track('op1', () => longRunningTask1());
+     * holder.track('op2', () => longRunningTask2());
+     *
+     * console.log(`Active operations: op1=${holder.has('op1')}, op2=${holder.has('op2')}`);
+     * ```
+     *
+     * @param id The operation ID to check
+     * @returns True if the operation is currently cached/ongoing, false otherwise
+     */
+    readonly has: (id: string) => boolean;
+
+    /**
+     * Waits for currently tracked promises to settle (resolve or reject). If no `id` is specified, all promises are
+     * waited, otherwise only the identified promises are waited - ids that don't match tracked promises are ignored.
+     *
+     * This method takes a snapshot of currently tracked promises and waits for them to complete. Promises that are
+     * tracked after `wait()` begins are not included in the current wait operation - this allows for predictable
+     * coordination patterns.
+     *
+     * Calling `wait()` when no promises are tracked returns immediately. This can be used as a way to "clear" or verify
+     * the tracker state.
+     *
+     * Consider using `withTimeout()` utility to prevent indefinite waiting in production scenarios.
+     *
+     * @example Server shutdown coordination
+     *
+     * ```ts
+     * import { trackPromises } from 'emitnlog/tracker';
+     *
+     * const tracker = trackPromises();
+     *
+     * // Start background operations
+     * tracker.track('op1', () => backgroundJob1());
+     * tracker.track('op2', () => backgroundJob2());
+     *
+     * // Wait for all current operations to complete
+     * await tracker.wait();
+     *
+     * // Any new promises tracked during wait() are not included above
+     * tracker.track('op3', () => newOperation()); // This won't block the previous wait()
+     * ```
+     *
+     * @example With timeout protection and specific ids
+     *
+     * ```ts
+     * import { trackPromises } from 'emitnlog/tracker';
+     * import { withTimeout } from 'emitnlog/utils';
+     *
+     * const tracker = trackPromises();
+     * tracker.track('op1', () => longRunningTask1());
+     * tracker.track('op2', () => longRunningTask2());
+     *
+     * // Wait maximum 30 seconds for 'op2'
+     * await withTimeout(tracker.wait('op2'), 30000);
+     * ```
+     *
+     * @example Clearing/verifying tracker state
+     *
+     * ```ts
+     * const tracker = trackPromises();
+     *
+     * // This returns immediately if no promises are tracked
+     * await tracker.wait(); // Effectively a no-op that can verify empty state
+     * ```
+     *
+     * @returns A promise that resolves when all tracked promises have settled
+     */
+    readonly wait: (...ids: readonly string[]) => Promise<void>;
   }
 >;
 
@@ -677,85 +735,6 @@ export type PromiseHolder = Simplify<
  */
 export type PromiseVault = PromiseHolder & {
   /**
-   * Clears all cached promises from the vault.
-   *
-   * After calling this method, all subsequent `track()` calls will execute their suppliers regardless of whether they
-   * were previously cached. This is useful for global cache invalidation or cleanup scenarios.
-   *
-   * @example Global cache reset
-   *
-   * ```ts
-   * import { vaultPromises } from 'emitnlog/tracker';
-   *
-   * const vault = vaultPromises();
-   *
-   * // Cache some operations
-   * await vault.track('config', () => loadConfig());
-   * await vault.track('data', () => loadData());
-   *
-   * console.log(vault.size); // 2
-   *
-   * // Clear all cached entries
-   * vault.clear();
-   *
-   * console.log(vault.size); // 0
-   *
-   * // Next calls will execute suppliers again
-   * await vault.track('config', () => loadConfig()); // Executes loadConfig()
-   * ```
-   */
-  clear(): void;
-
-  /**
-   * Removes a specific cached promise from the vault.
-   *
-   * This allows selective invalidation of cache entries. The next `track()` call with the same ID will execute the
-   * supplier again instead of returning the cached promise.
-   *
-   * @example Selective cache invalidation
-   *
-   * ```ts
-   * import { vaultPromises } from 'emitnlog/tracker';
-   *
-   * const vault = vaultPromises();
-   *
-   * // Cache some operations
-   * await vault.track('user-123', () => fetchUser(123));
-   * await vault.track('user-456', () => fetchUser(456));
-   *
-   * // Invalidate specific user
-   * const wasRemoved = vault.forget('user-123');
-   * console.log(wasRemoved); // true
-   *
-   * // user-123 will be fetched again, user-456 uses cached version
-   * await vault.track('user-123', () => fetchUser(123)); // Executes fetchUser(123)
-   * await vault.track('user-456', () => fetchUser(456)); // Uses cached promise
-   * ```
-   *
-   * @example Error recovery
-   *
-   * ```ts
-   * import { vaultPromises } from 'emitnlog/tracker';
-   *
-   * const vault = vaultPromises();
-   *
-   * try {
-   *   await vault.track('risky-op', () => riskyOperation());
-   * } catch (error) {
-   *   // Remove failed operation from cache to allow retry
-   *   vault.forget('risky-op');
-   *
-   *   // Retry will execute the operation again
-   *   await vault.track('risky-op', () => riskyOperation());
-   * }
-   * ```
-   *
-   * @param id The ID of the cached promise to remove
-   * @returns True if the entry was found and removed, false if it wasn't in the cache
-   */
-  forget(id: string): boolean;
-
-  /**
    * Caches and tracks an async operation with configurable persistence behavior.
    *
    * Extends PromiseHolder's caching functionality with optional per-operation control over cache persistence. By
@@ -897,6 +876,85 @@ export type PromiseVault = PromiseHolder & {
    * @returns The promise from the supplier (cached or fresh)
    */
   track<T>(id: string, supplier: () => Promise<T>, options?: { forget?: boolean }): Promise<T>;
+
+  /**
+   * Clears all cached promises from the vault.
+   *
+   * After calling this method, all subsequent `track()` calls will execute their suppliers regardless of whether they
+   * were previously cached. This is useful for global cache invalidation or cleanup scenarios.
+   *
+   * @example Global cache reset
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * // Cache some operations
+   * await vault.track('config', () => loadConfig());
+   * await vault.track('data', () => loadData());
+   *
+   * console.log(vault.size); // 2
+   *
+   * // Clear all cached entries
+   * vault.clear();
+   *
+   * console.log(vault.size); // 0
+   *
+   * // Next calls will execute suppliers again
+   * await vault.track('config', () => loadConfig()); // Executes loadConfig()
+   * ```
+   */
+  clear(): void;
+
+  /**
+   * Removes a specific cached promise from the vault.
+   *
+   * This allows selective invalidation of cache entries. The next `track()` call with the same ID will execute the
+   * supplier again instead of returning the cached promise.
+   *
+   * @example Selective cache invalidation
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * // Cache some operations
+   * await vault.track('user-123', () => fetchUser(123));
+   * await vault.track('user-456', () => fetchUser(456));
+   *
+   * // Invalidate specific user
+   * const wasRemoved = vault.forget('user-123');
+   * console.log(wasRemoved); // true
+   *
+   * // user-123 will be fetched again, user-456 uses cached version
+   * await vault.track('user-123', () => fetchUser(123)); // Executes fetchUser(123)
+   * await vault.track('user-456', () => fetchUser(456)); // Uses cached promise
+   * ```
+   *
+   * @example Error recovery
+   *
+   * ```ts
+   * import { vaultPromises } from 'emitnlog/tracker';
+   *
+   * const vault = vaultPromises();
+   *
+   * try {
+   *   await vault.track('risky-op', () => riskyOperation());
+   * } catch (error) {
+   *   // Remove failed operation from cache to allow retry
+   *   vault.forget('risky-op');
+   *
+   *   // Retry will execute the operation again
+   *   await vault.track('risky-op', () => riskyOperation());
+   * }
+   * ```
+   *
+   * @param id The ID of the cached promise to remove
+   * @returns True if the entry was found and removed, false if it wasn't in the cache
+   */
+  forget(id: string): boolean;
 };
 
 /**
