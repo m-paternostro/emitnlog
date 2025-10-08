@@ -1,5 +1,12 @@
 # emitnlog
 
+## 0.9.1
+
+### Patch Changes
+
+- aca9e0d: Allow the `wait` method of `PromiseHolder` and `PromiseVault` to wait for specific ids.
+- 9f0e6e7: Improve the return types of the `closeAll` and `asClosable` functions to better reflect whether the closables are synchronous or asynchronous.
+
 ## 0.9.0
 
 ### Minor Changes
