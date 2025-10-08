@@ -300,6 +300,61 @@ describe('emitnlog.utils.closable', () => {
       expect(s1).toHaveBeenCalledTimes(1);
       expect(s2).toHaveBeenCalledTimes(1);
     });
+
+    test('type inference should handle sync template arguments correctly', async () => {
+      type Transport = { close: () => void };
+
+      const close1 = (transports: Transport[]): void => closeAll(...transports);
+      const close2 = <TTransport extends Transport>(transports: TTransport[]) => closeAll(...transports);
+
+      const t1: Transport = { close: () => undefined };
+      const t2: Transport = { close: () => undefined };
+
+      const s1 = jest.spyOn(t1, 'close');
+      const s2 = jest.spyOn(t2, 'close');
+
+      const result1: void = close1([t1, t2]);
+      expect(result1).not.toBeInstanceOf(Promise);
+
+      const result2: void = close2([t1, t2]);
+      expect(result2).not.toBeInstanceOf(Promise);
+
+      expect(s1).toHaveBeenCalledTimes(2);
+      expect(s2).toHaveBeenCalledTimes(2);
+
+      // @ts-expect-error The return type is void
+      const result3: Promise<void> = close2([t1, t2]);
+      expect(result3).not.toBeInstanceOf(Promise);
+    });
+
+    test('type inference should handle async template arguments correctly', async () => {
+      type Transport = { close: () => Promise<void> };
+
+      const close1 = (transports: Transport[]): Promise<void> => closeAll(...transports);
+      const close2 = <TTransport extends Transport>(transports: TTransport[]) => closeAll(...transports);
+
+      const t1: Transport = { close: () => Promise.resolve() };
+      const t2: Transport = { close: () => Promise.resolve() };
+
+      const s1 = jest.spyOn(t1, 'close');
+      const s2 = jest.spyOn(t2, 'close');
+
+      const result1: Promise<void> = close1([t1, t2]);
+      expect(result1).toBeInstanceOf(Promise);
+
+      const result2: Promise<void> = close2([t1, t2]);
+      expect(result2).toBeInstanceOf(Promise);
+
+      await result1;
+      await result2;
+
+      expect(s1).toHaveBeenCalledTimes(2);
+      expect(s2).toHaveBeenCalledTimes(2);
+
+      // @ts-expect-error The return type is Promise<void>
+      const result3: void = close2([t1, t2]);
+      expect(result3).toBeInstanceOf(Promise);
+    });
   });
 
   describe('asClosable', () => {
@@ -706,9 +761,10 @@ describe('emitnlog.utils.closable', () => {
 
     test('should throw single error if only one sync source fails', () => {
       const err = new Error('boom');
-      const bad = asClosable(() => {
+      const thrower = () => {
         throw err;
-      });
+      };
+      const bad = asClosable(thrower);
       const okFn: () => void = jest.fn<() => void>();
       const sBad = jest.spyOn(bad, 'close');
 
@@ -784,6 +840,64 @@ describe('emitnlog.utils.closable', () => {
 
       expect(okSync).toHaveBeenCalledTimes(1);
       expect(sBadAsync).toHaveBeenCalledTimes(1);
+    });
+
+    test('type inference should handle sync template arguments correctly', async () => {
+      type Transport = { close: () => void };
+
+      const toClosable1 = (transports: Transport[]): SyncClosable => asClosable(...transports);
+      const toClosable2 = <TTransport extends Transport>(transports: TTransport[]) => asClosable(...transports);
+
+      const t1: Transport = { close: () => undefined };
+      const t2: Transport = { close: () => undefined };
+
+      const s1 = jest.spyOn(t1, 'close');
+      const s2 = jest.spyOn(t2, 'close');
+
+      const closable1 = toClosable1([t1, t2]);
+      const closable2 = toClosable2([t1, t2]);
+
+      const result1: void = closable1.close();
+      expect(result1).not.toBeInstanceOf(Promise);
+
+      const result2: void = closable2.close();
+      expect(result2).not.toBeInstanceOf(Promise);
+
+      expect(s1).toHaveBeenCalledTimes(2);
+      expect(s2).toHaveBeenCalledTimes(2);
+
+      // @ts-expect-error The return type is void
+      const result3: Promise<void> = toClosable2([t1, t2]).close();
+      expect(result3).not.toBeInstanceOf(Promise);
+    });
+
+    test('type inference should handle async template arguments correctly', async () => {
+      type Transport = { close: () => Promise<void> };
+
+      const toClosable1 = (transports: Transport[]): AsyncClosable => asClosable(...transports);
+      const toClosable2 = <TTransport extends Transport>(transports: TTransport[]) => asClosable(...transports);
+
+      const t1: Transport = { close: () => Promise.resolve() };
+      const t2: Transport = { close: () => Promise.resolve() };
+
+      const s1 = jest.spyOn(t1, 'close');
+      const s2 = jest.spyOn(t2, 'close');
+
+      const result1: Promise<void> = toClosable1([t1, t2]).close();
+      expect(result1).toBeInstanceOf(Promise);
+
+      const result2: Promise<void> = toClosable2([t1, t2]).close();
+      expect(result2).toBeInstanceOf(Promise);
+
+      await result1;
+      await result2;
+
+      expect(s1).toHaveBeenCalledTimes(2);
+      expect(s2).toHaveBeenCalledTimes(2);
+
+      // @ts-expect-error The return type is Promise<void>
+      const result3: void = toClosable2([t1, t2]).close();
+      expect(result3).toBeInstanceOf(Promise);
     });
   });
 
