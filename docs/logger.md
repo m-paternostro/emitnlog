@@ -14,6 +14,7 @@ A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rf
 - [Environment-Driven Configuration](#environment-driven-configuration)
 - [Tee Logger](#tee-logger)
 - [Prefixed Logger](#prefixed-logger)
+- [Utilities](#utilities)
 - [Creating Custom Loggers](#creating-custom-loggers)
 - [Advanced Features](#advanced-features)
 
@@ -454,6 +455,25 @@ interface PrefixOptions {
   prefixSeparator?: string; // Default: '.'
   messageSeparator?: string; // Default: ': '
 }
+```
+
+## Utilities
+
+### withEmitLevel
+
+Returns a logger that emits all entries using a fixed level, regardless of the log method used.
+
+```ts
+import { createConsoleLogLogger, withEmitLevel } from 'emitnlog/logger';
+
+const baseLogger = createConsoleLogLogger('info');
+
+// A logger that emits 'info' or higher severities, all as errors.
+const errorLogger = withEmitLevel(baseLogger, 'error');
+
+errorLogger.d`debug`; // Not emitted (filtered out by baseLogger.level)
+errorLogger.i`info`; // Emitted as an error
+errorLogger.c`error`; // Emitted as an error
 ```
 
 ## Creating Custom Loggers
