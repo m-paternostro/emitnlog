@@ -50,6 +50,7 @@
   "typescript.preferences.quoteStyle": "single",
   "typescript.tsc.autoDetect": "off",
   "typescript.tsdk": "node_modules/typescript/lib",
+  "workbench.colorCustomizations": { "titleBar.activeBackground": "#415539" },
   "workbench.editor.closeOnFileDelete": true,
   "workbench.editor.revealIfOpen": true
 }

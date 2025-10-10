@@ -6,3 +6,4 @@ export * as implementation from './implementation/index.ts';
 export * from './off-logger.ts';
 export * from './prefixed-logger.ts';
 export * from './tee-logger.ts';
+export * from './with-utils.ts';
