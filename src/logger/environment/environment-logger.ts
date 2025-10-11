@@ -38,7 +38,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
  *
  * @example
  *
- * ```typescript
+ * ```ts
  * import { fromEnv } from 'emitnlog/logger';
  *
  * // Basic usage - uses environment variables if set, otherwise returns OFF_LOGGER
@@ -47,7 +47,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
  *
  * @example
  *
- * ```typescript
+ * ```ts
  * import { fromEnv } from 'emitnlog/logger';
  *
  * // With fallback options when environment variables are not set
@@ -62,7 +62,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
  *
  * @example
  *
- * ```typescript
+ * ```ts
  * import { fromEnv } from 'emitnlog/logger';
  *
  * // With a custom fallback logger
@@ -74,7 +74,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
  *
  * @example
  *
- * ```typescript
+ * ```ts
  * import { fromEnv } from 'emitnlog/logger';
  *
  * // Using console logger with info level and colorful format
