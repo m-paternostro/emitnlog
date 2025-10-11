@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.9.2
+
+### Patch Changes
+
+- f9716d5: Add `withEmitLevel` to control the level of emitted entries
+
 ## 0.9.1
 
 ### Patch Changes
