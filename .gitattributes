@@ -1,0 +1,4 @@
+# The `linguist-generated=true` attribute tells GitHub to:
+# 1. Hide the often large, machine-generated diffs in pull requests by default.
+# 2. Exclude this file from the repository's language statistics.
+package-lock.json linguist-generated=true
