@@ -6,7 +6,7 @@ import { OFF_LOGGER } from './off-logger.ts';
  * Returns a logger that emits all entries using a fixed level, regardless of the log method used.
  *
  * Note: The returned logger preserves the original logger’s level filtering behavior, but every emitted entry is
- * rewritten to use the provided `level`.
+ * rewritten to use the provided `level`. To create a logger with a different level, use {@link withLevel}.
  *
  * This is useful when you want messages of any severity to be treated as, say, errors.
  *
@@ -63,4 +63,51 @@ export const withEmitLevel = (
       }
     },
   );
+};
+
+/**
+ * Returns a logger that evaluates entries with a new minimum level while reusing the original logger for emission.
+ *
+ * Note: The returned logger only changes the level threshold used to decide whether an entry should be emitted. When an
+ * entry passes that check it is logged through the original logger with its original level.
+ *
+ * @example Enforce a stricter level
+ *
+ * ```ts
+ * import { createConsoleLogLogger, withLevel } from 'emitnlog/logger';
+ *
+ * const baseLogger = createConsoleLogLogger('trace');
+ * const errorOnlyLogger = withLevel(baseLogger, 'error');
+ *
+ * errorOnlyLogger.i`info`; // Not emitted
+ * errorOnlyLogger.e`error`; // Emitted as an error
+ * ```
+ *
+ * @example Dynamic level
+ *
+ * ```ts
+ * import { createConsoleLogLogger, withLevel } from 'emitnlog/logger';
+ *
+ * let currentLevel: LogLevel = 'info';
+ * const adjustableLogger = withLevel(createConsoleLogLogger('trace'), () => currentLevel);
+ *
+ * adjustableLogger.i`info`; // Emitted while currentLevel is 'info'
+ *
+ * currentLevel = 'error';
+ * adjustableLogger.i`info`; // Filtered out
+ * adjustableLogger.e`error`; // Emitted
+ * ```
+ *
+ * @param logger The original logger to wrap.
+ * @param level The level (or level provider) to use as the minimum severity threshold.
+ * @returns A logger that filters entries using `level` before delegating to `logger`.
+ */
+export const withLevel = (logger: Logger, level: LogLevel | 'off' | (() => LogLevel | 'off')): Logger => {
+  if (level === 'off' || logger === OFF_LOGGER) {
+    return OFF_LOGGER;
+  }
+
+  return createLogger(level, (entryLevel, message, args) => {
+    logger.log(entryLevel, message, ...args);
+  });
 };
