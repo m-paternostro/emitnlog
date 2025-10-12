@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
 import type { Logger, LogLevel } from '../../src/logger/index.ts';
-import { OFF_LOGGER, withEmitLevel } from '../../src/logger/index.ts';
+import { OFF_LOGGER, withEmitLevel, withLevel } from '../../src/logger/index.ts';
 import type { MemoryLogger } from '../jester.setup.ts';
 import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
 
@@ -606,6 +606,98 @@ describe('emitnlog.logger.with-utils', () => {
         // baseLogger should still be mockable
         expect(baseLogger).toHaveLoggedWith('error', 'test message');
       });
+    });
+  });
+
+  describe('withLevel', () => {
+    describe('OFF_LOGGER handling', () => {
+      test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
+        const logger = withLevel(OFF_LOGGER, 'error');
+        expect(logger).toBe(OFF_LOGGER);
+      });
+
+      test('should return OFF_LOGGER when level is off', () => {
+        const baseLogger = createMemoryLogger();
+        const logger = withLevel(baseLogger, 'off');
+        expect(logger).toBe(OFF_LOGGER);
+      });
+
+      test('should not return OFF_LOGGER when level provider returns off', () => {
+        const baseLogger = createMemoryLogger('trace');
+        const logger = withLevel(baseLogger, () => 'off');
+
+        logger.error('suppressed');
+
+        expect(logger).not.toBe(OFF_LOGGER);
+        expect(logger.level).toBe('off');
+        expect(baseLogger.entries).toHaveLength(0);
+      });
+    });
+
+    test('should filter entries using provided level before delegating', () => {
+      const memoryLogger = createMemoryLogger('trace');
+      const warningLogger = withLevel(memoryLogger, 'warning');
+
+      warningLogger.info('info message');
+      warningLogger.warning('warning message');
+      warningLogger.error('error message');
+
+      expect(memoryLogger.entries).toHaveLength(2);
+      expect(memoryLogger.entries[0].level).toBe('warning');
+      expect(memoryLogger.entries[0].message).toBe('warning message');
+      expect(memoryLogger.entries[1].level).toBe('error');
+      expect(memoryLogger.entries[1].message).toBe('error message');
+    });
+
+    test('should respect base logger filtering after delegation', () => {
+      const memoryLogger = createMemoryLogger('error');
+      const verboseLogger = withLevel(memoryLogger, 'trace');
+
+      verboseLogger.info('info message'); // Filtered by base logger
+      verboseLogger.error('error message');
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].level).toBe('error');
+      expect(memoryLogger.entries[0].message).toBe('error message');
+    });
+
+    test('should reflect dynamic level provider changes', () => {
+      let currentLevel: LogLevel | 'off' = 'info';
+      const memoryLogger = createMemoryLogger('trace');
+      const adjustableLogger = withLevel(memoryLogger, () => currentLevel);
+
+      expect(adjustableLogger.level).toBe('info');
+
+      adjustableLogger.info('info allowed');
+
+      currentLevel = 'error';
+      expect(adjustableLogger.level).toBe('error');
+
+      adjustableLogger.info('info suppressed');
+      adjustableLogger.error('error emitted');
+
+      currentLevel = 'off';
+      expect(adjustableLogger.level).toBe('off');
+
+      adjustableLogger.error('off suppressed');
+
+      expect(memoryLogger.entries).toHaveLength(2);
+      expect(memoryLogger.entries[0]).toMatchObject({ level: 'info', message: 'info allowed' });
+      expect(memoryLogger.entries[1]).toMatchObject({ level: 'error', message: 'error emitted' });
+    });
+
+    test('should forward original entry level and args', () => {
+      const memoryLogger = createMemoryLogger('trace');
+      const warningLogger = withLevel(memoryLogger, 'warning');
+      const context = { requestId: 'abc' };
+
+      warningLogger.args(context).error('problem', { retry: false });
+
+      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries[0].level).toBe('error');
+      expect(memoryLogger.entries[0].message).toBe('problem');
+      expect(memoryLogger.entries[0].args[0]).toBe(context);
+      expect(memoryLogger.entries[0].args[1]).toEqual({ retry: false });
     });
   });
 });
