@@ -1,7 +1,7 @@
 import type { Logger, LogLevel } from '../definition.ts';
 import type { BaseLoggerOptions } from '../implementation/base-logger.ts';
 import { BaseLogger } from '../implementation/base-logger.ts';
-import type { LogSink } from './common.ts';
+import type { LogSink } from './sink.ts';
 
 /**
  * Creates a logger that emits entries to the specified log sink.

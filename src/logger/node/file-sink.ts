@@ -5,9 +5,9 @@ import * as path from 'node:path';
 import type { Simplify } from 'type-fest';
 
 import { errorify } from '../../utils/converter/errorify.ts';
-import type { LogSink } from '../emitter/common.ts';
 import type { LogFormatter } from '../emitter/formatter.ts';
 import { plainFormatter } from '../emitter/formatter.ts';
+import type { LogSink } from '../emitter/sink.ts';
 import type { AsyncFinalizer } from '../implementation/finalizer.ts';
 
 /**

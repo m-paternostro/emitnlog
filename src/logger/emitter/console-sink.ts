@@ -1,8 +1,8 @@
 import { shouldEmitEntry } from '../implementation/level-utils.ts';
-import type { LogSink } from './common.ts';
-import { asLogSink } from './common.ts';
 import type { LogFormatter } from './formatter.ts';
 import { plainFormatter } from './formatter.ts';
+import type { LogSink } from './sink.ts';
+import { asLogSink } from './sink.ts';
 
 /**
  * Creates a log sink that writes all entries to console.log.

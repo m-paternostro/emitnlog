@@ -86,7 +86,6 @@ export function asLogSink(
   }
   return logSink;
 }
-
 /**
  * Represents a structured log entry with timestamp and metadata.
  *
