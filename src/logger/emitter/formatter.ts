@@ -2,7 +2,7 @@ import { terminalFormatter } from '../../utils/common/terminal-formatter.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
 import type { LogLevel } from '../definition.ts';
 import { decorateLogText } from '../implementation/level-utils.ts';
-import { asLogEntry } from './common.ts';
+import { asLogEntry } from './log-entry.ts';
 
 /**
  * Function type for formatting log entries into strings.

@@ -1,6 +1,7 @@
 import type { SyncFinalizer } from '../implementation/finalizer.ts';
-import type { LogEntry, LogSink } from './common.ts';
-import { asLogEntry } from './common.ts';
+import type { LogEntry } from './log-entry.ts';
+import { asLogEntry } from './log-entry.ts';
+import type { LogSink } from './sink.ts';
 
 /**
  * Interface for accessing stored log entries and clearing the memory store.
