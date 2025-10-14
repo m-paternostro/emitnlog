@@ -1,5 +1,14 @@
 # emitnlog
 
+## 0.9.2
+
+### Patch Changes
+
+- f9716d5: Add `withEmitLevel` to control the level of emitted entries
+- b681bf1: enhance JSON formatting and add layout options to file logger
+- 601ba3b: Add `withLevel` to create a logger with a different log level
+- 5b2cfc4: Enhance `asExtendedLogger` and "with utils" to support prefix loggers
+
 ## 0.9.1
 
 ### Patch Changes
