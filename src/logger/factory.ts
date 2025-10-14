@@ -13,6 +13,7 @@ import {
   plainFormatter,
 } from './emitter/formatter.ts';
 import type { BaseLoggerOptions } from './implementation/base-logger.ts';
+import { injectPrefixInformation, isPrefixedLogger } from './prefixed-logger.ts';
 
 /**
  * The format of the emitted lines. The possible values are:
@@ -223,7 +224,7 @@ export const asExtendedLogger = <L extends Logger, Ms extends readonly object[]>
     operation();
   };
 
-  const extendedLogger: Logger = {
+  let extendedLogger: Logger = {
     get level() {
       return logger.level;
     },
@@ -259,6 +260,10 @@ export const asExtendedLogger = <L extends Logger, Ms extends readonly object[]>
 
   for (const m of extensions) {
     Object.assign(extendedLogger, m);
+  }
+
+  if (isPrefixedLogger(logger)) {
+    extendedLogger = injectPrefixInformation(logger, extendedLogger);
   }
 
   return extendedLogger as ExtendedLogger<L, Ms>;

@@ -552,6 +552,12 @@ export const resetPrefix = <const TPrefix extends string, const TSeparator exten
   return withPrefix(logger, prefix, options);
 };
 
+/**
+ * Checks if a logger is a prefixed logger.
+ *
+ * @param logger The logger to check.
+ * @returns True if the logger is a prefixed logger, false otherwise.
+ */
 export const isPrefixedLogger = (logger: Logger | undefined | null): logger is PrefixedLogger =>
   isNotNullable(logger) &&
   prefixSymbol in logger &&
@@ -563,16 +569,20 @@ export const isPrefixedLogger = (logger: Logger | undefined | null): logger is P
   messageSeparatorSymbol in logger &&
   typeof logger[messageSeparatorSymbol] === 'string';
 
-export const inspectPrefixedLogger = (
-  logger: Logger,
-):
-  | {
-      readonly rootLogger: Logger;
-      readonly prefix: string;
-      readonly separator: string;
-      readonly messageSeparator: string;
-    }
-  | undefined =>
+export type PrefixInformation = {
+  readonly rootLogger: Logger;
+  readonly prefix: string;
+  readonly separator: string;
+  readonly messageSeparator: string;
+};
+
+/**
+ * Inspects a logger to get its prefix information.
+ *
+ * @param logger The logger to inspect.
+ * @returns The prefix information, or undefined if the logger is not a prefixed logger.
+ */
+export const inspectPrefixedLogger = (logger: Logger): PrefixInformation | undefined =>
   isPrefixedLogger(logger)
     ? {
         rootLogger: (logger as InternalPrefixedLogger)[rootLoggerSymbol],
@@ -581,6 +591,33 @@ export const inspectPrefixedLogger = (
         messageSeparator: (logger as InternalPrefixedLogger)[messageSeparatorSymbol],
       }
     : undefined;
+
+/**
+ * Important: this is an advanced utility, meant for logger implementors.
+ *
+ * Injects the prefix information from a source logger into a target logger so that the target is handled as a prefixed
+ * logger by other utilities.
+ *
+ * Use it carefully:
+ *
+ * - This method modifies `target` so that object must not be read-only.
+ * - This method does not cause `target` to write out the prefixed messages: this MUST be already handled by `target`
+ *
+ * @param source A prefixed logger
+ * @param target A logger to inject the prefix information into
+ * @returns The modified target logger, cast as the type
+ */
+export const injectPrefixInformation = <P extends PrefixedLogger>(source: P, target: Logger): P => {
+  const prefixInformation = inspectPrefixedLogger(source);
+  if (prefixInformation) {
+    (target as unknown as Record<symbol, unknown>)[rootLoggerSymbol] = prefixInformation.rootLogger;
+    (target as unknown as Record<symbol, unknown>)[prefixSymbol] = prefixInformation.prefix;
+    (target as unknown as Record<symbol, unknown>)[separatorSymbol] = prefixInformation.separator;
+    (target as unknown as Record<symbol, unknown>)[messageSeparatorSymbol] = prefixInformation.messageSeparator;
+  }
+
+  return target as unknown as P;
+};
 
 type WithPrefixResult<
   TLogger extends Logger,

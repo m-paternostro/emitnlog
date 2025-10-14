@@ -7,6 +7,7 @@ import {
   createConsoleErrorLogger,
   createConsoleLogLogger,
   toLogFormatter,
+  withPrefix,
 } from '../../src/logger/index.ts';
 import { createMemoryLogger } from '../jester.setup.ts';
 
@@ -416,6 +417,25 @@ describe('emitnlog.logger.factory', () => {
 
       expect(baseLogger1.entries[0].args).toEqual(['logger1']);
       expect(baseLogger2.entries[0].args).toEqual(['logger2']);
+    });
+
+    test('should work with prefixed logger', () => {
+      const baseLogger = createMemoryLogger();
+      const prefixedLogger = withPrefix(baseLogger, 'prefix1');
+
+      const extendedLogger = asExtendedLogger(prefixedLogger, { a: 1 });
+      extendedLogger.info('test message 1');
+      expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+
+      const prefixedExtendedLogger = withPrefix(extendedLogger, 'prefix2');
+      prefixedExtendedLogger.info('test message 2');
+      expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+      expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+
+      extendedLogger.info('test message 3');
+      expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+      expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+      expect(baseLogger.entries[2].message).toBe('prefix1: test message 3');
     });
   });
 });

@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
 import type { Logger, LogLevel } from '../../src/logger/index.ts';
-import { OFF_LOGGER, withEmitLevel, withLevel } from '../../src/logger/index.ts';
+import { OFF_LOGGER, withEmitLevel, withLevel, withPrefix } from '../../src/logger/index.ts';
 import type { MemoryLogger } from '../jester.setup.ts';
 import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
 
@@ -13,10 +13,10 @@ describe('emitnlog.logger.with-utils', () => {
         expect(logger).toBe(OFF_LOGGER);
       });
 
-      test('should return OFF_LOGGER when level is off', () => {
+      test('should not return OFF_LOGGER when level is off', () => {
         const baseLogger = createMemoryLogger();
         const logger = withEmitLevel(baseLogger, 'off');
-        expect(logger).toBe(OFF_LOGGER);
+        expect(logger).not.toBe(OFF_LOGGER);
       });
 
       test('should not return OFF_LOGGER when function returns off', () => {
@@ -607,6 +607,27 @@ describe('emitnlog.logger.with-utils', () => {
         expect(baseLogger).toHaveLoggedWith('error', 'test message');
       });
     });
+
+    describe('withPrefix', () => {
+      test('should work with prefixed logger', () => {
+        const baseLogger = createMemoryLogger();
+        const prefixedLogger = withPrefix(baseLogger, 'prefix1');
+
+        const errorLogger = withEmitLevel(prefixedLogger, 'error');
+        errorLogger.info('test message 1');
+        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+
+        const prefixedErrorLogger = withPrefix(errorLogger, 'prefix2');
+        prefixedErrorLogger.info('test message 2');
+        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+        expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+
+        errorLogger.info('test message 3');
+        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+        expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+        expect(baseLogger.entries[2].message).toBe('prefix1: test message 3');
+      });
+    });
   });
 
   describe('withLevel', () => {
@@ -616,10 +637,10 @@ describe('emitnlog.logger.with-utils', () => {
         expect(logger).toBe(OFF_LOGGER);
       });
 
-      test('should return OFF_LOGGER when level is off', () => {
+      test('should not return OFF_LOGGER when level is off', () => {
         const baseLogger = createMemoryLogger();
         const logger = withLevel(baseLogger, 'off');
-        expect(logger).toBe(OFF_LOGGER);
+        expect(logger).not.toBe(OFF_LOGGER);
       });
 
       test('should not return OFF_LOGGER when level provider returns off', () => {
@@ -698,6 +719,27 @@ describe('emitnlog.logger.with-utils', () => {
       expect(memoryLogger.entries[0].message).toBe('problem');
       expect(memoryLogger.entries[0].args[0]).toBe(context);
       expect(memoryLogger.entries[0].args[1]).toEqual({ retry: false });
+    });
+
+    describe('withPrefix', () => {
+      test('should work with prefixed logger', () => {
+        const baseLogger = createMemoryLogger();
+        const prefixedLogger = withPrefix(baseLogger, 'prefix1');
+
+        const errorLogger = withLevel(prefixedLogger, 'error');
+        errorLogger.critical('test message 1');
+        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+
+        const prefixedErrorLogger = withPrefix(errorLogger, 'prefix2');
+        prefixedErrorLogger.c`test message 2`;
+        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+        expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+
+        errorLogger.em`test message 3`;
+        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+        expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+        expect(baseLogger.entries[2].message).toBe('prefix1: test message 3');
+      });
     });
   });
 });
