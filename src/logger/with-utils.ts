@@ -1,6 +1,7 @@
 import type { Logger, LogLevel } from './definition.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
+import { injectPrefixInformation, isPrefixedLogger } from './prefixed-logger.ts';
 
 /**
  * Returns a logger that emits all entries using a fixed level, regardless of the log method used.
@@ -50,11 +51,11 @@ export const withEmitLevel = (
   logger: Logger,
   level: LogLevel | 'off' | ((entryLevel: LogLevel) => LogLevel | 'off'),
 ): Logger => {
-  if (level === 'off' || logger === OFF_LOGGER) {
+  if (logger === OFF_LOGGER) {
     return OFF_LOGGER;
   }
 
-  return createLogger(
+  const newLogger = createLogger(
     () => logger.level,
     (entryLevel, message, args) => {
       const emitLevel = typeof level === 'function' ? level(entryLevel) : level;
@@ -63,6 +64,8 @@ export const withEmitLevel = (
       }
     },
   );
+
+  return isPrefixedLogger(logger) ? injectPrefixInformation(logger, newLogger) : newLogger;
 };
 
 /**
@@ -103,11 +106,13 @@ export const withEmitLevel = (
  * @returns A logger that filters entries using `level` before delegating to `logger`.
  */
 export const withLevel = (logger: Logger, level: LogLevel | 'off' | (() => LogLevel | 'off')): Logger => {
-  if (level === 'off' || logger === OFF_LOGGER) {
+  if (logger === OFF_LOGGER) {
     return OFF_LOGGER;
   }
 
-  return createLogger(level, (entryLevel, message, args) => {
+  const newLogger = createLogger(level, (entryLevel, message, args) => {
     logger.log(entryLevel, message, ...args);
   });
+
+  return isPrefixedLogger(logger) ? injectPrefixInformation(logger, newLogger) : newLogger;
 };
