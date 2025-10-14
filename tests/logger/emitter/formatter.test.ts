@@ -139,7 +139,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const formatted = emitter.jsonCompactFormatter('info', 'Test message', []);
       const parsed = JSON.parse(formatted);
 
-      expect(parsed).toEqual({ level: 'info', message: 'Test message', args: [], timestamp: expect.any(Number) });
+      expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
     });
 
     test('should include args in JSON', () => {
@@ -187,7 +187,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const formatted = emitter.jsonPrettyFormatter('info', 'Test message', []);
       const parsed = JSON.parse(formatted);
 
-      expect(parsed).toEqual({ level: 'info', message: 'Test message', args: [], timestamp: expect.any(Number) });
+      expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
 
       // Should contain newlines for pretty printing
       expect(formatted).toContain('\n');
