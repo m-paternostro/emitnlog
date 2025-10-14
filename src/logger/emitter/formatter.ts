@@ -75,17 +75,20 @@ export const colorfulFormatter: LogFormatter = (level, message) => {
 /**
  * JSON formatter that outputs compact, single-line JSON objects.
  *
- * Produces structured JSON output suitable for log aggregation systems, automated parsing, or storage in JSON-based
- * logging systems.
+ * Produces structured JSON-like output suitable for log aggregation systems, automated parsing, or storage in
+ * JSON-based logging systems.
  *
- * @example Output format
+ * Important: as shown in the example, each emitted entry is itself a valid JSON object - however the text with all
+ * entries is not itself a valid JSON, lacking colons and a root delimiter.
+ *
+ * @example Output format (notice that the argument property is only written if the array is not empty)
  *
  * ```json
- * {"level":"info","timestamp":1705312245123,"message":"Application started","args":[]}
+ * {"level":"info","timestamp":1705312245123,"message":"Application started"}
  * {"level":"error","timestamp":1705312246456,"message":"Connection failed","args":[{"host":"db.example.com"}]}
  * ```
  */
-export const jsonCompactFormatter: LogFormatter = (level, message, args) => stringify(asLogEntry(level, message, args));
+export const jsonCompactFormatter: LogFormatter = (level, message, args) => jsonFormatter(level, message, args, false);
 
 /**
  * JSON formatter that outputs pretty-printed, multi-line JSON objects.
@@ -93,14 +96,27 @@ export const jsonCompactFormatter: LogFormatter = (level, message, args) => stri
  * Produces readable JSON output with proper indentation. Useful for debugging or when human readability is more
  * important than compact size.
  *
- * @example Output format
+ * Important: as shown in the example, each emitted entry is itself a valid JSON object - however the text with all
+ * entries is not itself a valid JSON, lacking colons and a root delimiter.
+ *
+ * @example Output format (notice that the argument property is only written if the array is not empty)
  *
  * ```json
- * { "level": "info", "timestamp": 1705312245123, "message": "Application started", "args": [] }
+ * { "level": "info", "timestamp": 1705312245123, "message": "Application started" }
+ * { "level": "error", "timestamp": 1705312246456, "message": "Connection failed", "args": [ { "host": "db.example.com" } ] }
  * ```
  */
-export const jsonPrettyFormatter: LogFormatter = (level, message, args) =>
-  stringify(asLogEntry(level, message, args), { pretty: true });
+export const jsonPrettyFormatter: LogFormatter = (level, message, args) => jsonFormatter(level, message, args, true);
+
+const jsonFormatter = (level: LogLevel, message: string, args: readonly unknown[], pretty: boolean) => {
+  const entry = asLogEntry(level, message, args);
+  if (entry.args.length) {
+    return stringify(entry, { pretty });
+  }
+
+  const { args: _, ...rest } = entry;
+  return stringify(rest, { pretty });
+};
 
 /**
  * Creates a formatter that appends formatted arguments to the base formatter output.
