@@ -5,7 +5,7 @@ import { emitter } from '../../../src/logger/index.ts';
 import { flushFakeTimePromises } from '../../jester.setup.ts';
 
 describe('emitnlog.logger.emitter.batch-sink', () => {
-  let capturedLogs: { level: LogLevel; message: string; args: readonly unknown[] }[];
+  let capturedLogs: { level: LogLevel; message: string; args: readonly unknown[] | undefined }[];
   let mockSink: emitter.LogSink;
   let flushMock: jest.Mock<() => void>;
   let closeMock: jest.Mock<() => void>;
@@ -16,7 +16,7 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
     closeMock = jest.fn<() => void>();
 
     mockSink = {
-      sink: jest.fn((level: LogLevel, message: string, args: readonly unknown[]) => {
+      sink: jest.fn((level: LogLevel, message: string, args?: readonly unknown[]) => {
         capturedLogs.push({ level, message, args });
       }),
       flush: flushMock,

@@ -1,3 +1,4 @@
+import { emptyArray } from '../utils/common/singleton.ts';
 import type { Logger, LogLevel } from './definition.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
@@ -60,7 +61,7 @@ export const withEmitLevel = (
     (entryLevel, message, args) => {
       const emitLevel = typeof level === 'function' ? level(entryLevel) : level;
       if (emitLevel !== 'off') {
-        logger.log(emitLevel, message, ...args);
+        logger.log(emitLevel, message, ...(args ?? emptyArray()));
       }
     },
   );
@@ -111,7 +112,7 @@ export const withLevel = (logger: Logger, level: LogLevel | 'off' | (() => LogLe
   }
 
   const newLogger = createLogger(level, (entryLevel, message, args) => {
-    logger.log(entryLevel, message, ...args);
+    logger.log(entryLevel, message, ...(args ?? emptyArray()));
   });
 
   return isPrefixedLogger(logger) ? injectPrefixInformation(logger, newLogger) : newLogger;

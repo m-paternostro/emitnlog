@@ -291,7 +291,7 @@ describe('emitnlog.logger.factory', () => {
 
       expect(baseLogger.entries).toHaveLength(2);
       expect(baseLogger.entries[0].args).toEqual(['arg1']);
-      expect(baseLogger.entries[1].args).toEqual([]);
+      expect(baseLogger.entries[1]).not.toHaveProperty('args');
     });
 
     test('should accumulate multiple args calls', () => {

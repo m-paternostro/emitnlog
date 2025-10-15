@@ -1,7 +1,7 @@
 import { describe, expect, test } from '@jest/globals';
 
-import type { LogLevel } from '../../../src/logger/index.ts';
-import { emitter } from '../../../src/logger/index.ts';
+import type { LogEntry, LogLevel } from '../../../src/index.ts';
+import { emitter } from '../../../src/index.ts';
 
 describe('emitnlog.logger.emitter.memory-sink', () => {
   describe('memorySink', () => {
@@ -23,7 +23,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       sink.sink('debug', 'Message 3', [42, { key: 'value' }]);
 
       expect(sink.entries).toHaveLength(3);
-      expect(sink.entries[0]).toEqual({ level: 'info', message: 'Message 1', args: [], timestamp: expect.any(Number) });
+      expect(sink.entries[0]).toEqual({ level: 'info', message: 'Message 1', timestamp: expect.any(Number) });
       expect(sink.entries[1]).toEqual({
         level: 'error',
         message: 'Message 2',
@@ -52,13 +52,13 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
     });
 
     test('should use provided array', () => {
-      const customArray: emitter.LogEntry[] = [];
+      const customArray: LogEntry[] = [];
       const sink = emitter.memorySink(customArray);
 
       sink.sink('info', 'Message', []);
 
       expect(customArray).toHaveLength(1);
-      expect(customArray[0]).toEqual({ level: 'info', message: 'Message', args: [], timestamp: expect.any(Number) });
+      expect(customArray[0]).toEqual({ level: 'info', message: 'Message', timestamp: expect.any(Number) });
       expect(sink.entries).toBe(customArray);
     });
 
@@ -94,8 +94,8 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       obj.mutable = 'changed';
 
       // The stored reference should reflect the change
-      expect(sink.entries[0].args[0]).toBe(obj);
-      expect((sink.entries[0].args[0] as { mutable: string }).mutable).toBe('changed');
+      expect(sink.entries[0].args?.[0]).toBe(obj);
+      expect((sink.entries[0].args?.[0] as { mutable: string }).mutable).toBe('changed');
     });
 
     test('should handle empty messages and args', () => {
@@ -104,7 +104,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       sink.sink('info', '', []);
 
       expect(sink.entries).toHaveLength(1);
-      expect(sink.entries[0]).toEqual({ level: 'info', message: '', args: [], timestamp: expect.any(Number) });
+      expect(sink.entries[0]).toEqual({ level: 'info', message: '', timestamp: expect.any(Number) });
     });
 
     test('flush should clear entries', () => {
@@ -202,10 +202,10 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
 
       expect(sink.entries).toHaveLength(1);
       expect(sink.entries[0].args).toHaveLength(16);
-      expect(sink.entries[0].args[0]).toBe(error);
-      expect(sink.entries[0].args[1]).toBe(circular);
-      expect(sink.entries[0].args[2]).toBe(fn);
-      expect(sink.entries[0].args[3]).toBe(symbol);
+      expect(sink.entries[0].args?.[0]).toBe(error);
+      expect(sink.entries[0].args?.[1]).toBe(circular);
+      expect(sink.entries[0].args?.[2]).toBe(fn);
+      expect(sink.entries[0].args?.[3]).toBe(symbol);
     });
 
     test('entries should be readonly from outside', () => {
@@ -252,12 +252,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
         args: ['arg1', 42],
         timestamp: expect.any(Number),
       });
-      expect(sink.entries[1]).toEqual({
-        level: 'error',
-        message: 'Error message',
-        args: [],
-        timestamp: expect.any(Number),
-      });
+      expect(sink.entries[1]).toEqual({ level: 'error', message: 'Error message', timestamp: expect.any(Number) });
 
       void logger.flush();
       expect(sink.entries).toHaveLength(0);

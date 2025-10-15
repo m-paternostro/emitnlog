@@ -334,7 +334,7 @@ describe('emitnlog.logger.tee', () => {
 
       expect(logger1.entries).toHaveLength(1);
       expect(logger1.entries[0].message).toBe('Direct log');
-      expect(logger1.entries[0].args).not.toContainEqual(context);
+      expect(logger1.entries[0]).not.toHaveProperty('args');
 
       // Now log through the tee, it should have the context
       teeLogger.info('Tee log');

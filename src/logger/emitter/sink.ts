@@ -13,7 +13,7 @@ export type LogSink = {
   /**
    * The main sink function that receives and processes log entries
    */
-  readonly sink: (level: LogLevel, message: string, args: readonly unknown[]) => void;
+  readonly sink: (level: LogLevel, message: string, args?: readonly unknown[]) => void;
 
   /**
    * Optional method to flush any buffered entries

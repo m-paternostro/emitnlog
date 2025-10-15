@@ -1,3 +1,4 @@
+import { emptyArray } from '../../utils/common/singleton.ts';
 import { shouldEmitEntry } from '../implementation/level-utils.ts';
 import type { LogFormatter } from './formatter.ts';
 import { plainFormatter } from './formatter.ts';
@@ -29,7 +30,7 @@ export const consoleLogSink = (formatter: LogFormatter = plainFormatter): LogSin
   asLogSink((level, message, args) => {
     const line = formatter(level, message, args);
     // eslint-disable-next-line no-undef, no-console
-    console.log(line, ...args);
+    console.log(line, ...(args ?? emptyArray()));
   });
 
 /**
@@ -57,7 +58,7 @@ export const consoleErrorSink = (formatter: LogFormatter = plainFormatter): LogS
   asLogSink((level, message, args) => {
     const line = formatter(level, message, args);
     // eslint-disable-next-line no-undef, no-console
-    console.error(line, ...args);
+    console.error(line, ...(args ?? emptyArray()));
   });
 
 /**
@@ -95,15 +96,15 @@ export const consoleByLevelSink = (formatter: LogFormatter = plainFormatter): Lo
 
     if (shouldEmitEntry('error', level)) {
       // eslint-disable-next-line no-undef, no-console
-      console.error(line, ...args);
+      console.error(line, ...(args ?? emptyArray()));
     } else if (shouldEmitEntry('warning', level)) {
       // eslint-disable-next-line no-undef, no-console
-      console.warn(line, ...args);
+      console.warn(line, ...(args ?? emptyArray()));
     } else if (shouldEmitEntry('info', level)) {
       // eslint-disable-next-line no-undef, no-console
-      console.log(line, ...args);
+      console.log(line, ...(args ?? emptyArray()));
     } else {
       // eslint-disable-next-line no-undef, no-console
-      console.debug(line, ...args);
+      console.debug(line, ...(args ?? emptyArray()));
     }
   });

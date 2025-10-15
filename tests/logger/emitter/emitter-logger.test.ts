@@ -5,12 +5,12 @@ import { emitter } from '../../../src/logger/index.ts';
 
 describe('emitnlog.logger.emitter.emitter-logger', () => {
   describe('createLogger', () => {
-    let capturedLogs: { level: LogLevel; message: string; args: readonly unknown[] }[];
+    let capturedLogs: { level: LogLevel; message: string; args: readonly unknown[] | undefined }[];
     let testSink: emitter.LogSink['sink'];
 
     beforeEach(() => {
       capturedLogs = [];
-      testSink = (level: LogLevel, message: string, args: readonly unknown[]) => {
+      testSink = (level: LogLevel, message: string, args?: readonly unknown[]) => {
         capturedLogs.push({ level, message, args });
       };
     });

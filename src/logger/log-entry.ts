@@ -1,4 +1,6 @@
-import type { LogLevel } from '../definition.ts';
+import type { Writable } from 'type-fest';
+
+import type { LogLevel } from './definition.ts';
 
 /**
  * Represents a structured log entry with timestamp and metadata.
@@ -8,24 +10,24 @@ import type { LogLevel } from '../definition.ts';
  */
 export type LogEntry = {
   /**
-   * The severity level of the log entry
+   * The severity level of the log entry.
    */
   readonly level: LogLevel;
 
   /**
-   * Timestamp when the entry was created (milliseconds since epoch)
+   * Timestamp when the entry was created (milliseconds since epoch).
    */
   readonly timestamp: number;
 
   /**
-   * The formatted message content
+   * The formatted message content.
    */
   readonly message: string;
 
   /**
-   * Additional arguments provided with the log entry
+   * Additional arguments provided with the log entry.
    */
-  readonly args: readonly unknown[];
+  readonly args?: readonly unknown[];
 };
 
 /**
@@ -37,9 +39,9 @@ export type LogEntry = {
  * @example
  *
  * ```ts
- * import { emitter } from 'emitnlog/logger';
+ * import { asLogEntry } from 'emitnlog/logger';
  *
- * const entry = emitter.asLogEntry('info', 'Operation completed', [{ duration: 150 }]);
+ * const entry = asLogEntry('info', 'Operation completed', [{ duration: 150 }]);
  * console.log(entry.timestamp); // Current timestamp in milliseconds
  * ```
  *
@@ -48,9 +50,10 @@ export type LogEntry = {
  * @param args Additional arguments
  * @returns A LogEntry object with current timestamp
  */
-export const asLogEntry = (level: LogLevel, message: string, args: readonly unknown[]): LogEntry => ({
-  level,
-  timestamp: Date.now(),
-  message,
-  args,
-});
+export const asLogEntry = (level: LogLevel, message: string, args?: readonly unknown[]): LogEntry => {
+  const entry: Writable<LogEntry> = { level, timestamp: Date.now(), message };
+  if (args?.length) {
+    entry.args = args;
+  }
+  return entry;
+};
