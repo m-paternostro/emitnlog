@@ -1,6 +1,6 @@
 import type { SyncFinalizer } from '../implementation/finalizer.ts';
-import type { LogEntry } from './log-entry.ts';
-import { asLogEntry } from './log-entry.ts';
+import type { LogEntry } from '../log-entry.ts';
+import { asLogEntry } from '../log-entry.ts';
 import type { LogSink } from './sink.ts';
 
 /**

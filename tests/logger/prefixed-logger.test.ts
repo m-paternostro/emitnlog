@@ -538,7 +538,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
   describe('special cases', () => {
     test('should allow chaining with args', () => {
       const emittedLines: string[] = [];
-      const emittedArgs: (readonly unknown[])[] = [];
+      const emittedArgs: (readonly unknown[] | undefined)[] = [];
       const logger = emitter.createLogger('info', (level, message, args) => {
         emittedLines.push(emitter.basicFormatter(level, message, emptyArray()));
         emittedArgs.push(args);
@@ -1158,7 +1158,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       expect(memoryLogger.entries).toHaveLength(2);
       expect(memoryLogger.entries[0].args).toEqual(['first']);
-      expect(memoryLogger.entries[1].args).toEqual([]);
+      expect(memoryLogger.entries[1]).not.toHaveProperty('args');
     });
 
     test('should accumulate multiple args calls', () => {
@@ -1250,7 +1250,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       expect(memoryLogger.entries).toHaveLength(2);
       expect(memoryLogger.entries[0].args).toEqual(['arg1', 'arg2']);
-      expect(memoryLogger.entries[1].args).toEqual([]);
+      expect(memoryLogger.entries[1]).not.toHaveProperty('args');
     });
 
     test('should handle pendingArgs with all log levels', () => {
@@ -1312,10 +1312,10 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       expect(memoryLogger.entries).toHaveLength(1);
       expect(memoryLogger.entries[0].args).toHaveLength(4);
-      expect(memoryLogger.entries[0].args[0]).toBe(complexObj);
-      expect(memoryLogger.entries[0].args[1]).toBe(null);
-      expect(memoryLogger.entries[0].args[2]).toBe(undefined);
-      expect(memoryLogger.entries[0].args[3]).toBe(42);
+      expect(memoryLogger.entries[0].args?.[0]).toBe(complexObj);
+      expect(memoryLogger.entries[0].args?.[1]).toBe(null);
+      expect(memoryLogger.entries[0].args?.[2]).toBe(undefined);
+      expect(memoryLogger.entries[0].args?.[3]).toBe(42);
     });
 
     test('should handle empty args calls', () => {
@@ -1325,7 +1325,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       prefixedLogger.args().info('No args added');
 
       expect(memoryLogger.entries).toHaveLength(1);
-      expect(memoryLogger.entries[0].args).toEqual([]);
+      expect(memoryLogger.entries[0]).not.toHaveProperty('args');
     });
 
     test('should maintain args order', () => {

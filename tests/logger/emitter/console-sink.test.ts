@@ -30,7 +30,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
 
     test('should log to console.log with custom formatter', () => {
       const customFormatter = jest.fn(
-        (level: LogLevel, message: string, _args: readonly unknown[]) => `CUSTOM: ${level} - ${message}`,
+        (level: LogLevel, message: string, _args?: readonly unknown[]) => `CUSTOM: ${level} - ${message}`,
       );
       const sink = emitter.consoleLogSink(customFormatter);
 
@@ -95,7 +95,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
 
     test('should log to console.error with custom formatter', () => {
       const customFormatter = jest.fn<emitter.LogFormatter>(
-        (level: LogLevel, message: string, _args: readonly unknown[]) => `ERROR: ${level} - ${message}`,
+        (level: LogLevel, message: string, _args?: readonly unknown[]) => `ERROR: ${level} - ${message}`,
       );
       const sink = emitter.consoleErrorSink(customFormatter);
 
@@ -196,7 +196,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
 
     test('should use custom formatter', () => {
       const customFormatter = jest.fn(
-        (level: LogLevel, message: string, _args: readonly unknown[]) => `[${level.toUpperCase()}] ${message}`,
+        (level: LogLevel, message: string, _args?: readonly unknown[]) => `[${level.toUpperCase()}] ${message}`,
       );
       const sink = emitter.consoleByLevelSink(customFormatter);
 

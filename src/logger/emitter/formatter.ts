@@ -2,7 +2,7 @@ import { terminalFormatter } from '../../utils/common/terminal-formatter.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
 import type { LogLevel } from '../definition.ts';
 import { decorateLogText } from '../implementation/level-utils.ts';
-import { asLogEntry } from './log-entry.ts';
+import { asLogEntry } from '../log-entry.ts';
 
 /**
  * Function type for formatting log entries into strings.
@@ -10,7 +10,7 @@ import { asLogEntry } from './log-entry.ts';
  * Log formatters convert the structured log data (level, message, arguments) into a final string representation that
  * will be written to the output destination.
  */
-export type LogFormatter = (level: LogLevel, message: string, args: readonly unknown[]) => string;
+export type LogFormatter = (level: LogLevel, message: string, args?: readonly unknown[]) => string;
 
 /**
  * Basic formatter that outputs logs as "level - message".
@@ -81,7 +81,7 @@ export const colorfulFormatter: LogFormatter = (level, message) => {
  * Important: as shown in the example, each emitted entry is itself a valid JSON object - however the text with all
  * entries is not itself a valid JSON, lacking colons and a root delimiter.
  *
- * @example Output format (notice that the argument property is only written if the array is not empty)
+ * @example Output format
  *
  * ```json
  * {"level":"info","timestamp":1705312245123,"message":"Application started"}
@@ -99,7 +99,7 @@ export const jsonCompactFormatter: LogFormatter = (level, message, args) => json
  * Important: as shown in the example, each emitted entry is itself a valid JSON object - however the text with all
  * entries is not itself a valid JSON, lacking colons and a root delimiter.
  *
- * @example Output format (notice that the argument property is only written if the array is not empty)
+ * @example Output format
  *
  * ```json
  * { "level": "info", "timestamp": 1705312245123, "message": "Application started" }
@@ -108,14 +108,9 @@ export const jsonCompactFormatter: LogFormatter = (level, message, args) => json
  */
 export const jsonPrettyFormatter: LogFormatter = (level, message, args) => jsonFormatter(level, message, args, true);
 
-const jsonFormatter = (level: LogLevel, message: string, args: readonly unknown[], pretty: boolean) => {
+const jsonFormatter = (level: LogLevel, message: string, args: readonly unknown[] | undefined, pretty: boolean) => {
   const entry = asLogEntry(level, message, args);
-  if (entry.args.length) {
-    return stringify(entry, { pretty });
-  }
-
-  const { args: _, ...rest } = entry;
-  return stringify(rest, { pretty });
+  return stringify(entry, { pretty });
 };
 
 /**
@@ -150,7 +145,7 @@ export const plainArgAppendingFormatter =
   (baseFormatter: LogFormatter, delimiter = '\n'): LogFormatter =>
   (level, message, args) => {
     const formatted = baseFormatter(level, message, args);
-    if (!args.length) {
+    if (!args?.length) {
       return formatted;
     }
 

@@ -717,8 +717,8 @@ describe('emitnlog.logger.with-utils', () => {
       expect(memoryLogger.entries).toHaveLength(1);
       expect(memoryLogger.entries[0].level).toBe('error');
       expect(memoryLogger.entries[0].message).toBe('problem');
-      expect(memoryLogger.entries[0].args[0]).toBe(context);
-      expect(memoryLogger.entries[0].args[1]).toEqual({ retry: false });
+      expect(memoryLogger.entries[0].args?.[0]).toBe(context);
+      expect(memoryLogger.entries[0].args?.[1]).toEqual({ retry: false });
     });
 
     describe('withPrefix', () => {
