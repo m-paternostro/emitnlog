@@ -1,5 +1,12 @@
 # emitnlog
 
+## 0.10.0
+
+### Minor Changes
+
+- ce3a14b: LogEntry is now a main type on logger and only serializes `args` if needed.
+- e53b5af: New jsonParse utility (and helping types) to proper handle deserialization of arbitrary objects
+
 ## 0.9.2
 
 ### Patch Changes
