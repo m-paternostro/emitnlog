@@ -10,6 +10,7 @@ export * from './common/closed-error.ts';
 export * from './common/exhaustive-check.ts';
 export * from './common/generate-random-string.ts';
 export * from './common/is-not-nullable.ts';
+export * from './common/serialization.ts';
 export * from './common/singleton.ts';
 export * from './common/terminal-formatter.ts';
 export * from './converter/errorify.ts';

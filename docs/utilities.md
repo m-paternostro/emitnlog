@@ -7,6 +7,7 @@ A set of helpful utilities for async operations, type safety, and data handling.
 - [Data Utilities](#data-utilities)
   - [stringify](#stringify)
   - [errorify](#errorify)
+  - [jsonParse](#jsonparse)
 - [Type Utilities](#type-utilities)
   - [exhaustiveCheck](#exhaustivecheck)
   - [isNotNullable](#isnotnullable)
@@ -165,6 +166,65 @@ function logError(error: unknown) {
   const errorObj = errorify(error);
   logger.error(`Error occurred: ${errorObj.message}`, { stack: errorObj.stack, name: errorObj.name });
 }
+```
+
+### jsonParse
+
+Type-safe wrapper around `JSON.parse()` that returns a `JsonSafe` version of the expected input. The resulting
+structure only contains JSON-compatible values, so it can be fed back into `JSON.stringify()` without type assertions.
+The helper does not perform runtime validation — it assumes the JSON content already matches the shape you provide.
+
+```ts
+import { promises as fs } from 'node:fs';
+import { jsonParse } from 'emitnlog/utils';
+import type { LogEntry } from 'emitnlog/logger';
+
+const raw = await fs.promises.readFile('./logs/app.log', 'utf8');
+const lines = raw.trim().split('\n');
+
+const entries = lines.map((line) => jsonParse<LogEntry>(line));
+
+// entries: JsonSafe<LogEntry>[]
+for (const entry of entries) {
+  entry.timestamp; // number
+  entry.message; // string
+  entry.args?.forEach((arg) => {
+    // arg: JsonValue, safe for JSON.stringify()
+    console.log(JSON.stringify(arg));
+  });
+}
+```
+
+#### JsonSafe
+
+`JsonSafe<T>` represents the runtime structure of `T` after a round-trip through `JSON.stringify()` and `JSON.parse()`.
+It removes functions, symbols, and `undefined`-only properties while converting `Date` values to ISO strings. The
+conversion happens purely at the type level; no validation is executed at runtime.
+
+```ts
+import type { JsonSafe } from 'emitnlog/utils';
+
+type User = { readonly id: string; readonly createdAt: Date; readonly onInit?: () => void; readonly meta?: unknown };
+
+type PersistedUser = JsonSafe<User>;
+// {
+//   readonly id: string;
+//   readonly createdAt: string;
+//   readonly meta?: JsonValue;
+// }
+```
+
+#### JsonValue
+
+`JsonValue` describes every value accepted by `JSON.stringify()`. Use it when modelling data that must remain
+serializable.
+
+```ts
+import type { JsonValue } from 'emitnlog/utils';
+
+const payload: JsonValue = { ok: true, items: ['a', 'b', 'c'], info: { count: 3, seenAt: '2024-04-02T04:05:06.789Z' } };
+
+await fs.writeFile('payload.json', JSON.stringify(payload));
 ```
 
 ## Type Utilities
