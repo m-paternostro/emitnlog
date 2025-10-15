@@ -1,3 +1,5 @@
+// Verify `index.ts`
+
 export * from './invocation/definition.ts';
 export * from './invocation/implementation.ts';
 export * from './invocation/stack/definition.ts';

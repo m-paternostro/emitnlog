@@ -1,3 +1,5 @@
+// Verify `index-node.ts`
+
 export * from './definition.ts';
 export * as emitter from './emitter/index.ts';
 export * from './environment/environment-logger.ts';
