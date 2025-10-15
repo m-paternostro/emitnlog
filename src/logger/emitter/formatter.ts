@@ -110,7 +110,11 @@ export const jsonPrettyFormatter: LogFormatter = (level, message, args) => jsonF
 
 const jsonFormatter = (level: LogLevel, message: string, args: readonly unknown[] | undefined, pretty: boolean) => {
   const entry = asLogEntry(level, message, args);
-  return stringify(entry, { pretty });
+  try {
+    return pretty ? JSON.stringify(entry, undefined, 2) : JSON.stringify(entry);
+  } catch {
+    return stringify(entry, { pretty, excludeArrayTruncationElement: true, excludeObjectTruncationProperty: true });
+  }
 };
 
 /**
