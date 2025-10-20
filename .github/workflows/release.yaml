@@ -1,5 +1,8 @@
 name: Release
 
+env:
+  NODE_VERSION: '20.19.1'
+
 on:
   push:
     tags:
@@ -15,15 +18,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org/'
-
-      - name: Install dependencies
-        run: npm ci
-
       - name: Verify tag version matches package.json version
         shell: bash
         run: |
@@ -33,6 +27,15 @@ jobs:
             echo "❌ Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
             exit 1
           fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         run: npm run build
