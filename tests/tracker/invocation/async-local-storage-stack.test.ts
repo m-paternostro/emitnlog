@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { delay } from '../../../src/index-node.ts';
 import type { InvocationKey } from '../../../src/tracker/index-node.ts';
 import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/index-node.ts';
-import { createTestLogger } from '../../vitest.setup.ts';
+import { createTestLogger } from '../../test-kit.ts';
 
 // Simple function to check if we're in Node.js
 const isNodeEnvironment = () =>

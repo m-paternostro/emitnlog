@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { Invocation, InvocationTracker } from '../../../src/tracker/index.ts';
 import { createInvocationTracker, trackMethods } from '../../../src/tracker/index.ts';
-import type { TestLogger } from '../../vitest.setup.ts';
-import { createTestLogger } from '../../vitest.setup.ts';
+import type { TestLogger } from '../../test-kit.ts';
+import { createTestLogger } from '../../test-kit.ts';
 
 describe('trackMethods', () => {
   let tracker: InvocationTracker;

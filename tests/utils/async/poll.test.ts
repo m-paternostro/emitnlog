@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { startPolling } from '../../../src/utils/index.ts';
-import { createTestLogger, flushFakeTimePromises } from '../../vitest.setup.ts';
+import { createTestLogger, flushFakeTimePromises } from '../../test-kit.ts';
 
 describe('emitnlog.utils.poll', () => {
   beforeEach(() => {

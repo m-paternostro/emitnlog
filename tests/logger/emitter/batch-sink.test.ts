@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
-import { flushFakeTimePromises } from '../../vitest.setup.ts';
+import { flushFakeTimePromises } from '../../test-kit.ts';
 
 describe('emitnlog.logger.emitter.batch-sink', () => {
   let capturedLogs: { level: LogLevel; message: string; args: readonly unknown[] | undefined }[];

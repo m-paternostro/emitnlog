@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { InvocationAtStage, InvocationTracker } from '../../../src/tracker/index.ts';
 import { createBasicInvocationStack, createInvocationTracker } from '../../../src/tracker/index.ts';
-import type { TestLogger } from '../../vitest.setup.ts';
-import { createTestLogger } from '../../vitest.setup.ts';
+import type { TestLogger } from '../../test-kit.ts';
+import { createTestLogger } from '../../test-kit.ts';
 
 describe('emitnlog.tracker.cross-invocation', () => {
   let tracker: InvocationTracker;

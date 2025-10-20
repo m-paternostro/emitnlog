@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { PromiseSettledEvent } from '../../../src/tracker/index.ts';
 import { holdPromises } from '../../../src/tracker/index.ts';
-import { createTestLogger } from '../../vitest.setup.ts';
+import { createTestLogger } from '../../test-kit.ts';
 
 describe('emitnlog.tracker.promise.holder', () => {
   beforeEach(() => {

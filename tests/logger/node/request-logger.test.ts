@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { OFF_LOGGER, requestLogger } from '../../../src/logger/index-node.ts';
-import { createMemoryLogger } from '../../vitest.setup.ts';
+import { createMemoryLogger } from '../../test-kit.ts';
 
 type RequestLike = IncomingMessage & { path?: string };
 
