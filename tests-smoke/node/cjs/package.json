@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "jest"
+    "test": "vitest run --config ../../vitest.config.mjs"
   }
 }

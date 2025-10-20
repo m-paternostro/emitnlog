@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-invalid-void-type */
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
 
-import { describe, expect, jest, test } from '@jest/globals';
+import { describe, expect, test, vi } from 'vitest';
 
 import type { implementation, Logger } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
 import type { AsyncClosable, Closable, SyncClosable } from '../../../src/utils/index.ts';
 import { asClosable, asSafeClosable, closeAll, createCloser, delay } from '../../../src/utils/index.ts';
-import { fail } from '../../jester.setup.ts';
+import { fail } from '../../vitest.setup.ts';
 
 describe('emitnlog.utils.closable', () => {
   const NOT_CLOSABLE: { a: number; close?: () => void } = { a: 1 };
@@ -18,9 +18,9 @@ describe('emitnlog.utils.closable', () => {
       const closable2: Closable = { close: () => undefined };
       const closable3: SyncClosable = { close: () => undefined };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
 
       const result: void = closeAll(closable1, closable2, closable3);
       expect(result).not.toBeInstanceOf(Promise);
@@ -35,9 +35,9 @@ describe('emitnlog.utils.closable', () => {
       const closable2: Closable = { close: async () => undefined };
       const closable3: Closable = { close: async () => undefined };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
 
       const result: Promise<void> = closeAll(closable1, closable2, closable3, NOT_CLOSABLE);
       expect(result).toBeInstanceOf(Promise);
@@ -85,10 +85,10 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
-      const spy4 = jest.spyOn(closable4, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
+      const spy4 = vi.spyOn(closable4, 'close');
 
       const result: Promise<void> = closeAll(closable1, closable2, closable3, NOT_CLOSABLE, closable4);
       expect(result).toBeInstanceOf(Promise);
@@ -117,7 +117,7 @@ describe('emitnlog.utils.closable', () => {
 
     test('should handle single sync closable', () => {
       const closable = { close: () => undefined };
-      const spy = jest.spyOn(closable, 'close');
+      const spy = vi.spyOn(closable, 'close');
 
       const result: void = closeAll(closable);
       expect(result).not.toBeInstanceOf(Promise);
@@ -127,7 +127,7 @@ describe('emitnlog.utils.closable', () => {
 
     test('should handle single async closable', async () => {
       const closable: AsyncClosable = { close: () => Promise.resolve() };
-      const spy = jest.spyOn(closable, 'close');
+      const spy = vi.spyOn(closable, 'close');
 
       const result: Promise<void> = closeAll(closable);
       expect(result).toBeInstanceOf(Promise);
@@ -145,7 +145,7 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const spy = jest.spyOn(closable, 'close');
+      const spy = vi.spyOn(closable, 'close');
 
       const result: Promise<void> = closeAll(closable);
       expect(result).toBeInstanceOf(Promise);
@@ -174,9 +174,9 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const s1 = jest.spyOn(c1, 'close');
-      const s2 = jest.spyOn(c2, 'close');
-      const s3 = jest.spyOn(c3, 'close');
+      const s1 = vi.spyOn(c1, 'close');
+      const s2 = vi.spyOn(c2, 'close');
+      const s3 = vi.spyOn(c3, 'close');
 
       try {
         closeAll(c1, c2, c3);
@@ -207,8 +207,8 @@ describe('emitnlog.utils.closable', () => {
       };
       const c2: SyncClosable = { close: () => undefined };
 
-      const s1 = jest.spyOn(c1, 'close');
-      const s2 = jest.spyOn(c2, 'close');
+      const s1 = vi.spyOn(c1, 'close');
+      const s2 = vi.spyOn(c2, 'close');
 
       try {
         closeAll(c1, c2);
@@ -245,10 +245,10 @@ describe('emitnlog.utils.closable', () => {
       };
       const c4: SyncClosable = { close: () => undefined };
 
-      const s1 = jest.spyOn(c1, 'close');
-      const s2 = jest.spyOn(c2, 'close');
-      const s3 = jest.spyOn(c3, 'close');
-      const s4 = jest.spyOn(c4, 'close');
+      const s1 = vi.spyOn(c1, 'close');
+      const s2 = vi.spyOn(c2, 'close');
+      const s3 = vi.spyOn(c3, 'close');
+      const s4 = vi.spyOn(c4, 'close');
 
       // Track that the successful async completed
       const c2Wrapped: AsyncClosable = {
@@ -289,8 +289,8 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const s1 = jest.spyOn(c1, 'close');
-      const s2 = jest.spyOn(c2, 'close');
+      const s1 = vi.spyOn(c1, 'close');
+      const s2 = vi.spyOn(c2, 'close');
 
       const promise = closeAll(c1, c2);
       expect(promise).toBeInstanceOf(Promise);
@@ -310,8 +310,8 @@ describe('emitnlog.utils.closable', () => {
       const t1: Transport = { close: () => undefined };
       const t2: Transport = { close: () => undefined };
 
-      const s1 = jest.spyOn(t1, 'close');
-      const s2 = jest.spyOn(t2, 'close');
+      const s1 = vi.spyOn(t1, 'close');
+      const s2 = vi.spyOn(t2, 'close');
 
       const result1: void = close1([t1, t2]);
       expect(result1).not.toBeInstanceOf(Promise);
@@ -336,8 +336,8 @@ describe('emitnlog.utils.closable', () => {
       const t1: Transport = { close: () => Promise.resolve() };
       const t2: Transport = { close: () => Promise.resolve() };
 
-      const s1 = jest.spyOn(t1, 'close');
-      const s2 = jest.spyOn(t2, 'close');
+      const s1 = vi.spyOn(t1, 'close');
+      const s2 = vi.spyOn(t2, 'close');
 
       const result1: Promise<void> = close1([t1, t2]);
       expect(result1).toBeInstanceOf(Promise);
@@ -361,8 +361,8 @@ describe('emitnlog.utils.closable', () => {
     test('should create sync closable from sync closables', () => {
       const closable1 = { close: () => undefined };
       const closable2: SyncClosable = { close: () => undefined };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const combined = asClosable(closable1, closable2);
       expect(spy1).toHaveBeenCalledTimes(0);
@@ -379,8 +379,8 @@ describe('emitnlog.utils.closable', () => {
     test('should create async closable from async closables', async () => {
       const closable1 = { close: () => Promise.resolve() };
       const closable2: AsyncClosable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const combined = asClosable(closable1, closable2);
 
@@ -401,8 +401,8 @@ describe('emitnlog.utils.closable', () => {
     test('should create async closable from async closables', async () => {
       const closable1: Closable = { close: () => void 0 };
       const closable2: Closable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const combined = asClosable(closable1, closable2);
 
@@ -438,10 +438,10 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
-      const spy4 = jest.spyOn(closable4, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
+      const spy4 = vi.spyOn(closable4, 'close');
 
       const closable = asClosable(closable1, closable2, closable3, closable4);
 
@@ -488,8 +488,8 @@ describe('emitnlog.utils.closable', () => {
     });
 
     test('should create closable from sync functions', () => {
-      const func1: () => void = jest.fn<() => void>();
-      const func2: () => void = jest.fn<() => void>();
+      const func1: () => void = vi.fn<() => void>();
+      const func2: () => void = vi.fn<() => void>();
 
       const closable = asClosable(func1, func2);
 
@@ -504,8 +504,8 @@ describe('emitnlog.utils.closable', () => {
     });
 
     test('should create closable from async functions', async () => {
-      const func1: () => Promise<void> = jest.fn<() => Promise<void>>(() => Promise.resolve());
-      const func2: () => Promise<void> = jest.fn<() => Promise<void>>(() => Promise.resolve());
+      const func1: () => Promise<void> = vi.fn<() => Promise<void>>(() => Promise.resolve());
+      const func2: () => Promise<void> = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
       const closable = asClosable(func1, func2);
 
@@ -523,13 +523,13 @@ describe('emitnlog.utils.closable', () => {
     });
 
     test('should create closable from a mix of sync closables and sync functions', () => {
-      const func1: () => void = jest.fn<() => void>();
-      const func2: () => void = jest.fn<() => void>();
+      const func1: () => void = vi.fn<() => void>();
+      const func2: () => void = vi.fn<() => void>();
 
       const closable1 = { close: () => undefined };
       const closable2: SyncClosable = { close: () => undefined };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closable = asClosable(closable1, func1, closable2, func2);
 
@@ -548,13 +548,13 @@ describe('emitnlog.utils.closable', () => {
     });
 
     test('should create closable from a mix of async closables and async functions', async () => {
-      const func1: () => Promise<void> = jest.fn<() => Promise<void>>();
-      const func2: () => Promise<void> = jest.fn<() => Promise<void>>();
+      const func1: () => Promise<void> = vi.fn<() => Promise<void>>();
+      const func2: () => Promise<void> = vi.fn<() => Promise<void>>();
 
       const closable1 = { close: () => Promise.resolve() };
       const closable2: AsyncClosable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closable = asClosable(closable1, func1, closable2, func2);
 
@@ -579,13 +579,13 @@ describe('emitnlog.utils.closable', () => {
     });
 
     test('should create closable from mixed functions and closables', async () => {
-      const func1: () => void = jest.fn<() => void>();
-      const func2: () => Promise<void> = jest.fn<() => Promise<void>>();
+      const func1: () => void = vi.fn<() => void>();
+      const func2: () => Promise<void> = vi.fn<() => Promise<void>>();
 
       const closable1: Closable = { close: () => undefined };
       const closable2: Closable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closable = asClosable(closable1, func1, closable2, func2);
 
@@ -677,9 +677,9 @@ describe('emitnlog.utils.closable', () => {
         },
       });
 
-      const func1: () => void = jest.fn<() => void>();
+      const func1: () => void = vi.fn<() => void>();
       const closable: SyncClosable = { close: () => undefined };
-      const closableSpy = jest.spyOn(closable, 'close');
+      const closableSpy = vi.spyOn(closable, 'close');
 
       const combined = asClosable(logger, closable, func1);
 
@@ -704,9 +704,9 @@ describe('emitnlog.utils.closable', () => {
         },
       });
 
-      const func1: () => void = jest.fn<() => void>();
+      const func1: () => void = vi.fn<() => void>();
       const closable: SyncClosable = { close: () => undefined };
-      const closableSpy = jest.spyOn(closable, 'close');
+      const closableSpy = vi.spyOn(closable, 'close');
 
       const combined = asClosable(logger, closable, func1);
 
@@ -733,9 +733,9 @@ describe('emitnlog.utils.closable', () => {
         throw err3;
       });
 
-      const s1 = jest.spyOn(c1, 'close');
-      const sOk = jest.fn(fnOk);
-      const s3 = jest.spyOn(c3, 'close');
+      const s1 = vi.spyOn(c1, 'close');
+      const sOk = vi.fn(fnOk);
+      const s3 = vi.spyOn(c3, 'close');
 
       const combined = asClosable(c1, sOk, c3);
 
@@ -765,8 +765,8 @@ describe('emitnlog.utils.closable', () => {
         throw err;
       };
       const bad = asClosable(thrower);
-      const okFn: () => void = jest.fn<() => void>();
-      const sBad = jest.spyOn(bad, 'close');
+      const okFn: () => void = vi.fn<() => void>();
+      const sBad = vi.spyOn(bad, 'close');
 
       const combined = asClosable(bad, okFn);
 
@@ -799,9 +799,9 @@ describe('emitnlog.utils.closable', () => {
         throw asyncErr;
       };
 
-      const sBadSync = jest.spyOn(badSync, 'close');
-      const sOkAsync = jest.fn(okAsync);
-      const sBadAsync = jest.fn(badAsync);
+      const sBadSync = vi.spyOn(badSync, 'close');
+      const sOkAsync = vi.fn(okAsync);
+      const sBadAsync = vi.fn(badAsync);
 
       const combined = asClosable(badSync, sOkAsync, sBadAsync);
 
@@ -824,13 +824,13 @@ describe('emitnlog.utils.closable', () => {
     test('should reject with single error when only one async source fails', async () => {
       const asyncErr = new Error('only-async-fail');
 
-      const okSync: () => void = jest.fn<() => void>();
+      const okSync: () => void = vi.fn<() => void>();
       const badAsync: () => Promise<void> = async () => {
         await delay(1);
         throw asyncErr;
       };
 
-      const sBadAsync = jest.fn(badAsync);
+      const sBadAsync = vi.fn(badAsync);
 
       const combined = asClosable(okSync, sBadAsync);
       const result = combined.close();
@@ -851,8 +851,8 @@ describe('emitnlog.utils.closable', () => {
       const t1: Transport = { close: () => undefined };
       const t2: Transport = { close: () => undefined };
 
-      const s1 = jest.spyOn(t1, 'close');
-      const s2 = jest.spyOn(t2, 'close');
+      const s1 = vi.spyOn(t1, 'close');
+      const s2 = vi.spyOn(t2, 'close');
 
       const closable1 = toClosable1([t1, t2]);
       const closable2 = toClosable2([t1, t2]);
@@ -880,8 +880,8 @@ describe('emitnlog.utils.closable', () => {
       const t1: Transport = { close: () => Promise.resolve() };
       const t2: Transport = { close: () => Promise.resolve() };
 
-      const s1 = jest.spyOn(t1, 'close');
-      const s2 = jest.spyOn(t2, 'close');
+      const s1 = vi.spyOn(t1, 'close');
+      const s2 = vi.spyOn(t2, 'close');
 
       const result1: Promise<void> = toClosable1([t1, t2]).close();
       expect(result1).toBeInstanceOf(Promise);
@@ -1008,8 +1008,8 @@ describe('emitnlog.utils.closable', () => {
     test('should create closer with initial closables', () => {
       const closable1: SyncClosable = { close: () => undefined };
       const closable2: AsyncClosable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closer = createCloser(closable1, closable2);
       expect(closer).toHaveProperty('add');
@@ -1128,7 +1128,7 @@ describe('emitnlog.utils.closable', () => {
 
     test('should handle closer with single closable', () => {
       const closable: SyncClosable = { close: () => undefined };
-      const spy = jest.spyOn(closable, 'close');
+      const spy = vi.spyOn(closable, 'close');
 
       const closer = createCloser(closable);
       expect(closer.size).toBe(1);
@@ -1141,8 +1141,8 @@ describe('emitnlog.utils.closable', () => {
     test('should handle async closables and return Promise', async () => {
       const closable1: AsyncClosable = { close: () => Promise.resolve() };
       const closable2: AsyncClosable = { close: () => Promise.resolve() };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closer = createCloser(closable1, closable2);
       const result = closer.close();
@@ -1167,9 +1167,9 @@ describe('emitnlog.utils.closable', () => {
       };
       const closable3: SyncClosable = { close: () => undefined };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
 
       const closer = createCloser(closable1, closable2, closable3);
       const result = closer.close();
@@ -1187,8 +1187,8 @@ describe('emitnlog.utils.closable', () => {
     test('should clear closables after close', () => {
       const closable1: SyncClosable = { close: () => undefined };
       const closable2: SyncClosable = { close: () => undefined };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closer = createCloser(closable1);
       closer.add(closable2);
@@ -1210,9 +1210,9 @@ describe('emitnlog.utils.closable', () => {
       const closable1: SyncClosable = { close: () => undefined };
       const closable2: SyncClosable = { close: () => undefined };
       const closable3: SyncClosable = { close: () => undefined };
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
 
       const closer = createCloser(closable1);
       expect(closer.size).toBe(1);
@@ -1250,9 +1250,9 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
 
       const closer = createCloser(closable1, closable2, closable3);
       expect(closer.size).toBe(3);
@@ -1287,8 +1287,8 @@ describe('emitnlog.utils.closable', () => {
       };
       const closable2: SyncClosable = { close: () => undefined };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closer = createCloser(closable1, closable2);
 
@@ -1327,10 +1327,10 @@ describe('emitnlog.utils.closable', () => {
       };
       const closable4: SyncClosable = { close: () => undefined };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
-      const spy3 = jest.spyOn(closable3, 'close');
-      const spy4 = jest.spyOn(closable4, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+      const spy3 = vi.spyOn(closable3, 'close');
+      const spy4 = vi.spyOn(closable4, 'close');
 
       // Track that the successful async completed
       const closable2Wrapped: AsyncClosable = {
@@ -1372,8 +1372,8 @@ describe('emitnlog.utils.closable', () => {
         },
       };
 
-      const spy1 = jest.spyOn(closable1, 'close');
-      const spy2 = jest.spyOn(closable2, 'close');
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
 
       const closer = createCloser(closable1, closable2);
       const promise = closer.close();
@@ -1406,8 +1406,8 @@ describe('emitnlog.utils.closable', () => {
     });
 
     test('should work with functions as closables', async () => {
-      const func1: () => void = jest.fn<() => void>();
-      const func2: () => Promise<void> = jest.fn<() => Promise<void>>(() => Promise.resolve());
+      const func1: () => void = vi.fn<() => void>();
+      const func2: () => Promise<void> = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
       const closer = createCloser();
       closer.add(asClosable(func1));
@@ -1435,7 +1435,7 @@ describe('emitnlog.utils.closable', () => {
       });
 
       const closable: SyncClosable = { close: () => undefined };
-      const closableSpy = jest.spyOn(closable, 'close');
+      const closableSpy = vi.spyOn(closable, 'close');
 
       const closer = createCloser();
       closer.add(asClosable(logger));

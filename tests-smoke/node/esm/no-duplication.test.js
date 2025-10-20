@@ -7,7 +7,7 @@ import * as tracker from 'emitnlog/tracker';
 
 import { utils } from 'emitnlog';
 
-import { expect, test, describe } from '@jest/globals';
+import { expect, test, describe } from 'vitest';
 
 describe('ESM No duplication - shared instances', () => {
   test('OFF_LOGGER is the same instance across all imports', () => {

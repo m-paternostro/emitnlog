@@ -1,4 +1,7 @@
-import { expect, jest } from '@jest/globals';
+import type { Mock, Mocked } from 'vitest';
+import { expect, vi } from 'vitest';
+
+import type * as timersModule from 'node:timers';
 
 import type { Logger, LogLevel } from '../src/logger/index.ts';
 import { asExtendedLogger, emitter, implementation } from '../src/logger/index.ts';
@@ -13,15 +16,16 @@ export const fail = (message: string) => {
 };
 
 /**
- * Flushes all promises in the microtask queue on tests that are using Jest `jest.useFakeTimers()`.
+ * Flushes all promises in the microtask queue on tests that are using fake timers.
  *
  * @returns A promise that resolves when all promises in the microtask queue have been flushed.
  */
-export const flushFakeTimePromises = () =>
-  new Promise((resolve) => {
-    const timers: { setImmediate: (fn: (cb: () => void) => void) => void } = jest.requireActual('timers');
+export const flushFakeTimePromises = async () => {
+  const timers = await vi.importActual<typeof timersModule>('node:timers');
+  await new Promise<void>((resolve) => {
     timers.setImmediate(resolve);
   });
+};
 
 /**
  * A logger that exposes the emitted log entries.
@@ -58,7 +62,7 @@ export const createMemoryLogger = (
  */
 export type TestLogger = ReturnType<typeof createTestLogger>;
 
-type InternalTestLogger = Logger & { emit: jest.Mock };
+type InternalTestLogger = Logger & { emit: Mock };
 
 /**
  * Creates a logger that can be used to test log messages.
@@ -73,16 +77,16 @@ type InternalTestLogger = Logger & { emit: jest.Mock };
  *
  * @returns A logger that can be used to test log messages.
  */
-export const createTestLogger = (level: LogLevel | 'off' | (() => LogLevel | 'off') = 'debug'): jest.Mocked<Logger> => {
+export const createTestLogger = (level: LogLevel | 'off' | (() => LogLevel | 'off') = 'debug'): Mocked<Logger> => {
   const logger = new (class extends implementation.BaseLogger {
     protected emit(): void {
       return;
     }
   })(level);
 
-  jest.spyOn(logger, 'log');
-  jest.spyOn(logger as unknown as InternalTestLogger, 'emit');
-  return logger as unknown as jest.Mocked<Logger>;
+  vi.spyOn(logger, 'log');
+  vi.spyOn(logger as unknown as InternalTestLogger, 'emit');
+  return logger as unknown as Mocked<Logger>;
 };
 
 type CustomMatcherResult = { readonly pass: boolean; readonly message: () => string };
@@ -103,11 +107,7 @@ type CustomMatcherResult = { readonly pass: boolean; readonly message: () => str
  * @param expected The expected substring or string pattern.
  * @returns A custom matcher result.
  */
-const toHaveLoggedWith = (
-  logger: jest.Mocked<Logger>,
-  level: LogLevel,
-  expected: string | RegExp,
-): CustomMatcherResult => {
+const toHaveLoggedWith = (logger: Mocked<Logger>, level: LogLevel, expected: string | RegExp): CustomMatcherResult => {
   const calls = (logger as unknown as InternalTestLogger).emit.mock.calls;
   if (!calls.length) {
     return {
@@ -149,11 +149,12 @@ const toHaveLoggedWith = (
 expect.extend({ toHaveLoggedWith });
 
 // no-dd-sa:typescript-best-practices/no-namespace
-declare module 'expect' {
-  interface AsymmetricMatchers {
+declare module 'vitest' {
+  interface AsymmetricMatchersContaining {
     toHaveLoggedWith(level: LogLevel, expected: string | RegExp): void;
   }
-  interface Matchers<R> {
-    toHaveLoggedWith(level: LogLevel, expected: string | RegExp): R;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  interface Assertion<T = any> {
+    toHaveLoggedWith(level: LogLevel, expected: string | RegExp): T;
   }
 }

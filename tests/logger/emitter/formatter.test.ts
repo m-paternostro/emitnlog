@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, jest, test } from '@jest/globals';
+import { beforeAll, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
@@ -6,8 +6,8 @@ import { emitter } from '../../../src/logger/index.ts';
 describe('emitnlog.logger.emitter.formatter', () => {
   beforeAll(() => {
     // Mock Date to have consistent timestamps in tests
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2024-01-15T12:30:45.123Z'));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-15T12:30:45.123Z'));
   });
 
   describe('basicFormatter', () => {

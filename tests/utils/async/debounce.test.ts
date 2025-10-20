@@ -1,19 +1,19 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { CanceledError, debounce, delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.debounce', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('basic debouncing behavior', () => {
     test('should debounce function calls and execute only the last one', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 300);
 
       const promise1 = debouncedFn('call1');
@@ -24,7 +24,7 @@ describe('emitnlog.utils.debounce', () => {
       expect(mockFn).not.toHaveBeenCalled();
 
       // Advance time to trigger debounced execution
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // All promises should resolve to the same result (from the last call)
       const [result1, result2, result3] = await Promise.all([promise1, promise2, promise3]);
@@ -38,44 +38,44 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should support number options shorthand', async () => {
-      const mockFn = jest.fn((value: number) => value * 2);
+      const mockFn = vi.fn((value: number) => value * 2);
       const debouncedFn = debounce(mockFn, 500);
 
       const promise = debouncedFn(21);
 
       expect(mockFn).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
 
       await expect(promise).resolves.toBe(42);
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
     test('should support options object', async () => {
-      const mockFn = jest.fn((value: number) => value * 2);
+      const mockFn = vi.fn((value: number) => value * 2);
       const debouncedFn = debounce(mockFn, { delay: 500 });
 
       const promise = debouncedFn(21);
 
       expect(mockFn).not.toHaveBeenCalled();
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
 
       await expect(promise).resolves.toBe(42);
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
 
     test('should not execute if called within delay period', async () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       const debouncedFn = debounce(mockFn, 1000);
 
       void debouncedFn();
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
       expect(mockFn).not.toHaveBeenCalled();
 
       void debouncedFn();
-      jest.advanceTimersByTime(400);
+      vi.advanceTimersByTime(400);
       expect(mockFn).not.toHaveBeenCalled();
 
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });
@@ -83,7 +83,7 @@ describe('emitnlog.utils.debounce', () => {
   describe('waitForPrevious option', () => {
     test('should wait for previous promise when waitForPrevious: true', async () => {
       let resolvePromise: (value: string) => void;
-      const mockFn = jest.fn(
+      const mockFn = vi.fn(
         () =>
           new Promise<string>((resolve) => {
             resolvePromise = resolve;
@@ -94,14 +94,14 @@ describe('emitnlog.utils.debounce', () => {
 
       // First call
       const promise1 = debouncedFn();
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Function should be called
       expect(mockFn).toHaveBeenCalledTimes(1);
 
       // Second call while first is still running
       const promise2 = debouncedFn();
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Function should not be called again (waiting for first)
       expect(mockFn).toHaveBeenCalledTimes(1);
@@ -115,7 +115,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should not wait for previous promise when waitForPrevious: false', async () => {
-      const mockFn = jest.fn(async (value: number) => {
+      const mockFn = vi.fn(async (value: number) => {
         await delay(100);
         return value * 2;
       });
@@ -124,15 +124,15 @@ describe('emitnlog.utils.debounce', () => {
 
       // First call
       const promise1 = debouncedFn(5);
-      jest.advanceTimersByTime(200);
-      jest.advanceTimersByTime(50); // Partial execution
+      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(50); // Partial execution
 
       // Second call while first is still running
       const promise2 = debouncedFn(10);
-      jest.advanceTimersByTime(200);
+      vi.advanceTimersByTime(200);
 
       // Both should execute independently
-      jest.advanceTimersByTime(100); // Complete both executions
+      vi.advanceTimersByTime(100); // Complete both executions
 
       await expect(promise1).resolves.toBe(10);
       await expect(promise2).resolves.toBe(10);
@@ -143,7 +143,7 @@ describe('emitnlog.utils.debounce', () => {
 
   describe('accumulator option', () => {
     test('should accumulate arguments with addition', async () => {
-      const mockFn = jest.fn((sum: number) => `Total: ${sum}`);
+      const mockFn = vi.fn((sum: number) => `Total: ${sum}`);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         accumulator: (prev: [number] | undefined, current: [number]): [number] => {
@@ -157,7 +157,7 @@ describe('emitnlog.utils.debounce', () => {
       const promise2 = debouncedFn(3);
       const promise3 = debouncedFn(7);
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // All promises should resolve to the accumulated result
       const [result1, result2, result3] = await Promise.all([promise1, promise2, promise3]);
@@ -170,7 +170,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should accumulate array arguments', async () => {
-      const mockFn = jest.fn((items: string[]) => `Processed: ${items.join(', ')}`);
+      const mockFn = vi.fn((items: string[]) => `Processed: ${items.join(', ')}`);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         accumulator: (prev: [string[]] | undefined, current: [string[]]): [string[]] => {
@@ -184,7 +184,7 @@ describe('emitnlog.utils.debounce', () => {
       const promise2 = debouncedFn(['c']);
       const promise3 = debouncedFn(['d', 'e']);
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       const [result1, result2, result3] = await Promise.all([promise1, promise2, promise3]);
       expect(result1).toBe('Processed: a, b, c, d, e');
@@ -200,7 +200,7 @@ describe('emitnlog.utils.debounce', () => {
         updates: Record<string, unknown>;
       }
 
-      const mockFn = jest.fn((data: UpdateData) => `Updated: ${Object.keys(data.updates).length} fields`);
+      const mockFn = vi.fn((data: UpdateData) => `Updated: ${Object.keys(data.updates).length} fields`);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         accumulator: (prev, current) => {
@@ -214,7 +214,7 @@ describe('emitnlog.utils.debounce', () => {
       const promise2 = debouncedFn({ updates: { email: 'john@example.com' } });
       const promise3 = debouncedFn({ updates: { age: 31 } }); // Should overwrite age
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       const [result1, result2, result3] = await Promise.all([promise1, promise2, promise3]);
       expect(result1).toBe('Updated: 3 fields');
@@ -226,7 +226,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should handle multiple argument accumulation', async () => {
-      const mockFn = jest.fn((ids: number[], flags: boolean[]) => `IDs: ${ids.length}, Flags: ${flags.length}`);
+      const mockFn = vi.fn((ids: number[], flags: boolean[]) => `IDs: ${ids.length}, Flags: ${flags.length}`);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         accumulator: (prev, current) => {
@@ -245,7 +245,7 @@ describe('emitnlog.utils.debounce', () => {
       const promise2 = debouncedFn([3], [true]);
       const promise3 = debouncedFn([4, 5], [false, true]);
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       const [result1, result2, result3] = await Promise.all([promise1, promise2, promise3]);
       expect(result1).toBe('IDs: 5, Flags: 5');
@@ -257,7 +257,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should reset accumulator after execution', async () => {
-      const mockFn = jest.fn((sum: number) => sum);
+      const mockFn = vi.fn((sum: number) => sum);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         accumulator: (prev, current) => {
@@ -269,7 +269,7 @@ describe('emitnlog.utils.debounce', () => {
       // First batch
       const promise1 = debouncedFn(5);
       const promise2 = debouncedFn(3);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise1).resolves.toBe(8);
       await expect(promise2).resolves.toBe(8);
@@ -277,7 +277,7 @@ describe('emitnlog.utils.debounce', () => {
       // Second batch - should start fresh
       const promise3 = debouncedFn(10);
       const promise4 = debouncedFn(2);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise3).resolves.toBe(12);
       await expect(promise4).resolves.toBe(12);
@@ -288,7 +288,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should reset accumulator after cancel', async () => {
-      const mockFn = jest.fn((sum: number) => sum);
+      const mockFn = vi.fn((sum: number) => sum);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         accumulator: (prev, current) => {
@@ -306,7 +306,7 @@ describe('emitnlog.utils.debounce', () => {
 
       // New calls should start fresh
       const promise3 = debouncedFn(10);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise1).rejects.toThrow('cancelled');
       await expect(promise2).rejects.toThrow('cancelled');
@@ -317,7 +317,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should work with accumulator and leading edge', async () => {
-      const mockFn = jest.fn((sum: number) => sum);
+      const mockFn = vi.fn((sum: number) => sum);
       const debouncedFn = debounce(mockFn, {
         delay: 300,
         leading: true,
@@ -347,7 +347,7 @@ describe('emitnlog.utils.debounce', () => {
 
   describe('promise support', () => {
     test('should handle async functions', async () => {
-      const mockAsyncFn = jest.fn(async (value: string) => {
+      const mockAsyncFn = vi.fn(async (value: string) => {
         await delay(100);
         return `async result: ${value}`;
       });
@@ -357,8 +357,8 @@ describe('emitnlog.utils.debounce', () => {
       const promise1 = debouncedFn('test1');
       const promise2 = debouncedFn('test2');
 
-      jest.advanceTimersByTime(300);
-      jest.advanceTimersByTime(100); // For the async function's internal delay
+      vi.advanceTimersByTime(300);
+      vi.advanceTimersByTime(100); // For the async function's internal delay
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
       expect(result1).toBe('async result: test2');
@@ -370,7 +370,7 @@ describe('emitnlog.utils.debounce', () => {
 
     test('should handle promise rejection', async () => {
       const error = new Error('Test error');
-      const mockFn = jest.fn(async () => {
+      const mockFn = vi.fn(async () => {
         throw error;
       });
 
@@ -379,7 +379,7 @@ describe('emitnlog.utils.debounce', () => {
       const promise1 = debouncedFn();
       const promise2 = debouncedFn();
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise1).rejects.toThrow('Test error');
       await expect(promise2).rejects.toThrow('Test error');
@@ -389,7 +389,7 @@ describe('emitnlog.utils.debounce', () => {
 
     test('should execute new calls immediately by default (waitForPrevious: false)', async () => {
       let resolvePromise: (value: string) => void;
-      const mockFn = jest.fn(
+      const mockFn = vi.fn(
         () =>
           new Promise<string>((resolve) => {
             resolvePromise = resolve;
@@ -400,14 +400,14 @@ describe('emitnlog.utils.debounce', () => {
 
       // First call
       const promise1 = debouncedFn();
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Function should be called
       expect(mockFn).toHaveBeenCalledTimes(1);
 
       // Second call while first is still running - should debounce immediately
       const promise2 = debouncedFn();
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Function should be called again (new default behavior)
       expect(mockFn).toHaveBeenCalledTimes(1);
@@ -423,7 +423,7 @@ describe('emitnlog.utils.debounce', () => {
 
   describe('leading edge execution', () => {
     test('should execute immediately with leading: true', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, { delay: 300, leading: true });
 
       const promise = debouncedFn('test');
@@ -436,7 +436,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should debounce subsequent calls with leading: true', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, { delay: 300, leading: true });
 
       // First call executes immediately
@@ -448,7 +448,7 @@ describe('emitnlog.utils.debounce', () => {
       const promise3 = debouncedFn('call3');
       expect(mockFn).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // All should resolve to the first call's result
       const [result1, result2, result3] = await Promise.all([promise1, promise2, promise3]);
@@ -458,7 +458,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should allow new leading execution after timeout', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, { delay: 300, leading: true });
 
       // First call
@@ -466,7 +466,7 @@ describe('emitnlog.utils.debounce', () => {
       expect(mockFn).toHaveBeenCalledTimes(1);
 
       // Wait for timeout
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
       await promise1;
 
       // Second call should execute immediately again
@@ -480,24 +480,24 @@ describe('emitnlog.utils.debounce', () => {
 
   describe('cancel functionality', () => {
     test('should cancel pending execution', async () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       const debouncedFn = debounce(mockFn, 300);
 
       const promise = debouncedFn();
       debouncedFn.cancel();
 
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       expect(mockFn).not.toHaveBeenCalled();
       await expect(promise).rejects.toBeInstanceOf(CanceledError);
     });
 
     test('should not affect already resolved promises', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 300);
 
       const promise = debouncedFn('test');
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Wait for execution
       const result = await promise;
@@ -509,7 +509,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should reset internal state after cancel', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 300);
 
       // First call and cancel
@@ -518,7 +518,7 @@ describe('emitnlog.utils.debounce', () => {
 
       // Second call after cancel
       const promise2 = debouncedFn('test2');
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise1).rejects.toBeInstanceOf(CanceledError);
       await expect(promise2).resolves.toBe('result: test2');
@@ -528,7 +528,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('silent cancel should not reject pending promises and should clear timers/args', () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 300);
 
       let settled = false;
@@ -545,7 +545,7 @@ describe('emitnlog.utils.debounce', () => {
       debouncedFn.cancel(true);
 
       // Advance timers; function should not run and promise should remain unsettled
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
 
       expect(mockFn).not.toHaveBeenCalled();
       expect(settled).toBe(false);
@@ -557,7 +557,7 @@ describe('emitnlog.utils.debounce', () => {
 
   describe('flush functionality', () => {
     test('should immediately execute pending call', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 300);
 
       const promise = debouncedFn('test');
@@ -572,7 +572,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should return undefined when no pending call', () => {
-      const mockFn = jest.fn();
+      const mockFn = vi.fn();
       const debouncedFn = debounce(mockFn, 300);
 
       const result = debouncedFn.flush();
@@ -582,7 +582,7 @@ describe('emitnlog.utils.debounce', () => {
 
     test('should return undefined when already executing', async () => {
       let resolvePromise: (value: string) => void;
-      const mockFn = jest.fn(
+      const mockFn = vi.fn(
         () =>
           new Promise<string>((resolve) => {
             resolvePromise = resolve;
@@ -592,7 +592,7 @@ describe('emitnlog.utils.debounce', () => {
       const debouncedFn = debounce(mockFn, 300);
 
       const promise = debouncedFn();
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Function is now executing
       expect(mockFn).toHaveBeenCalledTimes(1);
@@ -607,7 +607,7 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should cancel timeout when flushing', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 1000);
 
       const promise = debouncedFn('test');
@@ -616,7 +616,7 @@ describe('emitnlog.utils.debounce', () => {
       const flushResult = debouncedFn.flush();
 
       // Advance time - the original timeout should not trigger
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
 
       await expect(promise).resolves.toBe('result: test');
       await expect(flushResult).resolves.toBe('result: test');
@@ -628,22 +628,22 @@ describe('emitnlog.utils.debounce', () => {
 
   describe('edge cases', () => {
     test('should handle functions that return non-promise values', async () => {
-      const mockFn = jest.fn((x: number, y: number) => x + y);
+      const mockFn = vi.fn((x: number, y: number) => x + y);
       const debouncedFn = debounce(mockFn, 300);
 
       const promise = debouncedFn(2, 3);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise).resolves.toBe(5);
       expect(mockFn).toHaveBeenCalledWith(2, 3);
     });
 
     test('should handle functions with no arguments', async () => {
-      const mockFn = jest.fn(() => 'no args');
+      const mockFn = vi.fn(() => 'no args');
       const debouncedFn = debounce(mockFn, 300);
 
       const promise = debouncedFn();
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise).resolves.toBe('no args');
       expect(mockFn).toHaveBeenCalledTimes(1);
@@ -655,13 +655,13 @@ describe('emitnlog.utils.debounce', () => {
         name: string;
       }
 
-      const mockFn = jest.fn((obj: TestObject, flag: boolean) => ({ ...obj, processed: flag }));
+      const mockFn = vi.fn((obj: TestObject, flag: boolean) => ({ ...obj, processed: flag }));
 
       const debouncedFn = debounce(mockFn, 300);
       const testObj = { id: 1, name: 'test' };
 
       const promise = debouncedFn(testObj, true);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       await expect(promise).resolves.toEqual({ id: 1, name: 'test', processed: true });
 
@@ -669,11 +669,11 @@ describe('emitnlog.utils.debounce', () => {
     });
 
     test('should handle zero delay', async () => {
-      const mockFn = jest.fn((value: string) => `result: ${value}`);
+      const mockFn = vi.fn((value: string) => `result: ${value}`);
       const debouncedFn = debounce(mockFn, 0);
 
       const promise = debouncedFn('test');
-      jest.advanceTimersByTime(0);
+      vi.advanceTimersByTime(0);
 
       await expect(promise).resolves.toBe('result: test');
       expect(mockFn).toHaveBeenCalledTimes(1);

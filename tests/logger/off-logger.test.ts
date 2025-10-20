@@ -1,13 +1,14 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { OFF_LOGGER, withLogger } from '../../src/logger/index.ts';
-import { createMemoryLogger } from '../jester.setup.ts';
+import { createMemoryLogger } from '../vitest.setup.ts';
 
 describe('emitnlog.logger.off-logger', () => {
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
+  let consoleLogSpy: MockInstance<typeof console.log>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

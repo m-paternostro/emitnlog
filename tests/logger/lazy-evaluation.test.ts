@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel, LogMessage } from '../../src/logger/index.ts';
 import {
@@ -12,14 +13,14 @@ import {
 } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.lazy-evaluation', () => {
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
-  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
-  let consoleDebugSpy: jest.SpiedFunction<typeof console.debug>;
+  let consoleLogSpy: MockInstance<typeof console.log>;
+  let consoleErrorSpy: MockInstance<typeof console.error>;
+  let consoleDebugSpy: MockInstance<typeof console.debug>;
 
   beforeEach(() => {
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

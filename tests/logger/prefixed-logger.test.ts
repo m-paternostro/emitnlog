@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test } from 'vitest';
 
 import type { IsEqual } from 'type-fest';
 
@@ -13,7 +13,7 @@ import {
   withPrefix,
 } from '../../src/logger/index.ts';
 import { emptyArray } from '../../src/utils/index.ts';
-import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
+import { createMemoryLogger, createTestLogger } from '../vitest.setup.ts';
 
 describe('emitnlog.logger.prefixed-logger', () => {
   test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {

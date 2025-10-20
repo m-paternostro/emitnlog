@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { Invocation, InvocationTracker } from '../../../src/tracker/index.ts';
 import { createInvocationTracker, trackMethods } from '../../../src/tracker/index.ts';
-import type { TestLogger } from '../../jester.setup.ts';
-import { createTestLogger } from '../../jester.setup.ts';
+import type { TestLogger } from '../../vitest.setup.ts';
+import { createTestLogger } from '../../vitest.setup.ts';
 
 describe('trackMethods', () => {
   let tracker: InvocationTracker;
@@ -11,7 +11,7 @@ describe('trackMethods', () => {
   let invocations: { operation: string; args: unknown[] }[];
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     logger = createTestLogger();
     tracker = createInvocationTracker({ logger });
     invocations = [];
@@ -26,7 +26,7 @@ describe('trackMethods', () => {
 
   afterEach(() => {
     tracker.close();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('with plain objects', () => {
@@ -268,7 +268,7 @@ describe('trackMethods', () => {
     test('should work with async methods', async () => {
       const obj = {
         async fetchData(): Promise<string> {
-          await jest.advanceTimersByTimeAsync(100);
+          await vi.advanceTimersByTimeAsync(100);
           return 'data';
         },
       };

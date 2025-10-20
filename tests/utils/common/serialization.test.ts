@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test } from 'vitest';
 
 import type { LogEntry } from '../../../src/logger/log-entry.ts';
 import type { JsonSafe, JsonValue } from '../../../src/utils/index.ts';

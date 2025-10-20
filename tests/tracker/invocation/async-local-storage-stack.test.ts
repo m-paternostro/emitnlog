@@ -1,9 +1,9 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test } from 'vitest';
 
 import type { InvocationKey } from '../../../src/tracker/index-node.ts';
 import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/index-node.ts';
 import { delay } from '../../../src/utils/index.ts';
-import { createTestLogger } from '../../jester.setup.ts';
+import { createTestLogger } from '../../vitest.setup.ts';
 
 // Simple function to check if we're in Node.js
 const isNodeEnvironment = () =>

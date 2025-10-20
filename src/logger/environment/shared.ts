@@ -51,7 +51,7 @@ export const toEnv = (): Record<string, string | undefined> | undefined => {
     return process.env;
   }
 
-  // This is not working with jest: time for vitest?
+  // This still does not work under the current test runner.
   // const meta = import.meta as unknown as { readonly env: Record<string, string | undefined> };
   // if (typeof meta !== 'undefined' && isEnvHolder(meta)) {
   //   return meta.env;

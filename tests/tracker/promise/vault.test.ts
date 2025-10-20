@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
 
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { PromiseSettledEvent } from '../../../src/tracker/index.ts';
 import { vaultPromises } from '../../../src/tracker/index.ts';
-import { createTestLogger } from '../../jester.setup.ts';
+import { createTestLogger } from '../../vitest.setup.ts';
 
 describe('emitnlog.tracker.promise.vault', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('vaultPromises', () => {
@@ -30,7 +30,7 @@ describe('emitnlog.tracker.promise.vault', () => {
   describe('persistent caching behavior', () => {
     test('should cache successful operations permanently', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('cached-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('cached-result'));
 
       // First call executes the supplier
       const result1 = await vault.track('persistent-op', supplierFn);
@@ -54,7 +54,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should cache failed operations permanently by default', async () => {
       const vault = vaultPromises();
       const error = new Error('operation failed');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // First call executes and fails
       await expect(vault.track('failing-op', supplierFn)).rejects.toThrow(error);
@@ -75,8 +75,8 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should cache multiple operations independently', async () => {
       const vault = vaultPromises();
-      const supplier1 = jest.fn(() => Promise.resolve('result-1'));
-      const supplier2 = jest.fn(() => Promise.resolve('result-2'));
+      const supplier1 = vi.fn(() => Promise.resolve('result-1'));
+      const supplier2 = vi.fn(() => Promise.resolve('result-2'));
 
       const result1 = await vault.track('op-1', supplier1);
       const result2 = await vault.track('op-2', supplier2);
@@ -104,7 +104,7 @@ describe('emitnlog.tracker.promise.vault', () => {
       const delayedPromise = new Promise<string>((resolve) => {
         resolvePromise = resolve;
       });
-      const supplierFn = jest.fn(() => delayedPromise);
+      const supplierFn = vi.fn(() => delayedPromise);
 
       // Start multiple concurrent requests
       const promises = Array.from({ length: 5 }, () => vault.track('concurrent-op', supplierFn));
@@ -137,7 +137,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should automatically clear failed operations when forgetOnRejection is true', async () => {
       const vault = vaultPromises({ forgetOnRejection: true });
       const error = new Error('operation failed');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // First call executes and fails
       await expect(vault.track('auto-retry-op', supplierFn)).rejects.toThrow(error);
@@ -152,7 +152,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should cache successful operations even with forgetOnRejection=true', async () => {
       const vault = vaultPromises({ forgetOnRejection: true });
-      const supplierFn = jest.fn(() => Promise.resolve('success-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('success-result'));
 
       // First call executes successfully
       const result1 = await vault.track('success-op', supplierFn);
@@ -170,8 +170,8 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle mixed success and failure scenarios with forgetOnRejection', async () => {
       const vault = vaultPromises({ forgetOnRejection: true });
       const error = new Error('failure');
-      const successSupplier = jest.fn(() => Promise.resolve('success'));
-      const failureSupplier = jest.fn(() => Promise.reject(error));
+      const successSupplier = vi.fn(() => Promise.resolve('success'));
+      const failureSupplier = vi.fn(() => Promise.reject(error));
 
       // Success operation - should be cached
       const successResult = await vault.track('success-op', successSupplier);
@@ -197,7 +197,7 @@ describe('emitnlog.tracker.promise.vault', () => {
       const vault = vaultPromises({ forgetOnRejection: true });
       const error = new Error('network error');
       let attemptCount = 0;
-      const flakySupplier = jest.fn(() => {
+      const flakySupplier = vi.fn(() => {
         attemptCount++;
         if (attemptCount <= 2) {
           return Promise.reject(error);
@@ -228,8 +228,8 @@ describe('emitnlog.tracker.promise.vault', () => {
   describe('clear method', () => {
     test('should clear all cached operations', async () => {
       const vault = vaultPromises();
-      const supplier1 = jest.fn(() => Promise.resolve('result-1'));
-      const supplier2 = jest.fn(() => Promise.resolve('result-2'));
+      const supplier1 = vi.fn(() => Promise.resolve('result-1'));
+      const supplier2 = vi.fn(() => Promise.resolve('result-2'));
 
       // Cache two operations
       await vault.track('op-1', supplier1);
@@ -262,8 +262,8 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should clear both successful and failed operations', async () => {
       const vault = vaultPromises();
       const error = new Error('failure');
-      const successSupplier = jest.fn(() => Promise.resolve('success'));
-      const failureSupplier = jest.fn(() => Promise.reject(error));
+      const successSupplier = vi.fn(() => Promise.resolve('success'));
+      const failureSupplier = vi.fn(() => Promise.reject(error));
 
       // Cache one success and one failure
       await vault.track('success-op', successSupplier);
@@ -288,8 +288,8 @@ describe('emitnlog.tracker.promise.vault', () => {
   describe('forget method', () => {
     test('should remove specific cached operation', async () => {
       const vault = vaultPromises();
-      const supplier1 = jest.fn(() => Promise.resolve('result-1'));
-      const supplier2 = jest.fn(() => Promise.resolve('result-2'));
+      const supplier1 = vi.fn(() => Promise.resolve('result-1'));
+      const supplier2 = vi.fn(() => Promise.resolve('result-2'));
 
       // Cache two operations
       await vault.track('op-1', supplier1);
@@ -323,7 +323,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle forgetting failed operations', async () => {
       const vault = vaultPromises();
       const error = new Error('operation failed');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // Cache a failed operation
       await expect(vault.track('failing-op', supplierFn)).rejects.toThrow(error);
@@ -346,7 +346,7 @@ describe('emitnlog.tracker.promise.vault', () => {
       const delayedPromise = new Promise<string>((resolve) => {
         resolvePromise = resolve;
       });
-      const supplierFn = jest.fn(() => delayedPromise);
+      const supplierFn = vi.fn(() => delayedPromise);
 
       // Start operation
       const promise1 = vault.track('concurrent-op', supplierFn);
@@ -372,7 +372,7 @@ describe('emitnlog.tracker.promise.vault', () => {
   describe('has method', () => {
     test('should return true for cached operations', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('result'));
+      const supplierFn = vi.fn(() => Promise.resolve('result'));
 
       expect(vault.has('test-op')).toBe(false);
 
@@ -385,7 +385,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should return false after forget', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('result'));
+      const supplierFn = vi.fn(() => Promise.resolve('result'));
 
       await vault.track('test-op', supplierFn);
       expect(vault.has('test-op')).toBe(true);
@@ -396,7 +396,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should return false after clear', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('result'));
+      const supplierFn = vi.fn(() => Promise.resolve('result'));
 
       await vault.track('test-op', supplierFn);
       expect(vault.has('test-op')).toBe(true);
@@ -409,7 +409,7 @@ describe('emitnlog.tracker.promise.vault', () => {
       const defaultVault = vaultPromises();
       const forgetVault = vaultPromises({ forgetOnRejection: true });
       const error = new Error('failure');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // Default vault should cache failed operations
       await expect(defaultVault.track('fail-op', supplierFn)).rejects.toThrow(error);
@@ -892,7 +892,7 @@ describe('emitnlog.tracker.promise.vault', () => {
   describe('forget option in track method', () => {
     test('should use persistent caching by default (forget: false)', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('persistent-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('persistent-result'));
 
       // First call executes the supplier
       const result1 = await vault.track('default-behavior', supplierFn);
@@ -909,7 +909,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should use persistent caching when forget: false is explicit', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('explicit-persistent'));
+      const supplierFn = vi.fn(() => Promise.resolve('explicit-persistent'));
 
       // First call with explicit forget: false
       const result1 = await vault.track('explicit-persistent', supplierFn, { forget: false });
@@ -926,7 +926,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should use transient caching when forget: true (PromiseHolder behavior)', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('transient-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('transient-result'));
 
       // First call executes and caches temporarily
       const result1 = await vault.track('transient-op', supplierFn, { forget: true });
@@ -943,8 +943,8 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should handle mixed caching strategies in same vault', async () => {
       const vault = vaultPromises();
-      const persistentSupplier = jest.fn(() => Promise.resolve('persistent'));
-      const transientSupplier = jest.fn(() => Promise.resolve('transient'));
+      const persistentSupplier = vi.fn(() => Promise.resolve('persistent'));
+      const transientSupplier = vi.fn(() => Promise.resolve('transient'));
 
       // Persistent operation
       const persistent1 = await vault.track('persistent-op', persistentSupplier, { forget: false });
@@ -970,7 +970,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle error scenarios with forget: true', async () => {
       const vault = vaultPromises();
       const error = new Error('transient operation failed');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // First call fails and is cleared automatically
       await expect(vault.track('transient-error', supplierFn, { forget: true })).rejects.toThrow(error);
@@ -986,7 +986,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle error scenarios with forget: false', async () => {
       const vault = vaultPromises();
       const error = new Error('persistent operation failed');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // First call fails and is cached
       await expect(vault.track('persistent-error', supplierFn, { forget: false })).rejects.toThrow(error);
@@ -1002,7 +1002,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should respect forgetOnRejection option even when forget: false', async () => {
       const vault = vaultPromises({ forgetOnRejection: true });
       const error = new Error('should be cleared by forgetOnRejection');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       // forget: false but forgetOnRejection: true should clear on failure
       await expect(vault.track('error-with-global-forget', supplierFn, { forget: false })).rejects.toThrow(error);
@@ -1021,7 +1021,7 @@ describe('emitnlog.tracker.promise.vault', () => {
       const delayedPromise = new Promise<string>((resolve) => {
         resolvePromise = resolve;
       });
-      const supplierFn = jest.fn(() => delayedPromise);
+      const supplierFn = vi.fn(() => delayedPromise);
 
       // Start multiple concurrent requests with forget: true
       const promises = Array.from({ length: 3 }, () =>
@@ -1053,7 +1053,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should allow switching forget behavior for same operation ID', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('switchable-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('switchable-result'));
 
       // First call with forget: true (transient)
       const result1 = await vault.track('switchable-op', supplierFn, { forget: true });
@@ -1121,7 +1121,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle synchronous errors with forget: true', async () => {
       const vault = vaultPromises();
       const error = new Error('sync error with forget');
-      const throwingSupplier = jest.fn(() => {
+      const throwingSupplier = vi.fn(() => {
         throw error;
       });
 
@@ -1137,8 +1137,8 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should handle complex scenarios with mixed options and global forgetOnRejection', async () => {
       const vault = vaultPromises({ forgetOnRejection: true });
-      const successSupplier = jest.fn(() => Promise.resolve('success'));
-      const errorSupplier = jest.fn(() => Promise.reject(new Error('failure')));
+      const successSupplier = vi.fn(() => Promise.resolve('success'));
+      const errorSupplier = vi.fn(() => Promise.reject(new Error('failure')));
 
       // Success with forget: false - should be cached (overrides global forgetOnRejection for success)
       await vault.track('success-persistent', successSupplier, { forget: false });
@@ -1164,9 +1164,9 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should validate that forget option does not affect other operations', async () => {
       const vault = vaultPromises();
-      const supplier1 = jest.fn(() => Promise.resolve('result1'));
-      const supplier2 = jest.fn(() => Promise.resolve('result2'));
-      const supplier3 = jest.fn(() => Promise.resolve('result3'));
+      const supplier1 = vi.fn(() => Promise.resolve('result1'));
+      const supplier2 = vi.fn(() => Promise.resolve('result2'));
+      const supplier3 = vi.fn(() => Promise.resolve('result3'));
 
       // Mix of operations with different forget settings
       await vault.track('op1', supplier1, { forget: false }); // Persistent
@@ -1191,7 +1191,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle suppliers that throw synchronously', async () => {
       const vault = vaultPromises();
       const error = new Error('sync error');
-      const throwingSupplier = jest.fn(() => {
+      const throwingSupplier = vi.fn(() => {
         throw error;
       });
 
@@ -1206,7 +1206,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle suppliers that throw synchronously with forgetOnRejection', async () => {
       const vault = vaultPromises({ forgetOnRejection: true });
       const error = new Error('sync error');
-      const throwingSupplier = jest.fn(() => {
+      const throwingSupplier = vi.fn(() => {
         throw error;
       });
 
@@ -1220,8 +1220,8 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should handle undefined and null results', async () => {
       const vault = vaultPromises();
-      const undefinedSupplier = jest.fn(() => Promise.resolve(undefined));
-      const nullSupplier = jest.fn(() => Promise.resolve(null));
+      const undefinedSupplier = vi.fn(() => Promise.resolve(undefined));
+      const nullSupplier = vi.fn(() => Promise.resolve(null));
 
       const undefinedResult = await vault.track('undefined-op', undefinedSupplier);
       const nullResult = await vault.track('null-op', nullSupplier);
@@ -1242,7 +1242,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should handle empty string as operation ID', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('empty-id-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('empty-id-result'));
 
       const result = await vault.track('', supplierFn);
       expect(result).toBe('empty-id-result');
@@ -1258,7 +1258,7 @@ describe('emitnlog.tracker.promise.vault', () => {
     test('should handle complex objects as results', async () => {
       const vault = vaultPromises();
       const complexObject = { data: [1, 2, 3], nested: { value: 'test' } };
-      const supplierFn = jest.fn(() => Promise.resolve(complexObject));
+      const supplierFn = vi.fn(() => Promise.resolve(complexObject));
 
       const result1 = await vault.track('complex-object', supplierFn);
       expect(result1).toBe(complexObject);
@@ -1272,7 +1272,7 @@ describe('emitnlog.tracker.promise.vault', () => {
 
     test('should handle rapid sequential calls', async () => {
       const vault = vaultPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('rapid-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('rapid-result'));
 
       const promises: Promise<string>[] = [];
       for (let i = 0; i < 10; i++) {

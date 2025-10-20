@@ -1,14 +1,14 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.delay', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   test('should resolve after the specified delay', async () => {
@@ -18,20 +18,20 @@ describe('emitnlog.utils.delay', () => {
     });
 
     expect(resolved).toBe(false);
-    jest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     await promise;
     expect(resolved).toBe(true);
   });
 
   test('should use 0 for negative delays', async () => {
     const promise = delay(-1000);
-    jest.advanceTimersByTime(0);
+    vi.advanceTimersByTime(0);
     await expect(promise).resolves.toBeUndefined();
   });
 
   test('should ceil decimal delays', async () => {
     const promise = delay(1000.4);
-    jest.advanceTimersByTime(1001);
+    vi.advanceTimersByTime(1001);
     await expect(promise).resolves.toBeUndefined();
   });
 
@@ -41,13 +41,13 @@ describe('emitnlog.utils.delay', () => {
       resolved = true;
     });
 
-    jest.advanceTimersByTime(500);
+    vi.advanceTimersByTime(500);
     expect(resolved).toBe(false);
 
-    jest.advanceTimersByTime(999);
+    vi.advanceTimersByTime(999);
     expect(resolved).toBe(false);
 
-    jest.advanceTimersByTime(1);
+    vi.advanceTimersByTime(1);
     await promise;
     expect(resolved).toBe(true);
   });

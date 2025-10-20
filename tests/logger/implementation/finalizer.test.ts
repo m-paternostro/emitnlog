@@ -1,4 +1,4 @@
-import { describe, expect, jest, test } from '@jest/globals';
+import { describe, expect, test, vi } from 'vitest';
 
 import { implementation } from '../../../src/logger/index.ts';
 
@@ -12,8 +12,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should create finalizer with only flush when only flush methods exist', () => {
-      const flush1 = jest.fn<() => void>();
-      const flush2 = jest.fn<() => void>();
+      const flush1 = vi.fn<() => void>();
+      const flush2 = vi.fn<() => void>();
 
       const finalizer1 = { flush: flush1 };
       const finalizer2 = { flush: flush2 };
@@ -30,8 +30,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should create finalizer with only close when only close methods exist', () => {
-      const close1 = jest.fn<() => void>();
-      const close2 = jest.fn<() => void>();
+      const close1 = vi.fn<() => void>();
+      const close2 = vi.fn<() => void>();
 
       const finalizer1 = { close: close1 };
       const finalizer2 = { close: close2 };
@@ -48,10 +48,10 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should create finalizer with both flush and close', () => {
-      const flush1 = jest.fn<() => void>();
-      const close1 = jest.fn<() => void>();
-      const flush2 = jest.fn<() => void>();
-      const close2 = jest.fn<() => void>();
+      const flush1 = vi.fn<() => void>();
+      const close1 = vi.fn<() => void>();
+      const flush2 = vi.fn<() => void>();
+      const close2 = vi.fn<() => void>();
 
       const finalizer1 = { flush: flush1, close: close1 };
       const finalizer2 = { flush: flush2, close: close2 };
@@ -71,8 +71,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should handle mix of sync and async flush methods', async () => {
-      const syncFlush = jest.fn<() => void>();
-      const asyncFlush = jest.fn<() => Promise<void>>(() => Promise.resolve());
+      const syncFlush = vi.fn<() => void>();
+      const asyncFlush = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
       const finalizer1 = { flush: syncFlush };
       const finalizer2 = { flush: asyncFlush };
@@ -90,8 +90,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should handle mix of sync and async close methods', async () => {
-      const syncClose = jest.fn<() => void>();
-      const asyncClose = jest.fn<() => Promise<void>>(() => Promise.resolve());
+      const syncClose = vi.fn<() => void>();
+      const asyncClose = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
       const finalizer1 = { close: syncClose };
       const finalizer2 = { close: asyncClose };
@@ -109,8 +109,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should return void when all flush methods are sync', () => {
-      const flush1 = jest.fn<() => void>();
-      const flush2 = jest.fn<() => void>();
+      const flush1 = vi.fn<() => void>();
+      const flush2 = vi.fn<() => void>();
 
       const finalizer1 = { flush: flush1 };
       const finalizer2 = { flush: flush2 };
@@ -124,8 +124,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should return void when all close methods are sync', () => {
-      const close1 = jest.fn<() => void>();
-      const close2 = jest.fn<() => void>();
+      const close1 = vi.fn<() => void>();
+      const close2 = vi.fn<() => void>();
 
       const finalizer1 = { close: close1 };
       const finalizer2 = { close: close2 };
@@ -140,8 +140,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
 
     test('should handle errors in async flush methods', async () => {
       const error = new Error('Flush failed');
-      const failingFlush = jest.fn<() => Promise<void>>(() => Promise.reject(error));
-      const successFlush = jest.fn<() => Promise<void>>(() => Promise.resolve());
+      const failingFlush = vi.fn<() => Promise<void>>(() => Promise.reject(error));
+      const successFlush = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
       const finalizer1 = { flush: failingFlush };
       const finalizer2 = { flush: successFlush };
@@ -156,8 +156,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
 
     test('should handle errors in async close methods', async () => {
       const error = new Error('Close failed');
-      const failingClose = jest.fn<() => Promise<void>>(() => Promise.reject(error));
-      const successClose = jest.fn<() => Promise<void>>(() => Promise.resolve());
+      const failingClose = vi.fn<() => Promise<void>>(() => Promise.reject(error));
+      const successClose = vi.fn<() => Promise<void>>(() => Promise.resolve());
 
       const finalizer1 = { close: failingClose };
       const finalizer2 = { close: successClose };
@@ -171,8 +171,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should skip finalizers without requested method', () => {
-      const flush = jest.fn<() => void>();
-      const close = jest.fn<() => void>();
+      const flush = vi.fn<() => void>();
+      const close = vi.fn<() => void>();
 
       const finalizer1 = { flush }; // No close
       const finalizer2 = { close }; // No flush
@@ -190,9 +190,9 @@ describe('emitnlog.logger.implementation.finalizer', () => {
 
     test('should handle multiple async finalizers', async () => {
       const flushes = [
-        jest.fn<() => Promise<void>>(() => Promise.resolve()),
-        jest.fn<() => Promise<void>>(() => Promise.resolve()),
-        jest.fn<() => Promise<void>>(() => Promise.resolve()),
+        vi.fn<() => Promise<void>>(() => Promise.resolve()),
+        vi.fn<() => Promise<void>>(() => Promise.resolve()),
+        vi.fn<() => Promise<void>>(() => Promise.resolve()),
       ];
 
       const finalizers = flushes.map((flush) => ({ flush }));
@@ -208,8 +208,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should handle single finalizer', () => {
-      const flush = jest.fn<() => void>();
-      const close = jest.fn<() => void>();
+      const flush = vi.fn<() => void>();
+      const close = vi.fn<() => void>();
 
       const finalizer = { flush, close };
       const combined = implementation.asSingleFinalizer(finalizer);
@@ -262,8 +262,8 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should handle undefined return values', () => {
-      const flush1 = jest.fn<() => void>(() => undefined);
-      const flush2 = jest.fn<() => void>(() => undefined);
+      const flush1 = vi.fn<() => void>(() => undefined);
+      const flush2 = vi.fn<() => void>(() => undefined);
 
       const finalizer1 = { flush: flush1 };
       const finalizer2 = { flush: flush2 };
@@ -277,7 +277,7 @@ describe('emitnlog.logger.implementation.finalizer', () => {
     });
 
     test('should handle async methods returning undefined', async () => {
-      const asyncFlush = jest.fn<() => Promise<void>>(async () => undefined);
+      const asyncFlush = vi.fn<() => Promise<void>>(async () => undefined);
 
       const finalizer = { flush: asyncFlush };
       const combined = implementation.asSingleFinalizer(finalizer);

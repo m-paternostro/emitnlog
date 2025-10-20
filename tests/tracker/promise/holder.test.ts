@@ -1,18 +1,18 @@
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
 
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { PromiseSettledEvent } from '../../../src/tracker/index.ts';
 import { holdPromises } from '../../../src/tracker/index.ts';
-import { createTestLogger } from '../../jester.setup.ts';
+import { createTestLogger } from '../../vitest.setup.ts';
 
 describe('emitnlog.tracker.promise.holder', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('holdPromises', () => {
@@ -25,7 +25,7 @@ describe('emitnlog.tracker.promise.holder', () => {
   describe('track (caching behavior)', () => {
     test('should execute operation only once for same ID', async () => {
       const holder = holdPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('cached-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('cached-result'));
 
       const promise1 = holder.track('operation-1', supplierFn);
       const promise2 = holder.track('operation-1', supplierFn);
@@ -42,8 +42,8 @@ describe('emitnlog.tracker.promise.holder', () => {
 
     test('should execute different operations for different IDs', async () => {
       const holder = holdPromises();
-      const supplier1 = jest.fn(() => Promise.resolve('result-1'));
-      const supplier2 = jest.fn(() => Promise.resolve('result-2'));
+      const supplier1 = vi.fn(() => Promise.resolve('result-1'));
+      const supplier2 = vi.fn(() => Promise.resolve('result-2'));
 
       const promise1 = holder.track('operation-1', supplier1);
       const promise2 = holder.track('operation-2', supplier2);
@@ -59,8 +59,8 @@ describe('emitnlog.tracker.promise.holder', () => {
 
     test('should allow reuse of ID after operation completes', async () => {
       const holder = holdPromises();
-      const supplier1 = jest.fn(() => Promise.resolve('first-execution'));
-      const supplier2 = jest.fn(() => Promise.resolve('second-execution'));
+      const supplier1 = vi.fn(() => Promise.resolve('first-execution'));
+      const supplier2 = vi.fn(() => Promise.resolve('second-execution'));
 
       // First execution
       const result1 = await holder.track('reusable-id', supplier1);
@@ -78,7 +78,7 @@ describe('emitnlog.tracker.promise.holder', () => {
     test('should cache rejected promises and clean up after rejection', async () => {
       const holder = holdPromises();
       const error = new Error('operation failed');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       const promise1 = holder.track('failing-operation', supplierFn);
       const promise2 = holder.track('failing-operation', supplierFn);
@@ -91,7 +91,7 @@ describe('emitnlog.tracker.promise.holder', () => {
       expect(holder.size).toBe(0);
 
       // Should allow retry after failure
-      const retrySupplier = jest.fn(() => Promise.resolve('retry-success'));
+      const retrySupplier = vi.fn(() => Promise.resolve('retry-success'));
       const retryResult = await holder.track('failing-operation', retrySupplier);
       expect(retryResult).toBe('retry-success');
       expect(retrySupplier).toHaveBeenCalledTimes(1);
@@ -100,7 +100,7 @@ describe('emitnlog.tracker.promise.holder', () => {
     test('should handle suppliers that throw synchronously', async () => {
       const holder = holdPromises();
       const error = new Error('sync error');
-      const throwingSupplier = jest.fn(() => {
+      const throwingSupplier = vi.fn(() => {
         throw error;
       });
 
@@ -121,7 +121,7 @@ describe('emitnlog.tracker.promise.holder', () => {
       const delayedPromise = new Promise<string>((resolve) => {
         resolvePromise = resolve;
       });
-      const supplierFn = jest.fn(() => delayedPromise);
+      const supplierFn = vi.fn(() => delayedPromise);
 
       // Start multiple concurrent requests
       const promises = Array.from({ length: 5 }, () => holder.track('concurrent-op', supplierFn));
@@ -701,7 +701,7 @@ describe('emitnlog.tracker.promise.holder', () => {
   describe('edge cases', () => {
     test('should handle operation that resolves to undefined', async () => {
       const holder = holdPromises();
-      const supplierFn = jest.fn(() => Promise.resolve(undefined));
+      const supplierFn = vi.fn(() => Promise.resolve(undefined));
 
       const promise1 = holder.track('undefined-result', supplierFn);
       const promise2 = holder.track('undefined-result', supplierFn);
@@ -718,7 +718,7 @@ describe('emitnlog.tracker.promise.holder', () => {
 
     test('should handle rapid sequential calls with same ID', async () => {
       const holder = holdPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('sequential-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('sequential-result'));
 
       // Make multiple calls in quick succession
       const promises: Promise<string>[] = [];
@@ -742,7 +742,7 @@ describe('emitnlog.tracker.promise.holder', () => {
 
     test('should handle empty string as operation ID', async () => {
       const holder = holdPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('empty-id-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('empty-id-result'));
 
       const result = await holder.track('', supplierFn);
       expect(result).toBe('empty-id-result');
@@ -752,7 +752,7 @@ describe('emitnlog.tracker.promise.holder', () => {
     test('should invoke the operation if the previous has settled', async () => {
       const holder = holdPromises();
       const complexObject = { data: [1, 2, 3], nested: { value: 'test' } };
-      const supplierFn = jest.fn(() => Promise.resolve(complexObject));
+      const supplierFn = vi.fn(() => Promise.resolve(complexObject));
 
       const result1 = await holder.track('complex-object', supplierFn);
       const result2 = await holder.track('complex-object', supplierFn);

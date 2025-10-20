@@ -1,16 +1,16 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { PromiseSettledEvent } from '../../../src/tracker/index.ts';
 import { trackPromises } from '../../../src/tracker/index.ts';
-import { createTestLogger } from '../../jester.setup.ts';
+import { createTestLogger } from '../../vitest.setup.ts';
 
 describe('emitnlog.tracker.promise', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('trackPromises', () => {
@@ -56,7 +56,7 @@ describe('emitnlog.tracker.promise', () => {
 
     test('should track promise suppliers', async () => {
       const tracker = trackPromises();
-      const supplierFn = jest.fn(() => Promise.resolve('supplier-result'));
+      const supplierFn = vi.fn(() => Promise.resolve('supplier-result'));
 
       const promise = tracker.track('supplier-test', supplierFn);
 
@@ -71,7 +71,7 @@ describe('emitnlog.tracker.promise', () => {
     test('should track promise suppliers that throw synchronously', async () => {
       const tracker = trackPromises();
       const error = new Error('sync error');
-      const supplierFn = jest.fn(() => {
+      const supplierFn = vi.fn(() => {
         throw error;
       });
 
@@ -85,7 +85,7 @@ describe('emitnlog.tracker.promise', () => {
     test('should track promise suppliers that return rejected promises', async () => {
       const tracker = trackPromises();
       const error = new Error('async error');
-      const supplierFn = jest.fn(() => Promise.reject(error));
+      const supplierFn = vi.fn(() => Promise.reject(error));
 
       const promise = tracker.track('async-reject-test', supplierFn);
 
@@ -150,13 +150,13 @@ describe('emitnlog.tracker.promise', () => {
 
       const waitPromise = tracker.wait();
 
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       await Promise.resolve(); // Wait for microtasks to execute
       expect(resolved1).toBe(true);
       expect(resolved2).toBe(false);
       expect(tracker.size).toBe(1);
 
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       await Promise.resolve(); // Wait for microtasks to execute
       expect(resolved2).toBe(true);
 
@@ -175,7 +175,7 @@ describe('emitnlog.tracker.promise', () => {
       // Track a promise that will reject - but handle it properly
       const trackedRejectedPromise = tracker.track(Promise.reject(new Error('failure')));
 
-      // Handle the rejection to prevent Jest from complaining
+      // Handle the rejection to prevent Vitest from complaining
       trackedRejectedPromise.catch(() => {
         // Expected rejection - do nothing
       });
@@ -213,7 +213,7 @@ describe('emitnlog.tracker.promise', () => {
       void tracker.track('second', secondPromise);
 
       // Advance time to resolve only the first promise
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       await Promise.resolve(); // Wait for microtasks to execute
       expect(firstResolved).toBe(true);
       expect(secondResolved).toBe(false);
@@ -225,7 +225,7 @@ describe('emitnlog.tracker.promise', () => {
       expect(tracker.size).toBe(1);
 
       // Clean up the second promise for the test
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       await Promise.resolve();
       expect(secondResolved).toBe(true);
       expect(tracker.size).toBe(0);
@@ -339,7 +339,7 @@ describe('emitnlog.tracker.promise', () => {
         events.push(event);
       });
 
-      const supplierFn = jest.fn(
+      const supplierFn = vi.fn(
         () =>
           new Promise<string>((resolve) => {
             setTimeout(() => resolve('supplier-result'), 100);
@@ -348,7 +348,7 @@ describe('emitnlog.tracker.promise', () => {
 
       const promise = tracker.track('timing-test', supplierFn);
 
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       await promise;
 
       expect(events).toHaveLength(1);

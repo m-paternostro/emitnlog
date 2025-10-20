@@ -1,14 +1,14 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { generateRandomString } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.generateRandomString', () => {
   beforeEach(() => {
-    jest.spyOn(Math, 'random');
+    vi.spyOn(Math, 'random');
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('should generate a string of default length (8)', () => {
@@ -55,7 +55,7 @@ describe('emitnlog.utils.generateRandomString', () => {
 
   test('should use all character types', () => {
     // Mock Math.random to return different values to ensure we get different characters
-    const mockRandom = jest.spyOn(Math, 'random');
+    const mockRandom = vi.spyOn(Math, 'random');
     mockRandom
       .mockReturnValueOnce(0) // 'A'
       .mockReturnValueOnce(0.5) // 'n'

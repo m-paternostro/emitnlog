@@ -1,5 +1,5 @@
 import * as emitnlog from 'emitnlog/neutral';
-import { expect, test, describe } from '@jest/globals';
+import { expect, test, describe } from 'vitest';
 
 describe('ESM neutral flat imports', () => {
   test('Logger exports are available', () => {

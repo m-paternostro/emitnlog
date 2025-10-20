@@ -10,7 +10,7 @@ When working on the project interactively with an agent, follow the guidelines b
 - Node dependencies are clearly identified in code `src/**/node/**`
 - Targets node JavaScript runtimes offering `neutral` options (see `package.json`).
 - `tsc` performs type checking only (no emit). JS conversion is done by `tsup`.
-- Source lives under `src/`; tests live under `tests/` and use Jest; "smoke tests" live under `tests-smoke` and also use Jest.
+- Source lives under `src/`; tests live under `tests/` and use Vitest; "smoke tests" live under `tests-smoke` and also use Vitest.
 
 ## Useful Commands
 
@@ -22,7 +22,7 @@ When working on the project interactively with an agent, follow the guidelines b
 | `npm run lint:check`       | ESLint checks only (no fixes).                            |
 | `npm run typecheck`        | TypeScript checks (no code emit).                         |
 | `npm run build`            | Build ESM/CJS bundles via `tsup`.                         |
-| `npm run test`             | Run tests with Jest.                                      |
+| `npm run test`             | Run tests with Vitest.                                    |
 | `npm run test:coverage`    | Run tests with coverage.                                  |
 | `npm run test:smoke`       | Run smoke tests (without rebuilding).                     |
 | `npm run test:smoke:build` | Build and run the smoke tests.                            |
@@ -58,14 +58,14 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
 
 ## Tests
 
-- Framework: Jest with explicit imports from `@jest/globals`.
+- Framework: Vitest with explicit imports from `vitest`.
 - All "Coding Conventions" apply to the test code.
 - Philosophy:
   - Focus on validating behavior over implementation details; it’s OK to test internals when flow/timing is complex.
-  - Prefer real code; use Jest mocking only when absolutely necessary and keep it minimal.
+  - Prefer real code; use Vitest mocking only when absolutely necessary and keep it minimal.
   - Maintain high, useful coverage—do not add tests merely for coverage.
   - On failures, review real code in `src` first, then consider test issues.
-- Utilities: See `tests/jester.setup.ts` for useful helpers.
+- Utilities: See `tests/vitest.setup.ts` for useful helpers.
 
 ### Coverage
 

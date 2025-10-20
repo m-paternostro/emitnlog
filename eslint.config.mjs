@@ -12,7 +12,7 @@ import * as nodeImportPrefix from 'eslint-plugin-require-node-import-prefix';
 export default ts.config([
   {
     name: 'ignore',
-    ignores: ['coverage/**', 'dist/**', '**/*.js', '**/*.cjs', '**/*.mjs', 'jest.config.ts', 'tsup.config.ts'],
+    ignores: ['coverage/**', 'dist/**', '**/*.js', '**/*.cjs', '**/*.mjs', 'tsup.config.ts', 'vitest.config.ts'],
   },
   {
     name: 'default',
@@ -189,7 +189,7 @@ export default ts.config([
         'error',
         {
           groups: [
-            ['^@jest/globals\\u0000$', '^@jest/globals$', '^tsup$', '^esbuild$'],
+            ['^vitest\\u0000$', '^vitest$', '^tsup$', '^esbuild$'],
             ['^node:'],
             ['^@\\w', '^\\w'],
             ['^\\.\\u0000$', '^\\.'],
@@ -240,7 +240,7 @@ export default ts.config([
   {
     name: 'tests',
     files: ['tests/**/*'],
-    languageOptions: { globals: { ...globals.node, ...globals.jest } },
+    languageOptions: { globals: { ...globals.node } },
     rules: { '@typescript-eslint/no-unsafe-assignment': 'off', '@typescript-eslint/unbound-method': 'off' },
   },
 ]);

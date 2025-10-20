@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { EventNotifier, OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
@@ -352,11 +352,11 @@ describe('emitnlog.notifier', () => {
 
   describe('debouncing', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('should debounce notifications to listeners', async () => {
@@ -374,7 +374,7 @@ describe('emitnlog.notifier', () => {
       expect(events).toEqual([]);
 
       // Advance time to trigger debounced execution
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Only the last event should be received
       expect(events).toEqual(['third']);
@@ -391,7 +391,7 @@ describe('emitnlog.notifier', () => {
       debouncedNotifier.notify('third');
 
       // Advance time to trigger debounced execution
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // waitForEvent should resolve with the last value
       await expect(eventPromise).resolves.toBe('third');
@@ -410,7 +410,7 @@ describe('emitnlog.notifier', () => {
       debouncedNotifier.notify('final');
 
       // Advance time to trigger debounced execution
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Both should receive the same final result
       await expect(eventPromise).resolves.toBe('final');
@@ -438,7 +438,7 @@ describe('emitnlog.notifier', () => {
       expect(callCount).toBe(0); // Functions not called yet
 
       // Advance time to trigger debounced execution
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Only the last function should be called once
       expect(callCount).toBe(1);
@@ -462,13 +462,13 @@ describe('emitnlog.notifier', () => {
 
     test('closing cancels pending debounced notify and rejects waiter', async () => {
       const n = createEventNotifier<string>({ debounceDelay: 100 });
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const p = n.waitForEvent();
       n.notify('x');
       n.close();
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       await expect(p).rejects.toBeInstanceOf(ClosedError);
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('onError accepts undefined to clear handler and does not throw if handler throws', () => {
