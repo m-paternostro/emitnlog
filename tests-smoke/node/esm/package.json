@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js"
+    "test": "vitest run --config ../../vitest.config.mjs"
   }
 }

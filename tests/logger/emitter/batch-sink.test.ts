@@ -1,22 +1,23 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { Mock } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
-import { flushFakeTimePromises } from '../../jester.setup.ts';
+import { flushFakeTimePromises } from '../../vitest.setup.ts';
 
 describe('emitnlog.logger.emitter.batch-sink', () => {
   let capturedLogs: { level: LogLevel; message: string; args: readonly unknown[] | undefined }[];
   let mockSink: emitter.LogSink;
-  let flushMock: jest.Mock<() => void>;
-  let closeMock: jest.Mock<() => void>;
+  let flushMock: Mock<() => void>;
+  let closeMock: Mock<() => void>;
 
   beforeEach(() => {
     capturedLogs = [];
-    flushMock = jest.fn<() => void>();
-    closeMock = jest.fn<() => void>();
+    flushMock = vi.fn<() => void>();
+    closeMock = vi.fn<() => void>();
 
     mockSink = {
-      sink: jest.fn((level: LogLevel, message: string, args?: readonly unknown[]) => {
+      sink: vi.fn((level: LogLevel, message: string, args?: readonly unknown[]) => {
         capturedLogs.push({ level, message, args });
       }),
       flush: flushMock,
@@ -38,7 +39,7 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
     });
 
     test('should flush after flushDelayMs with fake timers', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const batchedSink = emitter.batchSink(mockSink, { maxBufferSize: 100, flushDelayMs: 1000 });
 
       batchedSink.sink('info', 'Message 1', []);
@@ -47,23 +48,23 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
       expect(capturedLogs).toHaveLength(0);
 
       // Advance time and flush promises
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await flushFakeTimePromises();
 
       expect(capturedLogs).toHaveLength(2);
       expect(capturedLogs.map((log) => log.message)).toEqual(['Message 1', 'Message 2']);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('should reset timer when buffer fills', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const batchedSink = emitter.batchSink(mockSink, { maxBufferSize: 2, flushDelayMs: 1000 });
 
       batchedSink.sink('info', 'Message 1', []);
 
       // Advance time partially
-      jest.advanceTimersByTime(500);
+      vi.advanceTimersByTime(500);
 
       // This should flush immediately and reset timer
       batchedSink.sink('info', 'Message 2', []);
@@ -76,13 +77,13 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
 
       // The timer should start fresh after the flush
       // Advance full 1000ms for the new timer
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await flushFakeTimePromises();
 
       expect(capturedLogs).toHaveLength(1);
       expect(capturedLogs[0].message).toBe('Message 3');
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('should handle manual flush', async () => {
@@ -166,34 +167,34 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
     });
 
     test('should debounce multiple logs within delay', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const batchedSink = emitter.batchSink(mockSink, { maxBufferSize: 100, flushDelayMs: 1000 });
 
       // Add logs at different intervals
       batchedSink.sink('info', 'Message 1', []);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       batchedSink.sink('info', 'Message 2', []);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       batchedSink.sink('info', 'Message 3', []);
-      jest.advanceTimersByTime(300);
+      vi.advanceTimersByTime(300);
 
       // Still within the debounce delay
       expect(capturedLogs).toHaveLength(0);
 
       // Complete the debounce delay from last log
-      jest.advanceTimersByTime(700);
+      vi.advanceTimersByTime(700);
       await flushFakeTimePromises();
 
       // All should be flushed together
       expect(capturedLogs).toHaveLength(3);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('should handle sink without flush/close methods', async () => {
-      const simpleSink = { sink: jest.fn<emitter.LogSink['sink']>() };
+      const simpleSink = { sink: vi.fn<emitter.LogSink['sink']>() };
       const batchedSink = emitter.batchSink(simpleSink, { maxBufferSize: 2, flushDelayMs: 1000 });
 
       batchedSink.sink('info', 'Message 1', []);
@@ -233,8 +234,8 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
 
   describe('batchSizeSink', () => {
     test('should only flush based on size', async () => {
-      jest.clearAllTimers();
-      jest.useFakeTimers();
+      vi.clearAllTimers();
+      vi.useFakeTimers();
       capturedLogs = [];
       const batchedSink = emitter.batchSizeSink(mockSink, 3);
 
@@ -242,7 +243,7 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
       batchedSink.sink('info', 'Message 2', []);
 
       // Advance time significantly
-      jest.advanceTimersByTime(100000);
+      vi.advanceTimersByTime(100000);
       await flushFakeTimePromises();
 
       // Should not have flushed based on time
@@ -252,7 +253,7 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
       batchedSink.sink('info', 'Message 3', []);
       expect(capturedLogs).toHaveLength(3);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('flush should forward buffered logs and call underlying flush', async () => {
@@ -285,7 +286,7 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
 
   describe('batchTimeSink', () => {
     test('should only flush based on time', async () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
       const batchedSink = emitter.batchTimeSink(mockSink, 1000);
 
       // Add many logs
@@ -297,12 +298,12 @@ describe('emitnlog.logger.emitter.batch-sink', () => {
       expect(capturedLogs).toHaveLength(0);
 
       // Advance time to trigger flush
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await flushFakeTimePromises();
 
       expect(capturedLogs).toHaveLength(100);
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
   });
 });

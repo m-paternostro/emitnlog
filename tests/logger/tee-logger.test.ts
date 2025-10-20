@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, test } from '@jest/globals';
+import { beforeEach, describe, expect, test } from 'vitest';
 
 import type { Logger, LogLevel, LogMessage } from '../../src/logger/index.ts';
 import { OFF_LOGGER, tee } from '../../src/logger/index.ts';
-import type { MemoryLogger } from '../jester.setup.ts';
-import { createMemoryLogger } from '../jester.setup.ts';
+import type { MemoryLogger } from '../vitest.setup.ts';
+import { createMemoryLogger } from '../vitest.setup.ts';
 
 describe('emitnlog.logger.tee', () => {
   describe('tee creation', () => {

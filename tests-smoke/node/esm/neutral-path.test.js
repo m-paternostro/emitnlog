@@ -2,7 +2,7 @@ import * as logging from 'emitnlog/neutral/logger';
 import * as notifying from 'emitnlog/neutral/notifier';
 import * as tracking from 'emitnlog/neutral/tracker';
 import * as utils from 'emitnlog/neutral/utils';
-import { expect, test, describe } from '@jest/globals';
+import { expect, test, describe } from 'vitest';
 
 describe('ESM neutral path imports', () => {
   test('Logger path exports are available', () => {

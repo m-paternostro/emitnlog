@@ -1,10 +1,10 @@
-import { afterEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { EventEmitter } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import { OFF_LOGGER, requestLogger } from '../../../src/logger/index-node.ts';
-import { createMemoryLogger } from '../../jester.setup.ts';
+import { createMemoryLogger } from '../../vitest.setup.ts';
 
 type RequestLike = IncomingMessage & { path?: string };
 
@@ -18,7 +18,7 @@ const createResponse = (): { readonly emitter: EventEmitter; readonly response: 
 
 describe('emitnlog.logger.node.requestLogger', () => {
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('logs request lifecycle events with default configuration', () => {
@@ -27,7 +27,7 @@ describe('emitnlog.logger.node.requestLogger', () => {
 
     const req = createRequest({ method: 'GET', path: '/users' });
     const { emitter: resEmitter, response: res } = createResponse();
-    const next = jest.fn();
+    const next = vi.fn();
 
     middleware(req, res, next);
 
@@ -58,7 +58,7 @@ describe('emitnlog.logger.node.requestLogger', () => {
 
     const req = createRequest({ method: 'GET', path: '/users' });
     const { emitter: resEmitter, response: res } = createResponse();
-    const next = jest.fn();
+    const next = vi.fn();
 
     middleware(req, res, next);
     expect(next).toHaveBeenCalledTimes(1);
@@ -129,7 +129,7 @@ describe('emitnlog.logger.node.requestLogger', () => {
 
     const req = createRequest({ method: 'POST', path: '/custom' });
     const { emitter: resEmitter, response: res } = createResponse();
-    const next = jest.fn();
+    const next = vi.fn();
 
     middleware(req, res, next);
 
@@ -169,7 +169,7 @@ describe('emitnlog.logger.node.requestLogger', () => {
 
     const req = createRequest({ method: 'GET', path: '/ping' });
     const { emitter: resEmitter, response: res } = createResponse();
-    const next = jest.fn();
+    const next = vi.fn();
 
     middleware(req, res, next);
     resEmitter.emit('finish');

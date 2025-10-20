@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../src/logger/index.ts';
 import {
@@ -9,23 +10,23 @@ import {
   toLogFormatter,
   withPrefix,
 } from '../../src/logger/index.ts';
-import { createMemoryLogger } from '../jester.setup.ts';
+import { createMemoryLogger } from '../vitest.setup.ts';
 
 describe('emitnlog.logger.factory', () => {
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
-  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
-  let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
-  let consoleDebugSpy: jest.SpiedFunction<typeof console.debug>;
+  let consoleLogSpy: MockInstance<typeof console.log>;
+  let consoleErrorSpy: MockInstance<typeof console.error>;
+  let consoleWarnSpy: MockInstance<typeof console.warn>;
+  let consoleDebugSpy: MockInstance<typeof console.debug>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
+    vi.clearAllMocks();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
 
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2024-01-15T12:30:45.123Z'));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-15T12:30:45.123Z'));
   });
 
   describe('createConsoleLogLogger', () => {
@@ -188,7 +189,7 @@ describe('emitnlog.logger.factory', () => {
       const logger = createConsoleByLevelLogger('trace', 'plain');
 
       // Trace and Debug levels -> console.debug
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       logger.trace('Trace');
       logger.debug('Debug');
 
@@ -197,18 +198,18 @@ describe('emitnlog.logger.factory', () => {
       expect(totalDebugCalls).toBe(2);
 
       // Info levels -> console.log
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       logger.info('Info');
       logger.notice('Notice');
       expect(consoleLogSpy).toHaveBeenCalledTimes(2);
 
       // Warning level -> console.warn
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       logger.warning('Warning');
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
 
       // Error levels -> console.error
-      jest.clearAllMocks();
+      vi.clearAllMocks();
       logger.error('Error');
       logger.critical('Critical');
       logger.alert('Alert');
@@ -238,7 +239,7 @@ describe('emitnlog.logger.factory', () => {
   describe('asExtendedLogger', () => {
     test('should add extensions to logger', () => {
       const baseLogger = createMemoryLogger();
-      const extension = { customMethod: jest.fn(), customProperty: 'value' };
+      const extension = { customMethod: vi.fn(), customProperty: 'value' };
 
       const extendedLogger = asExtendedLogger(baseLogger, extension);
 
@@ -252,8 +253,8 @@ describe('emitnlog.logger.factory', () => {
 
     test('should handle multiple extensions', () => {
       const baseLogger = createMemoryLogger();
-      const ext1 = { method1: jest.fn() };
-      const ext2 = { method2: jest.fn() };
+      const ext1 = { method1: vi.fn() };
+      const ext2 = { method2: vi.fn() };
       const ext3 = { property: 'value' };
 
       const extendedLogger = asExtendedLogger(baseLogger, ext1, ext2, ext3);

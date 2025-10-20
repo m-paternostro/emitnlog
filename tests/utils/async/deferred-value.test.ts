@@ -1,15 +1,15 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createDeferredValue, delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.deferred-value', () => {
   describe('using fake timers', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     test('should resolve the promise with the correct value', async () => {
@@ -20,7 +20,7 @@ describe('emitnlog.utils.deferred-value', () => {
       expect(deferred.rejected).toBe(false);
 
       void delay(1000).then(() => deferred.resolve(42));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(42);
 
       expect(deferred.settled).toBe(true);
@@ -37,7 +37,7 @@ describe('emitnlog.utils.deferred-value', () => {
 
       const error = new Error('test error');
       void delay(1000).then(() => deferred.reject(error));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).rejects.toThrow('test error');
 
       expect(deferred.settled).toBe(true);
@@ -50,7 +50,7 @@ describe('emitnlog.utils.deferred-value', () => {
 
       // First resolution
       void delay(1000).then(() => deferred.resolve(42));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(42);
       expect(deferred.settled).toBe(true);
 
@@ -63,7 +63,7 @@ describe('emitnlog.utils.deferred-value', () => {
 
       // Second resolution
       void delay(1000).then(() => deferred.resolve(100));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(100);
       expect(deferred.settled).toBe(true);
     });
@@ -73,7 +73,7 @@ describe('emitnlog.utils.deferred-value', () => {
 
       // First resolution
       void delay(1000).then(() => deferred.resolve(42));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe(42);
 
       // Renew
@@ -83,7 +83,7 @@ describe('emitnlog.utils.deferred-value', () => {
       // Now reject the renewed promise
       const error = new Error('renewed rejection');
       void delay(1000).then(() => deferred.reject(error));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).rejects.toThrow('renewed rejection');
       expect(deferred.settled).toBe(true);
       expect(deferred.rejected).toBe(true);
@@ -94,19 +94,19 @@ describe('emitnlog.utils.deferred-value', () => {
 
       // First cycle
       void delay(1000).then(() => deferred.resolve('first'));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe('first');
 
       // Second cycle
       deferred.renew();
       void delay(1000).then(() => deferred.reject(new Error('second')));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).rejects.toThrow('second');
 
       // Third cycle
       deferred.renew();
       void delay(1000).then(() => deferred.resolve('third'));
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
       await expect(deferred.promise).resolves.toBe('third');
     });
   });

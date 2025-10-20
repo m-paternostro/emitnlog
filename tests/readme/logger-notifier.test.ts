@@ -1,8 +1,8 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test } from 'vitest';
 
 import type { OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier } from '../../src/notifier/index.ts';
-import { createMemoryLogger } from '../jester.setup.ts';
+import { createMemoryLogger } from '../vitest.setup.ts';
 
 describe('emitnlog.logger-notifier', () => {
   test('should make sure that the readme example works', async () => {

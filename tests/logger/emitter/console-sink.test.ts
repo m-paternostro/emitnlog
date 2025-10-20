@@ -1,20 +1,21 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { MockInstance } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
 
 describe('emitnlog.logger.emitter.console-sink', () => {
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
-  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
-  let consoleWarnSpy: jest.SpiedFunction<typeof console.warn>;
-  let consoleDebugSpy: jest.SpiedFunction<typeof console.debug>;
+  let consoleLogSpy: MockInstance<typeof console.log>;
+  let consoleErrorSpy: MockInstance<typeof console.error>;
+  let consoleWarnSpy: MockInstance<typeof console.warn>;
+  let consoleDebugSpy: MockInstance<typeof console.debug>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation(() => undefined);
+    vi.clearAllMocks();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
   });
 
   describe('consoleLogSink', () => {
@@ -29,7 +30,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
     });
 
     test('should log to console.log with custom formatter', () => {
-      const customFormatter = jest.fn(
+      const customFormatter = vi.fn(
         (level: LogLevel, message: string, _args?: readonly unknown[]) => `CUSTOM: ${level} - ${message}`,
       );
       const sink = emitter.consoleLogSink(customFormatter);
@@ -94,7 +95,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
     });
 
     test('should log to console.error with custom formatter', () => {
-      const customFormatter = jest.fn<emitter.LogFormatter>(
+      const customFormatter = vi.fn<emitter.LogFormatter>(
         (level: LogLevel, message: string, _args?: readonly unknown[]) => `ERROR: ${level} - ${message}`,
       );
       const sink = emitter.consoleErrorSink(customFormatter);
@@ -195,7 +196,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
     });
 
     test('should use custom formatter', () => {
-      const customFormatter = jest.fn(
+      const customFormatter = vi.fn(
         (level: LogLevel, message: string, _args?: readonly unknown[]) => `[${level.toUpperCase()}] ${message}`,
       );
       const sink = emitter.consoleByLevelSink(customFormatter);
@@ -231,7 +232,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
       const sink = emitter.consoleByLevelSink();
 
       // Test all levels with their expected console methods
-      const levelMappings: [LogLevel, jest.SpiedFunction<typeof console.log>][] = [
+      const levelMappings: [LogLevel, MockInstance<typeof console.log>][] = [
         ['trace', consoleDebugSpy],
         ['debug', consoleDebugSpy],
         ['info', consoleLogSpy],
@@ -244,7 +245,7 @@ describe('emitnlog.logger.emitter.console-sink', () => {
       ];
 
       levelMappings.forEach(([level, spy]) => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         sink.sink(level, `${level} message`, []);
         expect(spy).toHaveBeenCalledTimes(1);
       });

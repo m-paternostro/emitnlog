@@ -1,9 +1,9 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test } from 'vitest';
 
 import type { Logger, LogLevel } from '../../src/logger/index.ts';
 import { OFF_LOGGER, withEmitLevel, withLevel, withPrefix } from '../../src/logger/index.ts';
-import type { MemoryLogger } from '../jester.setup.ts';
-import { createMemoryLogger, createTestLogger } from '../jester.setup.ts';
+import type { MemoryLogger } from '../vitest.setup.ts';
+import { createMemoryLogger, createTestLogger } from '../vitest.setup.ts';
 
 describe('emitnlog.logger.with-utils', () => {
   describe('withEmitLevel', () => {

@@ -1,5 +1,5 @@
 import { logging, notifying, tracking, utils } from 'emitnlog';
-import { expect, test, describe } from '@jest/globals';
+import { expect, test, describe } from 'vitest';
 
 describe('ESM namespace imports', () => {
   test('Logger exports are available', () => {

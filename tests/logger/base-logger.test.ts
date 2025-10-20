@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../src/logger/index.ts';
 import { implementation } from '../../src/logger/index.ts';
@@ -165,14 +165,14 @@ describe('emitnlog.logger.BaseLogger', () => {
   describe('Deferred message execution', () => {
     test('should not execute function message if log level is not applicable', () => {
       loggerLevel = 'debug';
-      const messageFunction = jest.fn(() => 'expensive trace message');
+      const messageFunction = vi.fn(() => 'expensive trace message');
       logger.trace(messageFunction);
       expect(messageFunction).not.toHaveBeenCalled();
     });
 
     test('should execute function message if log level is applicable', () => {
       loggerLevel = 'info';
-      const messageFunction = jest.fn(() => 'expensive message');
+      const messageFunction = vi.fn(() => 'expensive message');
       logger.info(messageFunction);
       expect(messageFunction).toHaveBeenCalled();
     });

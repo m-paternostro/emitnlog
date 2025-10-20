@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from '@jest/globals';
+import { beforeEach, describe, expect, test } from 'vitest';
 
 import type { EventNotifier, OnEvent } from '../../src/notifier/index.ts';
 import { createEventNotifier, mapOnEvent, SKIP_MAPPED_EVENT } from '../../src/notifier/index.ts';

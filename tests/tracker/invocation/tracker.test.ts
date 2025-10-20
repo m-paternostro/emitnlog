@@ -1,24 +1,24 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { Invocation, InvocationAtStage, InvocationTracker, Tag, Tags } from '../../../src/tracker/index.ts';
 import { createInvocationTracker, isAtStage } from '../../../src/tracker/index.ts';
 import { delay } from '../../../src/utils/index.ts';
-import type { TestLogger } from '../../jester.setup.ts';
-import { createTestLogger, flushFakeTimePromises } from '../../jester.setup.ts';
+import type { TestLogger } from '../../vitest.setup.ts';
+import { createTestLogger, flushFakeTimePromises } from '../../vitest.setup.ts';
 
 describe('emitnlog.tracker', () => {
   let tracker: InvocationTracker;
   let logger: TestLogger;
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     logger = createTestLogger();
     tracker = createInvocationTracker({ logger });
   });
 
   afterEach(() => {
     tracker.close();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('basic functionality', () => {
@@ -162,7 +162,7 @@ describe('emitnlog.tracker', () => {
       tracker.onCompleted((invocation) => invocations.push(invocation));
 
       const fn = tracker.track('asyncTest', async (a: number) => {
-        await jest.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
         return a * 2;
       });
 
@@ -184,7 +184,7 @@ describe('emitnlog.tracker', () => {
 
       const error = new Error('Async error');
       const fn = tracker.track('asyncTest', async () => {
-        await jest.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
         throw error;
       });
 
@@ -472,7 +472,7 @@ describe('emitnlog.tracker', () => {
       fn();
 
       // Fast-forward time to allow the thenable to resolve
-      jest.advanceTimersByTime(150);
+      vi.advanceTimersByTime(150);
       await flushFakeTimePromises();
 
       expect(invocations).toHaveLength(1);

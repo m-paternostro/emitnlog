@@ -1,16 +1,16 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { InvocationAtStage, InvocationTracker } from '../../../src/tracker/index.ts';
 import { createBasicInvocationStack, createInvocationTracker } from '../../../src/tracker/index.ts';
-import type { TestLogger } from '../../jester.setup.ts';
-import { createTestLogger } from '../../jester.setup.ts';
+import type { TestLogger } from '../../vitest.setup.ts';
+import { createTestLogger } from '../../vitest.setup.ts';
 
 describe('emitnlog.tracker.cross-invocation', () => {
   let tracker: InvocationTracker;
   let logger: TestLogger;
 
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
     logger = createTestLogger();
     // Create tracker with explicit stack to ensure consistent behavior
     const stack = createBasicInvocationStack({ logger });
@@ -19,7 +19,7 @@ describe('emitnlog.tracker.cross-invocation', () => {
 
   afterEach(() => {
     tracker.close();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('parent-child relationships', () => {
@@ -104,7 +104,7 @@ describe('emitnlog.tracker.cross-invocation', () => {
       tracker.onCompleted((invocation) => completedInvocations.push(invocation));
 
       const childFn = tracker.track('asyncChild', async (x: number) => {
-        await jest.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
         return x * 2;
       });
 
@@ -191,7 +191,7 @@ describe('emitnlog.tracker.cross-invocation', () => {
       tracker.onStarted((invocation) => invocations.push(invocation));
 
       const childFn = tracker.track('child', async (x: number) => {
-        await jest.advanceTimersByTimeAsync(100);
+        await vi.advanceTimersByTimeAsync(100);
         return x * 2;
       });
 
@@ -274,7 +274,7 @@ describe('emitnlog.tracker.cross-invocation', () => {
     test('should automatically close the stack when tracker is closed', () => {
       // Create a stack with spies on its methods
       const stack = createBasicInvocationStack({ logger });
-      const closeSpy = jest.spyOn(stack, 'close');
+      const closeSpy = vi.spyOn(stack, 'close');
 
       // Create a tracker with this stack
       const trackerWithStack = createInvocationTracker({ stack, logger });

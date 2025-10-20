@@ -1,5 +1,5 @@
 import * as emitnlog from 'emitnlog';
-import { expect, test, describe } from '@jest/globals';
+import { expect, test, describe } from 'vitest';
 
 describe('ESM flat imports', () => {
   test('Logger exports are available', () => {

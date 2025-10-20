@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, expect, test } from 'vitest';
 
 import type { LogEntry, LogLevel } from '../../../src/index.ts';
 import { emitter } from '../../../src/index.ts';

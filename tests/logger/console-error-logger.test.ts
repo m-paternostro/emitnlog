@@ -1,12 +1,13 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { MockInstance } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createConsoleErrorLogger } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
-  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+  let consoleErrorSpy: MockInstance<typeof console.error>;
 
   beforeEach(() => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

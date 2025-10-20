@@ -1,13 +1,15 @@
-import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { MockedFunction } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { fromEnv as neutralFromEnv } from '../../src/logger/environment/environment-logger.ts';
+import type * as factoryModule from '../../src/logger/factory.ts';
 import * as factory from '../../src/logger/factory.ts';
 import type { LogLevel } from '../../src/logger/index.ts';
 import { OFF_LOGGER } from '../../src/logger/index.ts';
 import { fromEnv } from '../../src/logger/node/environment-logger.ts';
 import type { FileLoggerOptions } from '../../src/logger/node/factory.ts';
 import * as nodeFactory from '../../src/logger/node/factory.ts';
-import { createTestLogger } from '../jester.setup.ts';
+import { createTestLogger } from '../vitest.setup.ts';
 
 // eslint-disable-next-line no-console
 const originalConsoleWarn = console.warn;
@@ -16,24 +18,22 @@ const originalConsoleLog = console.log;
 // eslint-disable-next-line no-console
 const originalConsoleError = console.error;
 
-const mockConsoleWarn = jest.fn();
-const mockConsoleLog = jest.fn();
-const mockConsoleError = jest.fn();
+const mockConsoleWarn = vi.fn();
+const mockConsoleLog = vi.fn();
+const mockConsoleError = vi.fn();
 
 // Mock the factory functions
-jest.mock('../../src/logger/factory.ts', () => {
-  const actual: Pick<typeof factory, 'toLogFormatter' | 'asExtendedLogger'> =
-    jest.requireActual('../../src/logger/factory.ts');
+vi.mock('../../src/logger/factory.ts', async () => {
+  const actual = await vi.importActual<typeof factoryModule>('../../src/logger/factory.ts');
   return {
-    createConsoleLogLogger: jest.fn(),
-    createConsoleErrorLogger: jest.fn(),
-    createConsoleByLevelLogger: jest.fn(),
-    toLogFormatter: actual.toLogFormatter,
-    asExtendedLogger: actual.asExtendedLogger,
+    ...actual,
+    createConsoleLogLogger: vi.fn(),
+    createConsoleErrorLogger: vi.fn(),
+    createConsoleByLevelLogger: vi.fn(),
   };
 });
 
-jest.mock('../../src/logger/node/factory.ts', () => ({ createFileLogger: jest.fn() }));
+vi.mock('../../src/logger/node/factory.ts', () => ({ createFileLogger: vi.fn() }));
 
 describe('emitnlog.logger.environment-logger', () => {
   beforeEach(() => {
@@ -54,19 +54,19 @@ describe('emitnlog.logger.environment-logger', () => {
     delete process.env.EMITNLOG_FORMAT;
 
     // Setup mock factory functions to return test loggers with proper level
-    (factory.createConsoleLogLogger as jest.MockedFunction<typeof factory.createConsoleLogLogger>).mockImplementation(
+    (factory.createConsoleLogLogger as MockedFunction<typeof factory.createConsoleLogLogger>).mockImplementation(
+      (level?: LogLevel) => createTestLogger(level ?? 'info'),
+    );
+
+    (factory.createConsoleErrorLogger as MockedFunction<typeof factory.createConsoleErrorLogger>).mockImplementation(
       (level?: LogLevel) => createTestLogger(level ?? 'info'),
     );
 
     (
-      factory.createConsoleErrorLogger as jest.MockedFunction<typeof factory.createConsoleErrorLogger>
+      factory.createConsoleByLevelLogger as MockedFunction<typeof factory.createConsoleByLevelLogger>
     ).mockImplementation((level?: LogLevel) => createTestLogger(level ?? 'info'));
 
-    (
-      factory.createConsoleByLevelLogger as jest.MockedFunction<typeof factory.createConsoleByLevelLogger>
-    ).mockImplementation((level?: LogLevel) => createTestLogger(level ?? 'info'));
-
-    (nodeFactory.createFileLogger as jest.MockedFunction<typeof nodeFactory.createFileLogger>).mockImplementation(
+    (nodeFactory.createFileLogger as MockedFunction<typeof nodeFactory.createFileLogger>).mockImplementation(
       (filePath: string, options?: FileLoggerOptions | LogLevel) => {
         const logger = createTestLogger(typeof options === 'string' ? options : (options?.level ?? 'info'));
         return Object.assign(logger, { filePath }) as unknown as ReturnType<typeof nodeFactory.createFileLogger>;
@@ -74,7 +74,7 @@ describe('emitnlog.logger.environment-logger', () => {
     );
 
     // Clear all mock calls
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -106,7 +106,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should pass level and format to fallbackLogger', () => {
         const fallbackLogger = createTestLogger();
-        const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
+        const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
         process.env.EMITNLOG_LEVEL = 'warning';
         process.env.EMITNLOG_FORMAT = 'json-compact';
@@ -118,7 +118,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should pass options level and format to fallbackLogger when env vars not set', () => {
         const fallbackLogger = createTestLogger();
-        const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
+        const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
         fromEnv({ level: 'error', format: 'colorful', fallbackLogger: fallbackLoggerSpy });
 
@@ -456,7 +456,7 @@ describe('emitnlog.logger.environment-logger', () => {
           expect(nodeFactory.createFileLogger).toHaveBeenCalledWith(expectedPath, { datePrefix: undefined });
 
           // Clean up for next iteration
-          jest.clearAllMocks();
+          vi.clearAllMocks();
         });
       });
     });
@@ -474,7 +474,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should use all provided options', () => {
         const fallbackLogger = createTestLogger();
-        const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
+        const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
         const logger = fromEnv({ level: 'alert', format: 'json-compact', fallbackLogger: fallbackLoggerSpy });
 
@@ -492,7 +492,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
     test('should pass level and format to fallbackLogger', () => {
       const fallbackLogger = createTestLogger();
-      const fallbackLoggerSpy = jest.fn((..._args: unknown[]) => fallbackLogger);
+      const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
       process.env.EMITNLOG_LEVEL = 'warning';
       process.env.EMITNLOG_FORMAT = 'json-compact';

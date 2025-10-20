@@ -7,7 +7,7 @@ import {
   trackMethods,
 } from 'emitnlog/tracker';
 import { createDeferredValue, emptyArray } from 'emitnlog/utils';
-import { expect, test, describe } from '@jest/globals';
+import { expect, test, describe } from 'vitest';
 
 describe('ESM path imports', () => {
   test('Logger import works', () => {

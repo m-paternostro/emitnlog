@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
@@ -25,8 +25,8 @@ describe('emitnlog.logger.emitter.emitter-logger', () => {
     });
 
     test('should create a logger with a full LogSink object', () => {
-      const flushMock = jest.fn<() => void>();
-      const closeMock = jest.fn<() => void>();
+      const flushMock = vi.fn<() => void>();
+      const closeMock = vi.fn<() => void>();
       const fullSink: emitter.LogSink = { sink: testSink, flush: flushMock, close: closeMock };
 
       const logger = emitter.createLogger('debug', fullSink);
@@ -199,7 +199,7 @@ describe('emitnlog.logger.emitter.emitter-logger', () => {
     });
 
     test('should invoke flush when available', async () => {
-      const flushMock = jest.fn<() => void>();
+      const flushMock = vi.fn<() => void>();
       const fullSink: emitter.LogSink = { sink: testSink, flush: flushMock };
 
       const logger = emitter.createLogger('info', fullSink);
@@ -211,7 +211,7 @@ describe('emitnlog.logger.emitter.emitter-logger', () => {
     });
 
     test('should invoke close when available', async () => {
-      const closeMock = jest.fn<() => void>();
+      const closeMock = vi.fn<() => void>();
       const fullSink: emitter.LogSink = { sink: testSink, close: closeMock };
 
       const logger = emitter.createLogger('info', fullSink);
@@ -224,7 +224,7 @@ describe('emitnlog.logger.emitter.emitter-logger', () => {
 
     test('should handle async flush correctly', async () => {
       const flushPromise = Promise.resolve();
-      const flushMock = jest.fn<() => Promise<void>>(() => flushPromise);
+      const flushMock = vi.fn<() => Promise<void>>(() => flushPromise);
       const fullSink: emitter.LogSink = { sink: testSink, flush: flushMock };
 
       const logger = emitter.createLogger('info', fullSink);
@@ -238,7 +238,7 @@ describe('emitnlog.logger.emitter.emitter-logger', () => {
 
     test('should handle async close correctly', async () => {
       const closePromise = Promise.resolve();
-      const closeMock = jest.fn<() => Promise<void>>(() => closePromise);
+      const closeMock = vi.fn<() => Promise<void>>(() => closePromise);
       const fullSink: emitter.LogSink = { sink: testSink, close: closeMock };
 
       const logger = emitter.createLogger('info', fullSink);

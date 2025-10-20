@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, jest, test } from '@jest/globals';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
@@ -91,11 +91,11 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should prefix file name with timestamp when datePrefix is true', async () => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
 
     try {
       const fakeNow = new Date(2024, 0, 2, 3, 4, 5);
-      jest.setSystemTime(fakeNow);
+      vi.setSystemTime(fakeNow);
 
       const baseFile = path.join(testDir, 'prefixed.log');
       const logger = createFileLogger(baseFile, { datePrefix: true, flushDelayMs: 0 });
@@ -113,7 +113,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       const content = await readLogFile(logger.filePath);
       expect(content).toContain('Prefixed entry');
     } finally {
-      jest.useRealTimers();
+      vi.useRealTimers();
     }
   });
 
@@ -360,7 +360,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should use custom error handler when provided', async () => {
-    const mockErrorHandler = jest.fn();
+    const mockErrorHandler = vi.fn();
 
     try {
       // Force an error by trying to write to a non-existent directory
