@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 
+import { delay } from '../../../src/index-node.ts';
 import type { InvocationKey } from '../../../src/tracker/index-node.ts';
 import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/index-node.ts';
-import { delay } from '../../../src/utils/index.ts';
 import { createTestLogger } from '../../vitest.setup.ts';
 
 // Simple function to check if we're in Node.js
