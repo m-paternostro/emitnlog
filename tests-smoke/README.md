@@ -76,4 +76,4 @@ The smoke tests simulate how real users would consume the package in different e
 
 - File-based logging is disabled; `fromEnv()` always returns `OFF_LOGGER`
 - `createAsyncLocalStorageInvocationStack()` is undefined (AsyncLocalStorage is Node-specific)
-- Uses platform-neutral builds (platform: 'neutral', target: 'es2022')
+- Uses platform-neutral builds (platform: 'neutral', target: 'es2023')
