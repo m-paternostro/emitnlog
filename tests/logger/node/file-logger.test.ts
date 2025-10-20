@@ -4,9 +4,9 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { delay } from '../../../src/index-node.ts';
 import type { FileLoggerOptions, LogFormat } from '../../../src/logger/index-node.ts';
 import { createFileLogger, emitter, tee } from '../../../src/logger/index-node.ts';
-import { delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.logger.node.FileLogger', () => {
   const TEST_FLUSH_DELAY = { flushDelayMs: 50 } as const satisfies FileLoggerOptions;
