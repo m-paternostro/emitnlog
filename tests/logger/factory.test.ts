@@ -10,7 +10,7 @@ import {
   toLogFormatter,
   withPrefix,
 } from '../../src/logger/index.ts';
-import { createMemoryLogger } from '../vitest.setup.ts';
+import { createMemoryLogger } from '../test-kit.ts';
 
 describe('emitnlog.logger.factory', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;

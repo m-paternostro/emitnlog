@@ -9,7 +9,7 @@ import { OFF_LOGGER } from '../../src/logger/index.ts';
 import { fromEnv } from '../../src/logger/node/environment-logger.ts';
 import type { FileLoggerOptions } from '../../src/logger/node/factory.ts';
 import * as nodeFactory from '../../src/logger/node/factory.ts';
-import { createTestLogger } from '../vitest.setup.ts';
+import { createTestLogger } from '../test-kit.ts';
 
 // eslint-disable-next-line no-console
 const originalConsoleWarn = console.warn;

@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { Invocation, InvocationAtStage, InvocationTracker, Tag, Tags } from '../../../src/tracker/index.ts';
 import { createInvocationTracker, isAtStage } from '../../../src/tracker/index.ts';
 import { delay } from '../../../src/utils/index.ts';
-import type { TestLogger } from '../../vitest.setup.ts';
-import { createTestLogger, flushFakeTimePromises } from '../../vitest.setup.ts';
+import type { TestLogger } from '../../test-kit.ts';
+import { createTestLogger, flushFakeTimePromises } from '../../test-kit.ts';
 
 describe('emitnlog.tracker', () => {
   let tracker: InvocationTracker;

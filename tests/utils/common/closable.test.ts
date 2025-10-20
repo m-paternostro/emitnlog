@@ -7,7 +7,7 @@ import type { implementation, Logger } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
 import type { AsyncClosable, Closable, SyncClosable } from '../../../src/utils/index.ts';
 import { asClosable, asSafeClosable, closeAll, createCloser, delay } from '../../../src/utils/index.ts';
-import { fail } from '../../vitest.setup.ts';
+import { fail } from '../../test-kit.ts';
 
 describe('emitnlog.utils.closable', () => {
   const NOT_CLOSABLE: { a: number; close?: () => void } = { a: 1 };

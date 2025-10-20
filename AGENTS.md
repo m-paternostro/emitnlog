@@ -65,7 +65,7 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
   - Prefer real code; use Vitest mocking only when absolutely necessary and keep it minimal.
   - Maintain high, useful coverage—do not add tests merely for coverage.
   - On failures, review real code in `src` first, then consider test issues.
-- Utilities: See `tests/vitest.setup.ts` for useful helpers.
+- Utilities: See `tests/test-kit.ts` for useful helpers.
 
 ### Coverage
 
