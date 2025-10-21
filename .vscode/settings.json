@@ -46,7 +46,6 @@
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
   "javascript.preferences.quoteStyle": "single",
-  "jest.runMode": "on-demand",
   "typescript.preferences.quoteStyle": "single",
   "typescript.tsc.autoDetect": "off",
   "typescript.tsdk": "node_modules/typescript/lib",

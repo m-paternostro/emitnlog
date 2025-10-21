@@ -11,14 +11,6 @@
       "detail": "Restarts the TS server",
       "command": "${command:typescript.restartTsServer}"
     },
-    { "label": "task: dev:stop:jest", "detail": "Stops Jest", "command": "${command:io.orta.jest.stop}" },
-    { "label": "task: dev:start:jest", "detail": "Starts Jest", "command": "${command:io.orta.jest.start}" },
-    {
-      "label": "task: dev:restart:jest",
-      "detail": "Restarts Jest",
-      "dependsOrder": "sequence",
-      "dependsOn": ["task: dev:stop:jest", "task: dev:start:jest"]
-    },
     {
       "label": "task: dev:restart:servers",
       "detail": "Restarts both the TS and ESLint servers",
