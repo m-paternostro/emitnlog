@@ -63,7 +63,7 @@ jobs:
           elif (( $(echo "$PERCENT >= 70" | bc -l) )); then COLOR="yellowgreen";
           elif (( $(echo "$PERCENT >= 60" | bc -l) )); then COLOR="yellow";
           elif (( $(echo "$PERCENT >= 50" | bc -l) )); then COLOR="orange"; fi
-          curl -s "https://img.shields.io/badge/coverage-${PERCENT//./%2E}%25-$COLOR.svg?logo=jest" \
+          curl -s "https://img.shields.io/badge/coverage-${PERCENT//./%2E}%25-$COLOR.svg?logo=vitest" \
             -o ./public/coverage/coverage-badge.svg
 
       - name: Configure GitHub Pages
