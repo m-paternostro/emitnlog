@@ -1,5 +1,12 @@
 # emitnlog
 
+## 0.10.1
+
+### Patch Changes
+
+- 8b3481c: Require Node 20.19.1 and use ES2023 as target
+- d9ba3c9: Move tests from jester to vitest
+
 ## 0.10.0
 
 ### Minor Changes
