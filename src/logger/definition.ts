@@ -1,23 +1,26 @@
 /**
  * The possible levels for the Logger, inspired by RFC5424, with an additional 'trace' level for ultra-detailed logging.
  *
- * The severity levels are assumed to be numerically ascending from most important to least important.
+ * The severity levels are assumed to be numerically ascending from most important (`emergency`) to least important
+ * (`trace`).
  *
  * Level descriptions:
  *
  * ```
- * trace     - Extremely detailed debugging information (e.g., per-iteration or per-call tracing)
- * debug     - Detailed debugging information (e.g., function entry/exit points)
- * info      - General informational messages (e.g., operation progress updates)
- * notice    - Normal but significant events (e.g., configuration changes)
- * warning   - Warning conditions (e.g., deprecated feature usage)
- * error     - Error conditions (e.g., operation failures)
- * critical  - Critical conditions (e.g., system component failures)
- * alert     - Action must be taken immediately (e.g., data corruption detected)
  * emergency - System is unusable (e.g., complete system failure)
+ * alert     - Action must be taken immediately (e.g., data corruption detected)
+ * critical  - Critical conditions (e.g., system component failures)
+ * error     - Error conditions (e.g., operation failures)
+ * warning   - Warning conditions (e.g., deprecated feature usage)
+ * notice    - Normal but significant events (e.g., configuration changes)
+ * info      - General informational messages (e.g., operation progress updates)
+ * debug     - Detailed debugging information (e.g., function entry/exit points)
+ * trace     - Extremely detailed debugging information (e.g., per-iteration or per-call tracing)
  * ```
+ *
+ * @see RFC5424: https://tools.ietf.org/html/rfc5424
  */
-export type LogLevel = 'trace' | 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical' | 'alert' | 'emergency';
+export type LogLevel = 'emergency' | 'alert' | 'critical' | 'error' | 'warning' | 'notice' | 'info' | 'debug' | 'trace';
 
 /**
  * Type representing the content of a log entry. Can be a primitive value or a function that returns a primitive value.
