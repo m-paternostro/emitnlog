@@ -850,6 +850,8 @@ This utility is ideal for situations where resources are initialized conditional
 
 It complements [asClosable](#asclosable), which is used to combine existing closables into one. In contrast, `createCloser` gives you a mutable container that grows over time. It also preserves the type of each closable added, which helps maintain type safety in complex setups.
 
+The `createSyncCloser()` is also available when handling synchronous closables.
+
 ```ts
 import { createCloser, asClosable } from 'emitnlog/utils';
 

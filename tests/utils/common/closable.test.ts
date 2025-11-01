@@ -6,7 +6,14 @@ import { describe, expect, test, vi } from 'vitest';
 import type { implementation, Logger } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
 import type { AsyncClosable, Closable, SyncClosable } from '../../../src/utils/index.ts';
-import { asClosable, asSafeClosable, closeAll, createCloser, delay } from '../../../src/utils/index.ts';
+import {
+  asClosable,
+  asSafeClosable,
+  closeAll,
+  createCloser,
+  createSyncCloser,
+  delay,
+} from '../../../src/utils/index.ts';
 import { fail } from '../../test-kit.ts';
 
 describe('emitnlog.utils.closable', () => {
@@ -1448,6 +1455,53 @@ describe('emitnlog.utils.closable', () => {
       expect(result).toBeUndefined();
       expect(closeCalled).toBe(true);
       expect(closableSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('createSyncCloser', () => {
+    test('should allow creating a sync closer', () => {
+      const closable1: SyncClosable = { close: () => undefined };
+      const closable2: { close?: () => void } = { close: () => undefined };
+
+      type Local = { a: number; close?: () => void };
+      const local1: Local = { a: 1 };
+
+      const spy1 = vi.spyOn(closable1, 'close');
+      const spy2 = vi.spyOn(closable2, 'close');
+
+      const closer = createSyncCloser(closable1);
+
+      expect(closer.size).toBe(1);
+      expect(spy1).toHaveBeenCalledTimes(0);
+      expect(spy2).toHaveBeenCalledTimes(0);
+
+      expect(closer.add(closable1)).toBe(closable1);
+      expect(closer.size).toBe(1);
+      expect(spy1).toHaveBeenCalledTimes(0);
+      expect(spy2).toHaveBeenCalledTimes(0);
+
+      expect(closer.add(closable2)).toBe(closable2);
+      expect(closer.add(local1)).toBe(local1);
+      expect(closer.size).toBe(3);
+      expect(spy1).toHaveBeenCalledTimes(0);
+      expect(spy2).toHaveBeenCalledTimes(0);
+
+      // @ts-expect-error the return of add should not be a Local
+      const addedClosable: Local = closer.add(closable1);
+      expect(addedClosable).toBe(closable1);
+
+      const addedLocal: Local = closer.add(local1);
+      expect(addedLocal).toBe(local1);
+
+      expect(closer.size).toBe(3);
+      expect(spy1).toHaveBeenCalledTimes(0);
+      expect(spy2).toHaveBeenCalledTimes(0);
+
+      closer.close();
+
+      expect(closer.size).toBe(0);
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(spy2).toHaveBeenCalledTimes(1);
     });
   });
 });
