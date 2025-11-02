@@ -1,4 +1,5 @@
 import { errorify } from '../converter/errorify.ts';
+import type { SwitchType } from '../converter/switch-type.ts';
 import { isNotNullable } from './is-not-nullable.ts';
 
 /**
@@ -423,6 +424,23 @@ export type Closer = Closable & {
 };
 
 /**
+ * A container for managing multiple synchronous closables with a single `close()` call.
+ *
+ * This utility type represents a composite closable that accumulates other synchronous closables over time via the
+ * `add()` method. Once `close()` is called, all registered closables are closed in reverse order, and the internal
+ * collection is cleared. Any subsequent calls to `add()` are still allowed, but the already-closed closables will not
+ * be invoked again.
+ *
+ * Useful for ensuring cleanup logic is always executed, even in complex control flows with multiple return points.
+ */
+
+export type SyncCloser = SwitchType<
+  Closer,
+  | [Closer['add'], <T extends SyncClosable | PartialSyncClosable>(closeable: T) => T]
+  | [Closer['close'], SyncClosable['close']]
+>;
+
+/**
  * Creates a `Closer` that manages a group of closables as a single unit, simplifying resource management— especially in
  * functions with multiple return points or error paths.
  *
@@ -494,6 +512,15 @@ export const createCloser = (...input: readonly Closable[]): Closer => {
 
   return closer;
 };
+
+/**
+ * A version of {@link createCloser} to be used with synchronous closables.
+ *
+ * @param input - Optional initial set of closables
+ * @returns A `SyncCloser` that can register and close closables as a group
+ * @returns
+ */
+export const createSyncCloser = (...input: readonly SyncClosable[]): SyncCloser => createCloser(...input) as SyncCloser;
 
 type PartialSyncClosable = Partial<SyncClosable>;
 type PartialAsyncClosable = Partial<AsyncClosable>;
