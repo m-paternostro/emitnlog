@@ -1,5 +1,15 @@
 # emitnlog
 
+## 0.11.0
+
+### Minor Changes
+
+- 5cc74ee: Add `createSyncCloser` for sync closables
+
+### Patch Changes
+
+- 1e78eff: Export SwitchType
+
 ## 0.10.1
 
 ### Patch Changes
