@@ -15,3 +15,4 @@ export * from './common/singleton.ts';
 export * from './common/terminal-formatter.ts';
 export * from './converter/errorify.ts';
 export * from './converter/stringify.ts';
+export * from './converter/switch-type.ts';

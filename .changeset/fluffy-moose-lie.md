@@ -1,0 +1,5 @@
+---
+'emitnlog': patch
+---
+
+Export SwitchType
