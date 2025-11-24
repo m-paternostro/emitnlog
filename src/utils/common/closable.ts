@@ -399,6 +399,19 @@ export const asSafeClosable = <C extends ClosableLike>(
 };
 
 /**
+ * Closes a closable safely, preventing errors from propagating.
+ *
+ * This function is a convenience wrapper around {@link asSafeClosable} that returns a promise that resolves when the
+ * closable is closed. The return is always a promise, even if the closable is a synchronous.
+ *
+ * @param closable The closable to wrap with error protection
+ * @param onError Optional callback invoked when an error occurs during close
+ * @returns A promise that resolves when the close operation is done and never rejects (or throws).
+ */
+export const safeClose = <C extends ClosableLike>(closable: C, onError?: (error: unknown) => void): Promise<void> =>
+  Promise.resolve().then(() => asSafeClosable(closable, onError).close());
+
+/**
  * A container for managing multiple closables with a single `close()` call.
  *
  * This utility type represents a composite closable that accumulates other closables over time via the `add()` method.
