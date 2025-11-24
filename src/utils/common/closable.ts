@@ -359,7 +359,7 @@ export const asClosable = <T extends readonly ClosableLikeOrFunction[]>(...input
  * @param onError - Optional callback invoked when an error occurs during close
  * @returns A closable that never throws or rejects, matching the sync/async nature of the input
  */
-export const asSafeClosable = <C extends Closable>(
+export const asSafeClosable = <C extends ClosableLike>(
   closable: C,
   onError?: (error: unknown) => void,
 ): IsElementAsync<C> extends true ? AsyncClosable : SyncClosable => {
@@ -372,7 +372,7 @@ export const asSafeClosable = <C extends Closable>(
 
       closed = true;
       try {
-        const value = closable.close();
+        const value = closable.close?.();
         if (value instanceof Promise) {
           return value.catch((error: unknown) => {
             try {

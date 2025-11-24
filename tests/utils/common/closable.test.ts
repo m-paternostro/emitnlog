@@ -14,7 +14,6 @@ import {
   createSyncCloser,
   delay,
 } from '../../../src/utils/index.ts';
-import { fail } from '../../test-kit.ts';
 
 describe('emitnlog.utils.closable', () => {
   const NOT_CLOSABLE: { a: number; close?: () => void } = { a: 1 };
@@ -187,7 +186,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         closeAll(c1, c2, c3);
-        fail('close all should throw');
+        expect.fail('close all should throw');
       } catch (error) {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(s2).toHaveBeenCalledTimes(1);
@@ -219,7 +218,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         closeAll(c1, c2);
-        fail('close all should throw');
+        expect.fail('close all should throw');
       } catch (error) {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(s2).toHaveBeenCalledTimes(1);
@@ -748,7 +747,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         combined.close();
-        fail('close should throw');
+        expect.fail('close should throw');
       } catch (error) {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(sOk).toHaveBeenCalledTimes(1);
@@ -779,7 +778,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         combined.close();
-        fail('close should throw');
+        expect.fail('close should throw');
       } catch (error) {
         expect(sBad).toHaveBeenCalledTimes(1);
         expect(okFn).toHaveBeenCalledTimes(1);
@@ -981,6 +980,28 @@ describe('emitnlog.utils.closable', () => {
         const result: Promise<void> = safeClosable.close();
         expect(result).toBeInstanceOf(Promise);
         await expect(result).resolves.toBeUndefined();
+      });
+
+      test('should support sync closable without close method', async () => {
+        const notClosable = { foo: 'bar', close: undefined };
+        const safeClosable = asSafeClosable(notClosable, () => {
+          expect.fail('onError should not be called');
+        });
+
+        const result: void = safeClosable.close();
+        expect(result).not.toBeInstanceOf(Promise);
+        expect(result).toBeUndefined();
+      });
+
+      test('should support async closable without close method', async () => {
+        const notClosable: { foo: string; close?: () => Promise<void> } = { foo: 'bar' };
+        const safeClosable = asSafeClosable(notClosable, () => {
+          expect.fail('onError should not be called');
+        });
+
+        const result: Promise<void> = safeClosable.close();
+        expect(result).not.toBeInstanceOf(Promise);
+        expect(result).toBeUndefined();
       });
     });
 
@@ -1266,7 +1287,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         void closer.close();
-        fail('close should throw');
+        expect.fail('close should throw');
       } catch (error) {
         expect(closer.size).toBe(0);
         expect(spy1).toHaveBeenCalledTimes(1);
@@ -1301,7 +1322,7 @@ describe('emitnlog.utils.closable', () => {
 
       try {
         void closer.close();
-        fail('close should throw');
+        expect.fail('close should throw');
       } catch (error) {
         expect(spy1).toHaveBeenCalledTimes(1);
         expect(spy2).toHaveBeenCalledTimes(1);
