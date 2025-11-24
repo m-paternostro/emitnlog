@@ -7,15 +7,6 @@ import type { Logger, LogLevel } from '../src/logger/index.ts';
 import { asExtendedLogger, emitter, implementation } from '../src/logger/index.ts';
 
 /**
- * Fails a test with a given message.
- *
- * @param message The message to fail the test with.
- */
-export const fail = (message: string) => {
-  expect(message).toBe(true);
-};
-
-/**
  * Flushes all promises in the microtask queue on tests that are using fake timers.
  *
  * @returns A promise that resolves when all promises in the microtask queue have been flushed.
