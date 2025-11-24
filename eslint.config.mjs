@@ -33,14 +33,14 @@ export default ts.config([
       // Enforce consistent arrow function parentheses
       '@stylistic/arrow-parens': 'error',
 
+      // Enforce spacing around the => token
+      '@stylistic/arrow-spacing': ['error', { before: true, after: true }],
+
       // Enforce consistent delimiter style for interfaces and type literals
       '@stylistic/member-delimiter-style': 'error',
 
       // Enforce consistent spacing around type annotations
-      '@stylistic/type-annotation-spacing': [
-        'error',
-        { after: true, before: false, overrides: { arrow: { after: true, before: true } } },
-      ],
+      '@stylistic/type-annotation-spacing': 'error',
 
       // Enforce using array type syntax for arrays
       '@typescript-eslint/array-type': ['error', { default: 'array' }],

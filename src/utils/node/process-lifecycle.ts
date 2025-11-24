@@ -2,7 +2,7 @@ import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import type { SyncClosable } from '../common/closable.ts';
-import { asClosable } from '../common/closable.ts';
+import { asClosable, safeClose } from '../common/closable.ts';
 import { exhaustiveCheck } from '../common/exhaustive-check.ts';
 
 /**
@@ -104,21 +104,12 @@ export const runProcessMain = (
       .then(() => {
         const duration = Date.now() - start.valueOf();
         logger.i`the process has closed after ${duration}ms`;
-        try {
-          void logger.close?.();
-        } catch {
-          // ignore
-        }
+        void safeClose(logger);
       })
       .catch((error: unknown) => {
         const duration = Date.now() - start.valueOf();
         logger.args(error).e`an error occurred and the process has closed after ${duration}ms`;
-        try {
-          void logger.close?.();
-        } catch {
-          // ignore
-        }
-
+        void safeClose(logger);
         process.exit(1);
       });
   }

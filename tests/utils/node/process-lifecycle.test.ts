@@ -3,13 +3,14 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 
 import { OFF_LOGGER } from '../../../src/logger/off-logger.ts';
-import inner, {
+import {
   isProcessMain,
   onProcessExit,
   type ProcessExitEvent,
   type ProcessNotifier,
   runProcessMain,
-} from '../../../src/utils/node/process-lifecycle.ts';
+} from '../../../src/utils/index-node.ts';
+import inner from '../../../src/utils/node/process-lifecycle.ts';
 import { createTestLogger } from '../../test-kit.ts';
 
 describe('emitnlog.utils.node.process-lifecycle', () => {
