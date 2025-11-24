@@ -22,6 +22,10 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [asClosable](#asclosable)
   - [asSafeClosable](#assafeclosable)
   - [createCloser](#createcloser)
+- [Process Lifecycle (NodeJS)](#process-lifecycle-nodejs)
+  - [isProcessMain](#isprocessmain)
+  - [runProcessMain](#runprocessmain)
+  - [onProcessExit](#onprocessexit)
 - [QoL](#qol)
   - [Terminal Formatting](#terminal-formatting)
   - [Empty Array](#empty-array)
@@ -872,6 +876,246 @@ await closer.close(); // Closes in reverse order: metrics, logger, db
 If `close()` is called multiple times, previously registered closables are not invoked again. Any new closables added after the first `close()` will still be tracked and closed on subsequent calls.
 
 Errors thrown during closing are accumulated and reported consistently using the same strategy as [closeAll](#closeall).
+
+## Process Lifecycle (NodeJS)
+
+**Note:** These utilities are NodeJS-only and use Node-specific APIs like `process` signals and exit codes.
+
+Utilities for managing NodeJS process entry points and graceful shutdown. These help you build CLI tools, backend services, and applications that need robust lifecycle management.
+
+### isProcessMain
+
+Determines whether the current module is the main entry point of the running process.
+
+This is the ESM/CJS-compatible equivalent of the familiar `require.main === module` pattern. It works in both CommonJS and ES modules without requiring `import.meta.url` to be passed manually.
+
+```ts
+import { isProcessMain } from 'emitnlog/utils';
+
+if (isProcessMain()) {
+  void main();
+}
+```
+
+Returns `true` when the current file started the process, `false` otherwise. Useful for creating modules that can be both imported and executed directly.
+
+#### Use Cases
+
+```ts
+import { isProcessMain } from 'emitnlog/utils';
+
+// CLI script that can also be imported
+async function processFiles(pattern: string) {
+  // Your processing logic
+}
+
+// Only run when executed directly
+if (isProcessMain()) {
+  const pattern = process.argv[2] || '*.txt';
+  await processFiles(pattern);
+}
+
+// Module can be imported elsewhere
+export { processFiles };
+```
+
+### runProcessMain
+
+Wraps the main entry point of a NodeJS process with automatic lifecycle management.
+
+This helper checks if the current module is the process entry point (via `isProcessMain`), and if so, executes the provided async function with:
+
+- Automatic process exit with code `1` on failure
+- Optional lifecycle logging (start/end with duration)
+- Automatic logger cleanup on completion or error
+- No side effects when imported in non-main modules
+
+```ts
+import { runProcessMain } from 'emitnlog/utils';
+
+runProcessMain(async (start) => {
+  const args = process.argv.slice(2);
+  console.log(`CLI started at ${start}`);
+
+  // Your application logic
+  await performWork();
+
+  // Process exits normally (code 0) on success
+  // Process exits with code 1 if this throws/rejects
+});
+```
+
+The `start` parameter is a `Date` representing when the process began, useful for logging and tracking execution time.
+
+#### With Logger
+
+```ts
+import { createConsoleErrorLogger, withPrefix } from 'emitnlog/logger';
+import { runProcessMain } from 'emitnlog/utils';
+
+runProcessMain(
+  async (start) => {
+    // Create your main logger
+    const logger = createLogger(`app-${start.valueOf()}`);
+
+    logger.i`Starting application`;
+    await startServer();
+    logger.i`Server ready`;
+
+    // Keep process running...
+  },
+  {
+    // Logger for lifecycle messages (startup/shutdown)
+    logger: (start) => withPrefix(createConsoleErrorLogger(), `app-${start.valueOf()}`),
+  },
+);
+```
+
+The `logger` option can be:
+
+- A `Logger` instance for lifecycle messages
+- A factory function `(start: Date) => Logger` that creates a logger using the start timestamp
+
+#### Advanced Usage
+
+```ts
+import { runProcessMain, onProcessExit, createCloser } from 'emitnlog/utils';
+import { createFileLogger } from 'emitnlog/logger';
+
+runProcessMain(
+  async (start) => {
+    const logger = createFileLogger('info', './logs/app.log');
+    const closer = createCloser();
+
+    // Register cleanup for process signals
+    closer.add(
+      onProcessExit(
+        (event) => {
+          if (event.error) {
+            logger.args(event.error).e`Process exiting due to ${event.signal}`;
+          } else {
+            logger.i`Process exiting due to ${event.signal}`;
+          }
+
+          void closer.close();
+        },
+        { logger },
+      ),
+    );
+
+    // Start your application
+    const server = await startServer();
+    closer.add(server);
+
+    // Wait indefinitely (or until signal)
+    await new Promise(() => {});
+  },
+  { logger: (start) => createFileLogger('info', `./logs/app-${start.valueOf()}.log`) },
+);
+```
+
+This pattern is perfect for CLI tools, background services, and any NodeJS application that needs proper startup/shutdown handling.
+
+### onProcessExit
+
+Registers a listener that fires once when the process receives termination or error signals.
+
+Handles the following signals:
+
+- `SIGINT` - Ctrl+C interrupt
+- `SIGTERM` - Termination signal
+- `disconnect` - Parent process disconnected
+- `uncaughtException` - Unhandled exception
+- `unhandledRejection` - Unhandled promise rejection
+
+The listener is called only once for the first signal received, and all handlers are automatically cleaned up afterward.
+
+```ts
+import { onProcessExit } from 'emitnlog/utils';
+
+const closable = onProcessExit(
+  (event) => {
+    if (event.error) {
+      console.error(`Process exiting with error: ${event.error}`);
+    } else {
+      console.log(`Process received signal: ${event.signal}`);
+    }
+
+    // Perform cleanup
+    database.close();
+    server.close();
+  },
+  { logger },
+);
+
+// Optionally unregister early if no longer needed
+closable.close();
+```
+
+#### Event Types
+
+```ts
+type ProcessExitEvent =
+  | { readonly signal: 'SIGINT' | 'SIGTERM' | 'disconnect' }
+  | { readonly signal: 'uncaughtException' | 'unhandledRejection'; readonly error: unknown };
+```
+
+Error-based signals (`uncaughtException`, `unhandledRejection`) include the error that triggered them.
+
+#### Graceful Shutdown Pattern
+
+```ts
+import { onProcessExit, createCloser } from 'emitnlog/utils';
+import { createConsoleLogLogger } from 'emitnlog/logger';
+
+const logger = createConsoleLogLogger();
+const closer = createCloser();
+
+// Register all your resources
+const database = closer.add(await connectDatabase());
+const server = closer.add(await startServer());
+const cache = closer.add(await initializeCache());
+
+// Handle shutdown signals
+closer.add(
+  onProcessExit(
+    async (event) => {
+      if (event.error) {
+        logger.args(event.error).e`Fatal error - ${event.signal}`;
+      } else {
+        logger.i`Received ${event.signal} - shutting down gracefully`;
+      }
+
+      // Close all resources in reverse order
+      await closer.close();
+
+      process.exit(event.error ? 1 : 0);
+    },
+    { logger },
+  ),
+);
+
+logger.i`Application started - press Ctrl+C to stop`;
+```
+
+#### Testing with Custom Notifier
+
+```ts
+import { EventEmitter } from 'node:events';
+import { onProcessExit, type ProcessNotifier } from 'emitnlog/utils';
+
+// In tests, provide a fake process emitter
+const fakeProcess: ProcessNotifier = new EventEmitter();
+
+const events: ProcessExitEvent[] = [];
+onProcessExit((event) => events.push(event), { notifier: fakeProcess, logger: testLogger });
+
+// Trigger signals in tests
+fakeProcess.emit('SIGINT');
+fakeProcess.emit('uncaughtException', new Error('Test error'));
+```
+
+The `ProcessNotifier` type allows you to provide a custom event emitter for testing without depending on the real `process` global.
 
 ## QoL
 

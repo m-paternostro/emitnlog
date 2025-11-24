@@ -6,7 +6,7 @@ import {
   trackPromises,
   trackMethods,
 } from 'emitnlog/tracker';
-import { createDeferredValue, emptyArray } from 'emitnlog/utils';
+import { createDeferredValue, emptyArray, runProcessMain, isProcessMain } from 'emitnlog/utils';
 import { expect, test, describe } from 'vitest';
 
 describe('ESM path imports', () => {
@@ -44,5 +44,8 @@ describe('ESM path imports', () => {
   test('Utils import works', () => {
     expect(typeof createDeferredValue).toBe('function');
     expect(typeof emptyArray).toBe('function');
+
+    expect(typeof runProcessMain).toBe('function');
+    expect(isProcessMain()).toBe(false);
   });
 });

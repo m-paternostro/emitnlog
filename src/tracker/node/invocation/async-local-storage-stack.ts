@@ -20,7 +20,7 @@ import { createThreadSafeInvocationStack } from '../../invocation/stack/implemen
  * ```
  *
  * @param options - The options to use to create the stack.
- * @returns A thread-safe `InvocationStack` for Node.js environments.
+ * @returns A thread-safe `InvocationStack` for NodeJS environments.
  */
 export const createAsyncLocalStorageInvocationStack = (options?: { readonly logger: Logger }): InvocationStack => {
   const asyncLocal = new AsyncLocalStorage<InvocationKey[]>();

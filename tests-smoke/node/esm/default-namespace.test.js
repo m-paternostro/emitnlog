@@ -38,5 +38,8 @@ describe('ESM namespace imports', () => {
   test('Utils exports are available', () => {
     expect(typeof utils.createDeferredValue).toBe('function');
     expect(typeof utils.emptyArray).toBe('function');
+
+    expect(typeof utils.runProcessMain).toBe('function');
+    expect(utils.isProcessMain()).toBe(false);
   });
 });

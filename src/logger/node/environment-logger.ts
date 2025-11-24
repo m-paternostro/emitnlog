@@ -14,8 +14,8 @@ import { createFileLogger } from './factory.ts';
  *   - `console-log`: The console log logger.
  *   - `console-error`: The console error logger.
  *   - `console-level`: The console by level logger.
- *   - `file:<path>`: The file logger with the (required) file path information (Node.js only)
- *   - `file:date:<path>`: Same as 'file:<path>' however the local date is prefixed to the file name (Node.js only)
+ *   - `file:<path>`: The file logger with the (required) file path information (NodeJS only)
+ *   - `file:date:<path>`: Same as 'file:<path>' however the local date is prefixed to the file name (NodeJS only)
  *
  * EMITNLOG_LEVEL: The level to use.
  * The possible values are

@@ -73,6 +73,14 @@ export const createTestLogger = (level: LogLevel | 'off' | (() => LogLevel | 'of
     protected emit(): void {
       return;
     }
+
+    public flush(): void {
+      return;
+    }
+
+    public close(): Promise<void> {
+      return Promise.resolve();
+    }
   })(level);
 
   vi.spyOn(logger, 'log');
