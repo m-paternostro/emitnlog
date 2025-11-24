@@ -39,5 +39,8 @@ describe('ESM neutral flat imports', () => {
   test('Utils exports are available', () => {
     expect(typeof emitnlog.createDeferredValue).toBe('function');
     expect(typeof emitnlog.emptyArray).toBe('function');
+
+    expect(emitnlog.runProcessMain).toBeUndefined;
+    expect(emitnlog.isProcessMain).toBeUndefined;
   });
 });

@@ -38,5 +38,8 @@ describe('ESM flat imports', () => {
   test('Utils exports are available', () => {
     expect(typeof emitnlog.createDeferredValue).toBe('function');
     expect(typeof emitnlog.emptyArray).toBe('function');
+
+    expect(typeof emitnlog.runProcessMain).toBe('function');
+    expect(emitnlog.isProcessMain()).toBe(false);
   });
 });

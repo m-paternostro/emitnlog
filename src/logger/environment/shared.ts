@@ -154,7 +154,7 @@ export const createLoggerFromEnv = (
       default:
         if (envFile) {
           // eslint-disable-next-line no-undef, no-console
-          console.warn(`The file logger is only supported in Node.js.`);
+          console.warn(`The file logger is only supported in NodeJS.`);
         }
     }
   }

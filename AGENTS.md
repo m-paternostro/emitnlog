@@ -62,7 +62,7 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
 - All "Coding Conventions" apply to the test code.
 - Philosophy:
   - Focus on validating behavior over implementation details; it’s OK to test internals when flow/timing is complex.
-  - Prefer real code; use Vitest mocking only when absolutely necessary and keep it minimal.
+  - Prefer real code; use Vitest's `vi` mocks only when absolutely necessary and keep them minimal.
   - Maintain high, useful coverage—do not add tests merely for coverage.
   - On failures, review real code in `src` first, then consider test issues.
 - Utilities: See `tests/test-kit.ts` for useful helpers.

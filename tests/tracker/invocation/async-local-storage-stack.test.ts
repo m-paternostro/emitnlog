@@ -5,7 +5,7 @@ import type { InvocationKey } from '../../../src/tracker/index-node.ts';
 import { createAsyncLocalStorageInvocationStack } from '../../../src/tracker/index-node.ts';
 import { createTestLogger } from '../../test-kit.ts';
 
-// Simple function to check if we're in Node.js
+// Simple function to check if we're in NodeJS
 const isNodeEnvironment = () =>
   typeof process !== 'undefined' &&
   typeof process.versions !== 'undefined' &&
@@ -14,7 +14,7 @@ const isNodeEnvironment = () =>
 describe('emitnlog.tracker.async-local-storage-stack', () => {
   describe('basic operations', () => {
     test('should create a stack with expected methods', () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }
@@ -32,7 +32,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
     });
 
     test('should push and peek values correctly', () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }
@@ -59,7 +59,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
     });
 
     test('should pop values correctly', () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }
@@ -90,7 +90,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
     });
 
     test('should handle close correctly', () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }
@@ -113,7 +113,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
 
   describe('concurrency behavior', () => {
     test('should maintain separate contexts for concurrent operations', async () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }
@@ -154,7 +154,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
     });
 
     test('should preserve stack across chained promises', async () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }
@@ -208,7 +208,7 @@ describe('emitnlog.tracker.async-local-storage-stack', () => {
     });
 
     test('should handle parallel async operations with isolated contexts', async () => {
-      // Skip if not in Node.js environment
+      // Skip if not in NodeJS environment
       if (!isNodeEnvironment()) {
         return;
       }

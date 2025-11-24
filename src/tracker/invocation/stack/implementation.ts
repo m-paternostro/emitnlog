@@ -54,7 +54,7 @@ export const createBasicInvocationStack = (options?: { readonly logger: Logger }
 
 /**
  * Creates an invocation stack that uses a asynchronous storage to preserve the correct nesting of invocations across
- * async calls, promises, and timers — making it the recommended implementation in Node.js environments.
+ * async calls, promises, and timers — making it the recommended implementation in NodeJS environments.
  *
  * The stack is automatically scoped per async context, so values pushed in one async task will not leak into others.
  *
@@ -68,7 +68,7 @@ export const createBasicInvocationStack = (options?: { readonly logger: Logger }
  * await fetchUser('123');
  * ```
  *
- * @returns A thread-safe `InvocationStack` for Node.js environments.
+ * @returns A thread-safe `InvocationStack` for NodeJS environments.
  */
 export const createThreadSafeInvocationStack = (
   storage: AsyncStackStorage,

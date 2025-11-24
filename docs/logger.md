@@ -9,8 +9,8 @@ A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rf
 - [Template Logging](#template-logging)
 - [Traditional Logging](#traditional-logging)
 - [Available Loggers](#available-loggers)
-- [File Logging (Node.js)](#file-logging-nodejs)
-- [HTTP Request Logging (Node.js)](#http-request-logging-nodejs)
+- [File Logging (NodeJS)](#file-logging-nodejs)
+- [HTTP Request Logging (NodeJS)](#http-request-logging-nodejs)
 - [Environment-Driven Configuration](#environment-driven-configuration)
 - [Tee Logger](#tee-logger)
 - [Prefixed Logger](#prefixed-logger)
@@ -208,9 +208,9 @@ export const compute = ({ logger?: Logger }) => {
 }
 ```
 
-## File Logging (Node.js)
+## File Logging (NodeJS)
 
-For persistent logging in Node.js environments:
+For persistent logging in NodeJS environments:
 
 ```ts
 import { createFileLogger } from 'emitnlog/logger';
@@ -235,7 +235,7 @@ createFileLogger(
 ): Logger
 ```
 
-## HTTP Request Logging (Node.js)
+## HTTP Request Logging (NodeJS)
 
 Use `requestLogger(logger, options?)` for a drop-in Express-compatible middleware that logs request lifecycle events with configurable levels.
 
@@ -252,7 +252,7 @@ app.use(requestLogger(logger));
 
 Configure logging behavior through environment variables for easy deployment-time adjustments without code changes.
 
-> **Note:** Supported on Node.js or on runtimes where `process.env` exposes the environment variables.
+> **Note:** Supported on NodeJS or on runtimes where `process.env` exposes the environment variables.
 
 ```ts
 import { fromEnv } from 'emitnlog/logger';
@@ -275,9 +275,9 @@ EMITNLOG_LOGGER=console-log
 EMITNLOG_LOGGER=console-error
 # Use ConsoleLevelLogger
 EMITNLOG_LOGGER=console-level
-# Use FileLogger with specified path (Node.js only)
+# Use FileLogger with specified path (NodeJS only)
 EMITNLOG_LOGGER=file:/var/log/app.log
-# Use FileLogger with the date prefixed to the specified path (Node.js only)
+# Use FileLogger with the date prefixed to the specified path (NodeJS only)
 EMITNLOG_LOGGER=file:date:/var/log/app.log
 
 # Log level (optional)

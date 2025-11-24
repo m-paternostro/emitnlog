@@ -6,7 +6,7 @@ const {
   trackPromises,
   trackMethods,
 } = require('emitnlog/tracker');
-const { createDeferredValue, emptyArray } = require('emitnlog/utils');
+const { createDeferredValue, emptyArray, runProcessMain, isProcessMain } = require('emitnlog/utils');
 
 describe('CJS path imports', () => {
   test('Logger import works', () => {
@@ -45,5 +45,7 @@ describe('CJS path imports', () => {
   test('Utils import works', () => {
     expect(typeof createDeferredValue).toBe('function');
     expect(typeof emptyArray).toBe('function');
+    expect(typeof runProcessMain).toBe('function');
+    expect(isProcessMain()).toBe(false);
   });
 });

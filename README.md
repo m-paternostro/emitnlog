@@ -141,7 +141,7 @@ function handleStatus(status: 'pending' | 'success' | 'error') {
 - **Lightweight**: Zero dependencies, minimal runtime overhead
 - **Lazy Evaluation**: Compute values only when needed
 - **Flexible**: Multiple logger targets, customizable formats
-- **Environment-Aware**: Automatically detects Node.js vs browser/neutral environments
+- **Environment-Aware**: Automatically detects NodeJS vs browser/neutral environments
 - **Promise-Friendly**: First-class async/await support
 
 ## Documentation
@@ -194,7 +194,7 @@ This section is for developers who want more control over how modules are resolv
 
 ### Runtime-Specific Imports
 
-By default, `emitnlog` automatically detects the runtime environment (Node.js or neutral like browser/edge runtimes) and loads the appropriate implementation. However, if you're building a library or SDK and want stricter control — for example, to guarantee that only runtime-neutral features are included, you can explicitly import from the `emitnlog/neutral` variant:
+By default, `emitnlog` automatically detects the runtime environment (NodeJS or neutral like browser/edge runtimes) and loads the appropriate implementation. However, if you're building a library or SDK and want stricter control — for example, to guarantee that only runtime-neutral features are included, you can explicitly import from the `emitnlog/neutral` variant:
 
 ```ts
 import { createConsoleLogLogger } from 'emitnlog/neutral/logger';

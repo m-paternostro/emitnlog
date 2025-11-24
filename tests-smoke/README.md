@@ -14,9 +14,9 @@ These tests complement the unit tests by validating the package from a consumer'
 
 ## Structure
 
-- `node/`: Tests for Node.js environment (uses Node-specific builds and features)
-  - `esm/`: ESM tests with Node.js-specific functionality
-  - `cjs/`: CommonJS tests with Node.js-specific functionality
+- `node/`: Tests for NodeJS environment (uses Node-specific builds and features)
+  - `esm/`: ESM tests with NodeJS-specific functionality
+  - `cjs/`: CommonJS tests with NodeJS-specific functionality
 - `non-node/`: Tests for non-Node environments (browser-like, uses platform-neutral builds)
   - `esm/`: ESM tests using platform-neutral builds
   - `cjs/`: CommonJS tests using platform-neutral builds
@@ -70,7 +70,7 @@ The smoke tests simulate how real users would consume the package in different e
 
 - File-based logging works with `fromEnv()` when `EMITNLOG_LOGGER=file:...`
 - `createAsyncLocalStorageInvocationStack()` is available for tracking
-- Uses builds optimized for Node.js (platform: 'node', target: 'node20')
+- Uses builds optimized for NodeJS (platform: 'node', target: 'node20')
 
 **Non-Node Environment Tests:**
 
