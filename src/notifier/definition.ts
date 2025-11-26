@@ -122,9 +122,17 @@ export type EventNotifier<T = void, E = Error> = {
   readonly onError: (handler: ((error: E) => void) | undefined) => void;
 
   /**
+   * Returns true if the notifier has been closed.
+   *
+   * More precisely, this value is false after `close` is invoked and while no other listener is added or `waitForEvent`
+   * is invoked.
+   */
+  readonly closed: boolean;
+
+  /**
    * Closes the notifier and removes all listeners.
    *
-   * @warning Failing to call close() on subscriptions or the notifier itself may lead to memory leaks.
+   * @warning Failing to call `close()` on subscriptions or the notifier itself may lead to memory leaks.
    */
   readonly close: () => void;
 };

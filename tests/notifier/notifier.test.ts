@@ -80,8 +80,11 @@ describe('emitnlog.notifier', () => {
     notifier.onEvent((event) => events.push(event));
 
     notifier.notify('first event');
+    expect(notifier.closed).toBe(false);
     notifier.close();
+    expect(notifier.closed).toBe(true);
     notifier.notify('second event');
+    expect(notifier.closed).toBe(true);
 
     expect(events).toEqual(['first event']);
   });
@@ -100,24 +103,9 @@ describe('emitnlog.notifier', () => {
     expect(events).toEqual(['1: first event', '2: first event', '2: second event']);
   });
 
-  test('should handle error handler after close', () => {
+  test('should not report error after close', () => {
     const errors: Error[] = [];
     notifier.onError((error) => errors.push(error));
-    notifier.close();
-
-    notifier.onEvent(() => {
-      throw new Error('test error');
-    });
-
-    notifier.notify('test event');
-
-    expect(errors).toHaveLength(0);
-  });
-
-  test('should clear error handler on close', () => {
-    const errors: Error[] = [];
-    notifier.onError((error) => errors.push(error));
-
     notifier.close();
 
     notifier.onEvent(() => {
@@ -146,6 +134,25 @@ describe('emitnlog.notifier', () => {
     expect(errors1).toHaveLength(0);
     expect(errors2).toHaveLength(1);
     expect(errors2[0].message).toBe('test error');
+  });
+
+  test('should still work after the notifier has been closed and reopened', async () => {
+    expect(notifier.closed).toBe(false);
+    notifier.close();
+    expect(notifier.closed).toBe(true);
+
+    const events: string[] = [];
+    notifier.onEvent((event) => {
+      events.push(event);
+    });
+
+    expect(notifier.closed).toBe(false);
+    notifier.notify('after close');
+    expect(events).toEqual(['after close']);
+    expect(notifier.closed).toBe(false);
+
+    notifier.close();
+    expect(notifier.closed).toBe(true);
   });
 
   test('should validate the Car example from JSDoc', () => {
@@ -310,11 +317,18 @@ describe('emitnlog.notifier', () => {
     });
 
     test('should still work after the notifier has been closed and reopened', async () => {
+      expect(notifier.closed).toBe(false);
       notifier.close();
+      expect(notifier.closed).toBe(true);
       const eventPromise = notifier.waitForEvent();
+      expect(notifier.closed).toBe(false);
       notifier.notify('after close');
       const result = await eventPromise;
       expect(result).toBe('after close');
+      expect(notifier.closed).toBe(false);
+
+      notifier.close();
+      expect(notifier.closed).toBe(true);
     });
 
     test('should work in a loop as shown in the example', async () => {
@@ -345,8 +359,11 @@ describe('emitnlog.notifier', () => {
     test('should reject if notifier is closed before the next event', async () => {
       const n = createEventNotifier<string>();
       const p = n.waitForEvent();
+      expect(n.closed).toBe(false);
       n.close();
+      expect(n.closed).toBe(true);
       await expect(p).rejects.toBeInstanceOf(ClosedError);
+      expect(n.closed).toBe(true);
     });
   });
 
