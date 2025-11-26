@@ -1,5 +1,4 @@
 import { errorify } from '../converter/errorify.ts';
-import type { SwitchType } from '../converter/switch-type.ts';
 import { isNotNullable } from './is-not-nullable.ts';
 
 /**
@@ -431,9 +430,18 @@ export type Closer = Closable & {
   readonly add: <T extends ClosableLike>(closable: T) => T;
 
   /**
+   * Adds multiple closables to be handled when the closer is closed.
+   *
+   * @param closables
+   */
+  readonly addAll: (...closables: readonly ClosableLike[]) => void;
+
+  /**
    * The number of closables that have not been closed.
    */
   readonly size: number;
+
+  // Review SyncClosable after changing Closer.
 };
 
 /**
@@ -447,11 +455,27 @@ export type Closer = Closable & {
  * Useful for ensuring cleanup logic is always executed, even in complex control flows with multiple return points.
  */
 
-export type SyncCloser = SwitchType<
-  Closer,
-  | [Closer['add'], <T extends SyncClosable | PartialSyncClosable>(closeable: T) => T]
-  | [Closer['close'], SyncClosable['close']]
->;
+export type SyncCloser = SyncClosable & {
+  /**
+   * Adds a closable to be handled when the closer is closed.
+   *
+   * @param closable
+   * @returns The closable
+   */
+  readonly add: <T extends SyncClosable | PartialSyncClosable>(closable: T) => T;
+
+  /**
+   * Adds multiple closables to be handled when the closer is closed.
+   *
+   * @param closables
+   */
+  readonly addAll: (...closables: readonly (SyncClosable | PartialSyncClosable)[]) => void;
+
+  /**
+   * The number of closables that have not been closed.
+   */
+  readonly size: number;
+};
 
 /**
  * Creates a `Closer` that manages a group of closables as a single unit, simplifying resource management— especially in
@@ -498,13 +522,17 @@ export type SyncCloser = SwitchType<
  * @param input - Optional initial set of closables
  * @returns A `Closer` that can register and close closables as a group
  */
-export const createCloser = (...input: readonly Closable[]): Closer => {
+export const createCloser = (...input: readonly ClosableLike[]): Closer => {
   const closables = new Set<ClosableLike>(input);
 
   const closer: Closer = {
     add: (closable) => {
       closables.add(closable);
       return closable;
+    },
+
+    addAll: (...all) => {
+      all.forEach((closable) => closables.add(closable));
     },
 
     get size() {

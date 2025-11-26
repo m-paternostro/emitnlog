@@ -1241,6 +1241,37 @@ describe('emitnlog.utils.closable', () => {
       expect(returned2).toBe(closable2);
     });
 
+    test('should add multiple closables at once with addAll', async () => {
+      const callOrder: number[] = [];
+      const closable1: SyncClosable = {
+        close: () => {
+          callOrder.push(1);
+        },
+      };
+      const closable2: SyncClosable = {
+        close: () => {
+          callOrder.push(2);
+        },
+      };
+      const closable3: AsyncClosable = {
+        close: async () => {
+          callOrder.push(3);
+        },
+      };
+
+      const closer = createCloser();
+      closer.addAll(closable1, closable2);
+      closer.addAll(closable3);
+
+      expect(closer.size).toBe(3);
+
+      const result = closer.close();
+      expect(result).toBeInstanceOf(Promise);
+
+      await result;
+      expect(callOrder).toEqual([3, 2, 1]);
+    });
+
     test('should close all added closables in reverse order', () => {
       const callOrder: number[] = [];
       const closable1: SyncClosable = {
@@ -1704,6 +1735,34 @@ describe('emitnlog.utils.closable', () => {
       expect(closer.size).toBe(0);
       expect(spy1).toHaveBeenCalledTimes(1);
       expect(spy2).toHaveBeenCalledTimes(1);
+    });
+
+    test('should add multiple closables at once with addAll', () => {
+      const callOrder: number[] = [];
+      const closable1: SyncClosable = {
+        close: () => {
+          callOrder.push(1);
+        },
+      };
+      const closable2: SyncClosable = {
+        close: () => {
+          callOrder.push(2);
+        },
+      };
+      const closable3: SyncClosable = {
+        close: () => {
+          callOrder.push(3);
+        },
+      };
+
+      const closer = createSyncCloser(closable1);
+      closer.addAll(closable2, closable3);
+
+      expect(closer.size).toBe(3);
+
+      const result = closer.close();
+      expect(result).toBeUndefined();
+      expect(callOrder).toEqual([3, 2, 1]);
     });
   });
 });
