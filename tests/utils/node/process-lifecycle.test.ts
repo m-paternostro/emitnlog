@@ -2,14 +2,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EventEmitter } from 'node:events';
 
-import { OFF_LOGGER } from '../../../src/logger/off-logger.ts';
-import {
-  isProcessMain,
-  onProcessExit,
-  type ProcessExitEvent,
-  type ProcessNotifier,
-  runProcessMain,
-} from '../../../src/utils/index-node.ts';
+import { OFF_LOGGER } from '../../../src/logger/index.ts';
+import type { Closer, ProcessExitEvent, ProcessNotifier } from '../../../src/utils/index-node.ts';
+import { isProcessMain, onProcessExit, runProcessMain } from '../../../src/utils/index-node.ts';
 import inner from '../../../src/utils/node/process-lifecycle.ts';
 import { createTestLogger } from '../../test-kit.ts';
 
@@ -56,11 +51,14 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       });
 
       const callArg = mainSpy.mock.calls[0][0];
-      expect(callArg).toBeInstanceOf(Date);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      expect(callArg.getTime()).toBeGreaterThanOrEqual(startTime);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-      expect(callArg.getTime()).toBeLessThanOrEqual(Date.now());
+      const { start, closer } = callArg;
+      expect(start).toBeInstanceOf(Date);
+      expect((start as Date).getTime()).toBeGreaterThanOrEqual(startTime);
+      expect((start as Date).getTime()).toBeLessThanOrEqual(Date.now());
+
+      expect(closer).toBeDefined();
+      expect((closer as Closer).add).toBeTypeOf('function');
+      expect((closer as Closer).size).toBe(0);
     });
 
     test('does not execute main function when current file is not the entry point', async () => {
@@ -166,6 +164,44 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       });
 
       expect(closeSpy).toHaveBeenCalled();
+    });
+
+    test('closes resources registered on closer after successful execution', async () => {
+      const resource = { close: vi.fn().mockResolvedValue(undefined) };
+      const mainSpy = vi.fn().mockImplementation(async ({ closer }: { closer: Closer }) => {
+        closer.add(resource);
+      });
+
+      runProcessMain(mainSpy, { logger: OFF_LOGGER });
+
+      await vi.waitFor(() => {
+        expect(mainSpy).toHaveBeenCalledOnce();
+      });
+
+      await vi.waitFor(() => {
+        expect(resource.close).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    test('closes resources registered on closer when execution fails', async () => {
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      const resource = { close: vi.fn().mockResolvedValue(undefined) };
+      const error = new Error('boom');
+
+      const mainSpy = vi.fn().mockImplementation(async ({ closer }: { closer: Closer }) => {
+        closer.add(resource);
+        throw error;
+      });
+
+      runProcessMain(mainSpy, { logger: OFF_LOGGER });
+
+      await vi.waitFor(() => {
+        expect(exitSpy).toHaveBeenCalledWith(1);
+      });
+
+      await vi.waitFor(() => {
+        expect(resource.close).toHaveBeenCalledTimes(1);
+      });
     });
 
     test('handles logger.close throwing without propagating error on success', async () => {
