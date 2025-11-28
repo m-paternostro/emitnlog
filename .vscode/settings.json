@@ -33,7 +33,6 @@
   "editor.guides.highlightActiveBracketPair": true,
   "editor.largeFileOptimizations": false,
   "editor.minimap.enabled": false,
-  "editor.multiCursorModifier": "ctrlCmd",
   "editor.parameterHints.cycle": true,
   "editor.rulers": [120],
   "editor.suggestSelection": "first",
