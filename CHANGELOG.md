@@ -1,5 +1,21 @@
 # emitnlog
 
+## 0.11.0
+
+### Minor Changes
+
+- efa23d8: Add `closer.addAll` to allow for adding multiple closable
+- 659c7ad: Allow asSafeClosable to handle ClosableLike
+- 2eb7024: Add new utilities to handle code that is meant to be executed a the main entry point of the process or that needs to react to process exit signals.
+- 987b536: Add `safeClose` utility
+- 69e016b: Add `notifier.close` to indicate if the notifier has been closed and not activated again
+- 7a5cc40: Object parameter for `runProcessMain` passing the start date and a closer
+- 5cc74ee: Add `createSyncCloser` for sync closables
+
+### Patch Changes
+
+- 1e78eff: Export SwitchType
+
 ## 0.10.1
 
 ### Patch Changes
