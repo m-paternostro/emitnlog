@@ -1,8 +1,8 @@
 import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
-import type { SyncClosable } from '../common/closable.ts';
-import { asClosable, safeClose } from '../common/closable.ts';
+import type { Closer, SyncClosable } from '../common/closable.ts';
+import { asClosable, createCloser, safeClose } from '../common/closable.ts';
 import { exhaustiveCheck } from '../common/exhaustive-check.ts';
 
 /**
@@ -49,12 +49,17 @@ export const isProcessMain = () => {
  * If the current module is not the main entry point, this function does nothing. This allows the same module to be
  * safely imported elsewhere without side effects.
  *
+ * The specified main method is invoked with an input object with the following properties:
+ *
+ * - `start`: The start `Date` of the process.
+ * - `closer`: A `Closer` instance that can be used to register cleanup operations, immediately before the process exits.
+ *
  * @example Simple usage:
  *
  * ```ts
  * import { runProcessMain } from 'emitnlog/utils';
  *
- * runProcessMain(async (start) => {
+ * runProcessMain(async ({ start }) => {
  *   const args = process.argv.slice(2);
  *   console.log(`CLI started at ${start}`);
  *   // ... your application logic
@@ -68,8 +73,10 @@ export const isProcessMain = () => {
  * import { runProcessMain } from 'emitnlog/utils';
  *
  * runProcessMain(
- *   async (start) => {
+ *   async ({ start, closer }) => {
  *     const logger = createPluginLogger('backend', `backend-${start.valueOf()}`);
+ *     closer.add(logger);
+ *
  *     logger.i`starting HTTP bridge...`;
  *     // ... your application logic
  *   },
@@ -77,11 +84,12 @@ export const isProcessMain = () => {
  * );
  * ```
  *
- * @param main The async function to execute as the process entry point. Receives the start `Date` as its argument.
+ * @param main The async function to execute as the process entry point. Receives an input object as argument as
+ *   described above.
  * @param options Optional configuration.
  */
 export const runProcessMain = (
-  main: (start: Date) => Promise<void>,
+  main: (input: { readonly start: Date; readonly closer: Closer }) => Promise<void>,
   options?: {
     /**
      * A logger for lifecycle messages or a factory function that creates one. If a factory is provided, it receives the
@@ -98,23 +106,28 @@ export const runProcessMain = (
       { fallbackPrefix: 'main' },
     );
 
+    const closer = createCloser(logger);
+
     logger.i`starting the process main operation`;
     void Promise.resolve()
-      .then(() => main(start))
-      .then(() => {
+      .then(() => main({ start, closer }))
+      .then(async () => {
         const duration = Date.now() - start.valueOf();
         logger.i`the process has closed after ${duration}ms`;
-        void safeClose(logger);
+        await safeClose(closer);
       })
-      .catch((error: unknown) => {
+      .catch(async (error: unknown) => {
         const duration = Date.now() - start.valueOf();
         logger.args(error).e`an error occurred and the process has closed after ${duration}ms`;
-        void safeClose(logger);
+        await safeClose(closer);
         process.exit(1);
       });
   }
 };
 
+// Do not add 'exit':
+// - Fires on every normal shutdown
+// - Runs after the event loop is drained and Node forbids asynchronous work at that point.
 export type ProcessExitSignal = 'SIGINT' | 'SIGTERM' | 'disconnect' | 'uncaughtException' | 'unhandledRejection';
 
 export type ProcessExitEvent<S extends ProcessExitSignal = ProcessExitSignal> = S extends
@@ -234,7 +247,7 @@ const testScope: {
  * @example
  *
  * ```ts
- * import inner from '../src/utils/node/process-lifecycle';
+ * import inner from '../src/utils/node/process-lifecycle.ts';
  *
  * beforeEach(() => {
  *   inner[Symbol.for('@emitnlog:test')].processMain = true;

@@ -933,7 +933,7 @@ This helper checks if the current module is the process entry point (via `isProc
 ```ts
 import { runProcessMain } from 'emitnlog/utils';
 
-runProcessMain(async (start) => {
+runProcessMain(async ({ start }) => {
   const args = process.argv.slice(2);
   console.log(`CLI started at ${start}`);
 
@@ -945,7 +945,10 @@ runProcessMain(async (start) => {
 });
 ```
 
-The `start` parameter is a `Date` representing when the process began, useful for logging and tracking execution time.
+The argument passed to the "main" function is an object with the following properties:
+
+- `start` whose value is the `Date` representing when the process began, useful for logging and tracking execution time.
+- `closer` whose value is a [Closer](#createcloser), useful to register cleanup operations.
 
 #### With Logger
 
@@ -954,9 +957,10 @@ import { createConsoleErrorLogger, withPrefix } from 'emitnlog/logger';
 import { runProcessMain } from 'emitnlog/utils';
 
 runProcessMain(
-  async (start) => {
+  async ({ start, closer }) => {
     // Create your main logger
     const logger = createLogger(`app-${start.valueOf()}`);
+    closer.add(logger);
 
     logger.i`Starting application`;
     await startServer();
