@@ -140,10 +140,15 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
       }
     : basicNotify;
 
+  let closed = false;
   return {
-    close: () => {
-      debounced?.cancel(true);
+    get closed() {
+      return closed;
+    },
 
+    close: () => {
+      closed = true;
+      debounced?.cancel(true);
       listeners.clear();
 
       if (deferredEvent) {
@@ -155,6 +160,7 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
     },
 
     onEvent: (listener) => {
+      closed = false;
       listeners.add(listener);
       return {
         close: () => {
@@ -163,7 +169,13 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
       };
     },
 
-    waitForEvent: () => (deferredEvent || (deferredEvent = createDeferredValue<T>())).promise,
+    waitForEvent: () => {
+      if (!deferredEvent) {
+        closed = false;
+        deferredEvent = createDeferredValue<T>();
+      }
+      return deferredEvent.promise;
+    },
 
     notify,
 
