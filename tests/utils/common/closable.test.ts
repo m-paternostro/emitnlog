@@ -193,7 +193,7 @@ describe('emitnlog.utils.closable', () => {
         expect(s2).toHaveBeenCalledTimes(1);
         expect(s3).toHaveBeenCalledTimes(1);
 
-        const thrown = error as Error & { cause?: unknown };
+        const thrown = error as Error;
         expect(thrown).toBeInstanceOf(Error);
         expect(thrown.message).toBe('Multiple errors occurred while closing closables');
 
@@ -224,7 +224,7 @@ describe('emitnlog.utils.closable', () => {
         expect(s1).toHaveBeenCalledTimes(1);
         expect(s2).toHaveBeenCalledTimes(1);
 
-        const thrown = error as Error & { cause?: unknown };
+        const thrown = error as Error;
         expect(thrown).toBe(err);
       }
     });
@@ -754,7 +754,7 @@ describe('emitnlog.utils.closable', () => {
         expect(sOk).toHaveBeenCalledTimes(1);
         expect(s3).toHaveBeenCalledTimes(1);
 
-        const thrown = error as Error & { cause?: unknown };
+        const thrown = error as Error;
         expect(thrown).toBeInstanceOf(Error);
         expect(thrown.message).toBe('Multiple errors occurred while closing closables');
 
@@ -784,7 +784,7 @@ describe('emitnlog.utils.closable', () => {
         expect(sBad).toHaveBeenCalledTimes(1);
         expect(okFn).toHaveBeenCalledTimes(1);
 
-        const thrown = error as Error & { cause?: unknown };
+        const thrown = error as Error;
         expect(thrown).toBe(err);
       }
     });
@@ -1506,7 +1506,7 @@ describe('emitnlog.utils.closable', () => {
         expect(spy2).toHaveBeenCalledTimes(1);
         expect(spy3).toHaveBeenCalledTimes(1);
 
-        const thrown = error as Error & { cause?: unknown };
+        const thrown = error as Error;
         expect(thrown).toBeInstanceOf(Error);
         expect(thrown.message).toBe('Multiple errors occurred while closing closables');
 
@@ -1539,7 +1539,7 @@ describe('emitnlog.utils.closable', () => {
         expect(spy1).toHaveBeenCalledTimes(1);
         expect(spy2).toHaveBeenCalledTimes(1);
 
-        const thrown = error as Error & { cause?: unknown };
+        const thrown = error as Error;
         expect(thrown).toBe(err);
       }
     });
