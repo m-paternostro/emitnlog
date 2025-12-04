@@ -89,8 +89,8 @@ const toPath = (value: string | URL | undefined): string | undefined => {
  * the provided async function. Moreover,
  *
  * - If the function "fails" (throws or rejects), the process exits with code `1`.
- * - If a logger is provided, it will be used to log the start and end of the process lifecycle, with the duration of the
- *   operation.
+ * - If a logger is provided via the `options` parameter, it will be used to log the start and end of the process
+ *   lifecycle, with the duration of the operation. This logger is closed when the applications exists.
  *
  * If the current module is not the main entry point, this function does nothing. This allows the same module to be
  * safely imported elsewhere without side effects.
@@ -99,6 +99,7 @@ const toPath = (value: string | URL | undefined): string | undefined => {
  *
  * - `start`: The start `Date` of the process.
  * - `closer`: A `Closer` instance that can be used to register cleanup operations, immediately before the process exits.
+ * - `logger`: A logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
  *
  * The first argument `moduleReference` is used to detect if the module invoking this method is the entry point of the
  * process. The possible values are:
@@ -149,10 +150,7 @@ const toPath = (value: string | URL | undefined): string | undefined => {
  *
  * runProcessMain(
  *   undefined,
- *   async ({ start, closer }) => {
- *     const logger = createPluginLogger('backend', `backend-${start.valueOf()}`);
- *     closer.add(logger);
- *
+ *   async ({ start, closer, logger }) => {
  *     logger.i`starting HTTP bridge...`;
  *     // ... your application logic
  *   },
@@ -167,36 +165,48 @@ const toPath = (value: string | URL | undefined): string | undefined => {
  */
 export const runProcessMain = (
   moduleReference: string | URL | undefined,
-  main: (input: { readonly start: Date; readonly closer: Closer }) => Promise<void>,
+  main: (input: {
+    /**
+     * The start of the process.
+     */
+    readonly start: Date;
+
+    /**
+     * A `Closer` instance that can be used to register cleanup operations.
+     */
+    readonly closer: Closer;
+
+    /**
+     * A logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
+     */
+    readonly logger: Logger;
+  }) => Promise<void>,
   options?: {
     /**
-     * A logger for lifecycle messages or a factory function that creates one. If a factory is provided, it receives the
-     * same start `Date` passed to the `main` method, to enable timestamp-based logger configuration.
+     * A logger or a factory function that creates one. If a factory is provided, it receives the same start `Date`
+     * passed to the `main` method, to enable timestamp-based logger configuration.
      */
     readonly logger?: Logger | ((start: Date) => Logger);
   },
 ): void => {
   if (isProcessMain(moduleReference)) {
     const start = new Date();
-    const logger = withPrefix(
-      withLogger(typeof options?.logger === 'function' ? options.logger(start) : options?.logger),
-      '',
-      { fallbackPrefix: 'main' },
-    );
+    const logger = withLogger(typeof options?.logger === 'function' ? options.logger(start) : options?.logger);
 
     const closer = createCloser(logger);
 
-    logger.i`starting the process main operation`;
+    logger.i`starting the process main operation at ${start}`;
     void Promise.resolve()
-      .then(() => main({ start, closer }))
+      .then(() => main({ start, closer, logger }))
       .then(async () => {
-        const duration = Date.now() - start.valueOf();
-        logger.i`the process has closed after ${duration}ms`;
+        const end = new Date();
+        logger.i`the process has closed at ${end} after ${end.valueOf() - start.valueOf()}ms`;
         await safeClose(closer);
       })
       .catch(async (error: unknown) => {
-        const duration = Date.now() - start.valueOf();
-        logger.args(error).e`an error occurred and the process has closed after ${duration}ms`;
+        const end = new Date();
+        logger.args(error)
+          .e`an error occurred and the process has closed at ${end} after ${end.valueOf() - start.valueOf()}ms`;
         await safeClose(closer);
         process.exit(1);
       });

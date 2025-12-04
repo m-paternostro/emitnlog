@@ -8,12 +8,12 @@ import type { LogSink } from './sink.ts';
  */
 export type MemoryStore = {
   /**
-   * The log entries stored in memory
+   * The log entries stored in memory.
    */
   readonly entries: readonly LogEntry[];
 
   /**
-   * Clear the log entries stored in memory
+   * Clears the log entries stored in memory.
    */
   readonly clear: () => void;
 };
