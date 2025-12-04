@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
+import { jsonParse, jsonStringify } from '../../../src/utils/index.ts';
 
 describe('emitnlog.logger.emitter.formatter', () => {
   beforeAll(() => {
@@ -137,7 +138,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
   describe('ndjsonFormatter', () => {
     test('should format as compact JSON', () => {
       const formatted = emitter.ndjsonFormatter('info', 'Test message', []);
-      const parsed = JSON.parse(formatted);
+      const parsed = jsonParse<Record<string, unknown>>(formatted);
 
       expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
     });
@@ -145,7 +146,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
     test('should include args in JSON', () => {
       const args = ['string', 42, { key: 'value' }, true];
       const formatted = emitter.ndjsonFormatter('error', 'Error occurred', args);
-      const parsed = JSON.parse(formatted);
+      const parsed = jsonParse<Record<string, unknown>>(formatted);
 
       expect(parsed).toEqual({ level: 'error', message: 'Error occurred', args: args, timestamp: expect.any(Number) });
     });
@@ -159,7 +160,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
 
     test('should handle special characters in message', () => {
       const formatted = emitter.ndjsonFormatter('info', 'Line\nwith\ttabs"quotes"', []);
-      const parsed = JSON.parse(formatted) as { message: string };
+      const parsed = jsonParse<{ message: string }>(formatted);
 
       expect(parsed.message).toBe('Line\nwith\ttabs"quotes"');
     });
@@ -173,19 +174,19 @@ describe('emitnlog.logger.emitter.formatter', () => {
       circular.self = circular;
 
       const formatted = emitter.ndjsonFormatter('info', 'Circular ref', [circular]);
-      const parsed = JSON.parse(formatted) as { level: string; message: string; args: unknown[] };
+      const parsed = jsonParse<{ level: string; message: string; args: unknown[] }>(formatted);
 
       expect(parsed.level).toBe('info');
       expect(parsed.message).toBe('Circular ref');
       // The circular reference should be handled by stringify
-      expect(JSON.stringify(parsed.args[0])).toContain('circular');
+      expect(jsonStringify(parsed.args[0])).toContain('circular');
     });
   });
 
   describe('jsonPrettyFormatter', () => {
     test('should format as pretty-printed JSON', () => {
       const formatted = emitter.jsonPrettyFormatter('info', 'Test message', []);
-      const parsed = JSON.parse(formatted);
+      const parsed = jsonParse<Record<string, unknown>>(formatted);
 
       expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
 
@@ -202,7 +203,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
       expect(formatted).toContain('\n');
       expect(formatted).toMatch(/^\{[\s\S]*\}$/);
 
-      const parsed = JSON.parse(formatted) as { args: unknown[] };
+      const parsed = jsonParse<{ args: unknown[] }>(formatted);
       expect(parsed.args[0]).toEqual(args[0]);
     });
 
@@ -210,7 +211,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const args = [[1, 2, 3, { nested: 'value' }]];
       const formatted = emitter.jsonPrettyFormatter('info', 'Array test', args);
 
-      const parsed = JSON.parse(formatted) as { args: unknown[] };
+      const parsed = jsonParse<{ args: unknown[] }>(formatted);
       expect(parsed.args[0]).toEqual(args[0]);
 
       // Should have multiple lines due to pretty printing

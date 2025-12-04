@@ -39,6 +39,35 @@
 export const jsonParse = <T = unknown>(value: string): JsonSafe<T> => JSON.parse(value) as JsonSafe<T>;
 
 /**
+ * A type-safe wrapper around `JSON.stringify()` that only accepts {@link JsonSafe} values.
+ *
+ * By constraining the input to `JsonSafe`, this helper ensures the value has already been stripped of functions,
+ * symbols, and other non-serializable structures, eliminating most runtime failures you'd otherwise see when calling
+ * `JSON.stringify()` directly.
+ *
+ * @example
+ *
+ * ```ts
+ * import { jsonParse, jsonStringify } from 'emitnlog/utils';
+ *
+ * const config = jsonParse<{ name: string }>('{"name":"app"}');
+ * const json = jsonStringify(config);
+ * // json === '{"name":"app"}'
+ * ```
+ *
+ * @param value A {@link JsonSafe} value to serialize, usually an object or array.
+ * @param replacer A function that transforms the results.
+ * @param space Adds indentation, white space, and line break characters to the return-value JSON text to make it easier
+ *   to read.
+ * @returns The serialized JSON string.
+ */
+export const jsonStringify = (
+  value: JsonSafe,
+  replacer?: ((key: string, value: unknown) => unknown) | null,
+  space?: string | number,
+): string => JSON.stringify(value, replacer ?? undefined, space);
+
+/**
  * A type that maps to a structure of a value after it has been serialized with `JSON.stringify()` and then parsed with
  * `JSON.parse()`.
  *

@@ -2,6 +2,7 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createConsoleLogLogger } from '../../src/logger/index.ts';
+import { jsonParse } from '../../src/utils/index.ts';
 
 describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;
@@ -56,9 +57,9 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
     expect(consoleLogSpy).toHaveBeenCalled();
 
     const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
-    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+    expect(() => jsonParse(jsonOutput)).not.toThrow();
 
-    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonOutput);
     expect(parsed.message).toBe('JSON test message');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -74,10 +75,10 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
 
     // Check that the first argument is valid JSON and compact
     const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
-    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+    expect(() => jsonParse(jsonOutput)).not.toThrow();
     expect(jsonOutput).not.toContain('\n'); // Should be compact
 
-    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonOutput);
     expect(parsed.message).toBe('Unformatted JSON test message');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -96,7 +97,7 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
 
     // First argument should be JSON formatted line
     const jsonOutput = consoleLogSpy.mock.calls[0][0] as string;
-    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonOutput);
     expect(parsed.message).toBe('User action');
     expect(parsed.level).toBe('info');
 

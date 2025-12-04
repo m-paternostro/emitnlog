@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import type { LogEntry } from '../../../src/logger/log-entry.ts';
 import type { JsonSafe, JsonValue } from '../../../src/utils/index.ts';
-import { jsonParse } from '../../../src/utils/index.ts';
+import { jsonParse, jsonStringify } from '../../../src/utils/index.ts';
 
 type Equal<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false;
 const assertType = <T extends true>(_value: T) => undefined;
@@ -109,5 +109,23 @@ describe('emitnlog.utils.serialization', () => {
     // @ts-expect-error skip is omitted because undefined-only properties are dropped
     expect(parsed.skip).toBeUndefined();
     expect(parsed).not.toHaveProperty('skip');
+  });
+
+  test('stringifies JsonSafe values without throwing', () => {
+    const parsed = jsonParse<{ readonly foo: string; readonly count?: number }>('{"foo":"bar","count":1}');
+
+    expect(jsonStringify(parsed)).toBe('{"foo":"bar","count":1}');
+
+    const json: string = jsonStringify(parsed);
+    void json;
+  });
+
+  test('supports replacer and space formatting options', () => {
+    const parsed = jsonParse<{ readonly foo: string; readonly secret?: string }>('{"foo":"bar","secret":"nope"}');
+
+    const replacer = (key: string, value: unknown) => (key === 'secret' ? undefined : value);
+    const formatted = jsonStringify(parsed, replacer, 2);
+
+    expect(formatted).toBe('{\n  "foo": "bar"\n}');
   });
 });

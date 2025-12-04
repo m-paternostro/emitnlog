@@ -8,6 +8,7 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [stringify](#stringify)
   - [errorify](#errorify)
   - [jsonParse](#jsonparse)
+  - [jsonStringify](#jsonstringify)
 - [Type Utilities](#type-utilities)
   - [exhaustiveCheck](#exhaustivecheck)
   - [isNotNullable](#isnotnullable)
@@ -197,6 +198,22 @@ for (const entry of entries) {
     console.log(JSON.stringify(arg));
   });
 }
+```
+
+### jsonStringify
+
+Type-safe companion to `jsonParse` that serializes values already known to be JSON-safe. Since it only accepts
+`JsonSafe` inputs, you can round-trip parsed data or validated payloads without worrying about runtime failures
+caused by non-serializable members.
+
+```ts
+import { jsonParse, jsonStringify } from 'emitnlog/utils';
+
+const parsed = jsonParse<{ readonly id: string; readonly tags?: readonly string[] }>('{"id":"123","tags":["a"]}');
+
+// parsed is JsonSafe<...>, so passing it to jsonStringify never throws
+const json = jsonStringify(parsed);
+console.log(json); // '{"id":"123","tags":["a"]}'
 ```
 
 #### JsonSafe
