@@ -43,6 +43,7 @@ export type LogSink = {
  * @returns A LogSink object with only the sink function
  */
 export function asLogSink(sink: LogSink['sink']): LogSink;
+
 /**
  * Converts a sink function into a LogSink object with flush and close methods.
  *

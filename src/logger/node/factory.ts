@@ -54,6 +54,9 @@ export type FileLogger = AsyncFinalizer<Logger> & Pick<FileSink, 'filePath'>;
 /**
  * Creates a file logger with basic level and format configuration.
  *
+ * The file operations performed by the logger may fail, however no error is thrown to ensure that the logger does not
+ * compromise the operation of the application. If necessary, use other overloads to provide a custom error handling.
+ *
  * @example Basic usage
  *
  * ```ts
@@ -75,6 +78,10 @@ export function createFileLogger(filePath: string, level?: LogLevel, format?: Lo
  *
  * This overload provides full control over file operations, batching behavior, and formatting options including
  * argument handling.
+ *
+ * The file operations performed by the logger may fail, however no error is thrown to ensure that the logger does not
+ * compromise the operation of the application. Use `options.errorHandler` to provide a custom error handling that
+ * could, for example, throw the value passed as argument.
  *
  * @example With comprehensive options
  *

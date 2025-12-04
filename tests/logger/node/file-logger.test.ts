@@ -68,10 +68,56 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(path.basename(logger.filePath)).toBe(relativeFileName);
   });
 
-  test('should throw error when no file path is provided', () => {
-    expect(() => {
-      createFileLogger('');
-    }).toThrow('InvalidArgument: file path is required');
+  test('should ignore errors when no file path is provided', async () => {
+    const logger = createFileLogger('');
+
+    logger.info('message should be ignored');
+
+    expect(logger.filePath).toBe('');
+    await expect(logger.close()).resolves.toBeUndefined();
+  });
+
+  const createBlockedFilePath = async (): Promise<string> => {
+    const blockerPath = path.join(testDir, `blocker-${Date.now()}-${Math.random()}`);
+    await fs.writeFile(blockerPath, '');
+    return path.join(blockerPath, 'blocked.log');
+  };
+
+  test('should swallow file system errors by default', async () => {
+    const blockedPath = await createBlockedFilePath();
+    const logger = createFileLogger(blockedPath);
+
+    logger.info('this write will fail internally');
+
+    await expect(logger.close()).resolves.toBeUndefined();
+  });
+
+  test('should forward errors to a custom error handler', async () => {
+    const blockedPath = await createBlockedFilePath();
+    const errorHandler = vi.fn();
+
+    const logger = createFileLogger(blockedPath, { errorHandler });
+    logger.info('trigger failure');
+
+    await expect(logger.close()).resolves.toBeUndefined();
+
+    expect(errorHandler).toHaveBeenCalled();
+    expect(errorHandler.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+  });
+
+  test('should allow error handlers to rethrow', async () => {
+    const blockedPath = await createBlockedFilePath();
+    const customError = new Error('custom error handler failure');
+
+    const logger = createFileLogger(blockedPath, {
+      errorHandler: () => {
+        throw customError;
+      },
+    });
+
+    logger.info('trigger failure');
+
+    await expect(logger.close()).rejects.toBe(customError);
   });
 
   test('should create nested directories as needed', async () => {
