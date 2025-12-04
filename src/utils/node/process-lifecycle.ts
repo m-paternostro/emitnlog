@@ -1,3 +1,6 @@
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
@@ -8,32 +11,75 @@ import { exhaustiveCheck } from '../common/exhaustive-check.ts';
 /**
  * Indicates whether the current module is the main entry point of the running process.
  *
- * This is a thin wrapper around the familiar `require.main === module` pattern adapted for ESM shims.
+ * The first argument `moduleReference` is used to detect if the module invoking this method is the entry point of the
+ * process. The possible values are:
+ *
+ * - `import.meta.url` in ESM
+ * - `__filename` or `module.filename` in CommonJS
+ * - `undefined` if the application bundles the dependencies (or, at least, emitnlog)
+ *
+ * If it is not possible to know during development time how the code is distributed, use the following approach to
+ * determine the value of the argument:
+ *
+ * ```ts
+ * const moduleReference =
+ *   typeof __filename === 'string'
+ *     ? __filename
+ *     : typeof import.meta === 'object' && import.meta.url
+ *       ? import.meta.url
+ *       : undefined;
+ * ```
  *
  * @example
  *
  * ```ts
- * if (isProcessMain()) {
+ * if (isProcessMain(import.meta.url)) {
  *   void main();
  * }
  * ```
  *
+ * @param moduleReference `import.meta.url`, `__filename`, `module.filename`, or `undefined` as described above.
  * @returns `true` when the current file started the process, otherwise `false`.
  */
-export const isProcessMain = () => {
+export const isProcessMain = (moduleReference: string | URL | undefined) => {
   if (testScope.processMain === true) {
     return true;
   }
 
-  if (typeof __filename === 'string') {
-    return process.argv[1] === __filename;
+  const scriptPath = toPath(process.argv[1]);
+  if (!scriptPath) {
+    return false;
   }
 
-  if (typeof import.meta === 'object' && import.meta.url) {
-    return import.meta.url === process.argv[1];
+  if (toPath(moduleReference) === scriptPath) {
+    return true;
+  }
+
+  if (typeof __filename === 'string' && toPath(__filename) === scriptPath) {
+    return true;
+  }
+
+  if (typeof import.meta === 'object' && toPath(import.meta.url) === scriptPath) {
+    return true;
   }
 
   return false;
+};
+
+const toPath = (value: string | URL | undefined): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string') {
+    value = value.toString();
+  }
+
+  if (value.includes('://')) {
+    value = fileURLToPath(value);
+  }
+
+  return resolve(value);
 };
 
 /**
@@ -54,14 +100,43 @@ export const isProcessMain = () => {
  * - `start`: The start `Date` of the process.
  * - `closer`: A `Closer` instance that can be used to register cleanup operations, immediately before the process exits.
  *
- * @example Simple usage:
+ * The first argument `moduleReference` is used to detect if the module invoking this method is the entry point of the
+ * process. The possible values are:
+ *
+ * - `import.meta.url` in ESM
+ * - `__filename` or `module.filename` in CommonJS
+ * - `undefined` if the application bundles the dependencies (or, at least, emitnlog)
+ *
+ * If it is not possible to know during development time how the code is distributed, use the following approach to
+ * determine the value of the argument:
+ *
+ * ```ts
+ * const moduleReference =
+ *   typeof __filename === 'string'
+ *     ? __filename
+ *     : typeof import.meta === 'object' && import.meta.url
+ *       ? import.meta.url
+ *       : undefined;
+ * ```
+ *
+ * @example Simple usage (ESM):
  *
  * ```ts
  * import { runProcessMain } from 'emitnlog/utils';
  *
- * runProcessMain(async ({ start }) => {
+ * runProcessMain(import.meta.url, async ({ start }) => {
  *   const args = process.argv.slice(2);
  *   console.log(`CLI started at ${start}`);
+ *   // ... your application logic
+ * });
+ * ```
+ *
+ * @example Simple usage (CommonJS):
+ *
+ * ```ts
+ * import { runProcessMain } from 'emitnlog/utils';
+ *
+ * runProcessMain(__filename, async ({ start }) => {
  *   // ... your application logic
  * });
  * ```
@@ -73,6 +148,7 @@ export const isProcessMain = () => {
  * import { runProcessMain } from 'emitnlog/utils';
  *
  * runProcessMain(
+ *   undefined,
  *   async ({ start, closer }) => {
  *     const logger = createPluginLogger('backend', `backend-${start.valueOf()}`);
  *     closer.add(logger);
@@ -84,11 +160,13 @@ export const isProcessMain = () => {
  * );
  * ```
  *
+ * @param moduleReference `import.meta.url`, `__filename`, `module.filename`, or `undefined` as described above.
  * @param main The async function to execute as the process entry point. Receives an input object as argument as
  *   described above.
  * @param options Optional configuration.
  */
 export const runProcessMain = (
+  moduleReference: string | URL | undefined,
   main: (input: { readonly start: Date; readonly closer: Closer }) => Promise<void>,
   options?: {
     /**
@@ -97,8 +175,8 @@ export const runProcessMain = (
      */
     readonly logger?: Logger | ((start: Date) => Logger);
   },
-) => {
-  if (isProcessMain()) {
+): void => {
+  if (isProcessMain(moduleReference)) {
     const start = new Date();
     const logger = withPrefix(
       withLogger(typeof options?.logger === 'function' ? options.logger(start) : options?.logger),

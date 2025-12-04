@@ -904,17 +904,48 @@ Utilities for managing NodeJS process entry points and graceful shutdown. These 
 
 Determines whether the current module is the main entry point of the running process.
 
-This is the ESM/CJS-compatible equivalent of the familiar `require.main === module` pattern. It works in both CommonJS and ES modules without requiring `import.meta.url` to be passed manually.
+Pass the reference of the module that is calling the helper—either the absolute filename (`__filename`/`module.filename`), the file URL (`import.meta.url`), or `undefined` when you must rely on the internal auto-detection fallback. The helper resolves the argument into a path and compares it with `process.argv[1]`, mirroring the familiar `require.main === module` pattern in both ESM and CommonJS.
+
+- **ESM modules:** `isProcessMain(import.meta.url)`
+- **CommonJS modules:** `isProcessMain(__filename)` (or `module.filename`)
+- **bundled applications:** `undefined`
 
 ```ts
 import { isProcessMain } from 'emitnlog/utils';
 
-if (isProcessMain()) {
+if (isProcessMain(import.meta.url)) {
+  void main();
+}
+```
+
+```ts
+const { isProcessMain } = require('emitnlog/utils');
+
+if (isProcessMain(__filename)) {
   void main();
 }
 ```
 
 Returns `true` when the current file started the process, `false` otherwise. Useful for creating modules that can be both imported and executed directly.
+
+#### Dual-format Entry Points
+
+When the same source file may be bundled to both ESM and CJS (and the application is not bundled), use the following approach to determine the module reference at runtime and pass it to all helpers.
+
+```ts
+import { isProcessMain } from 'emitnlog/utils';
+
+const moduleReference =
+  typeof __filename === 'string'
+    ? __filename
+    : typeof import.meta === 'object' && import.meta?.url
+      ? import.meta.url
+      : undefined;
+
+if (isProcessMain(moduleReference)) {
+  void main();
+}
+```
 
 #### Use Cases
 
@@ -927,7 +958,7 @@ async function processFiles(pattern: string) {
 }
 
 // Only run when executed directly
-if (isProcessMain()) {
+if (isProcessMain(import.meta.url)) {
   const pattern = process.argv[2] || '*.txt';
   await processFiles(pattern);
 }
@@ -938,7 +969,7 @@ export { processFiles };
 
 ### runProcessMain
 
-Wraps the main entry point of a NodeJS process with automatic lifecycle management.
+Wraps the main entry point of a NodeJS process with automatic lifecycle management. See the documentation for [isProcessMain](#isprocessmain) for a description of the first argument `moduleReference`.
 
 This helper checks if the current module is the process entry point (via `isProcessMain`), and if so, executes the provided async function with:
 
@@ -950,7 +981,7 @@ This helper checks if the current module is the process entry point (via `isProc
 ```ts
 import { runProcessMain } from 'emitnlog/utils';
 
-runProcessMain(async ({ start }) => {
+runProcessMain(import.meta.url, async ({ start }) => {
   const args = process.argv.slice(2);
   console.log(`CLI started at ${start}`);
 
@@ -960,6 +991,10 @@ runProcessMain(async ({ start }) => {
   // Process exits normally (code 0) on success
   // Process exits with code 1 if this throws/rejects
 });
+
+// CommonJS example:
+// const { runProcessMain } = require('emitnlog/utils');
+// runProcessMain(__filename, async ({ start }) => { ... });
 ```
 
 The argument passed to the "main" function is an object with the following properties:
@@ -974,6 +1009,7 @@ import { createConsoleErrorLogger, withPrefix } from 'emitnlog/logger';
 import { runProcessMain } from 'emitnlog/utils';
 
 runProcessMain(
+  import.meta.url,
   async ({ start, closer }) => {
     // Create your main logger
     const logger = createLogger(`app-${start.valueOf()}`);
@@ -1000,13 +1036,13 @@ The `logger` option can be:
 #### Advanced Usage
 
 ```ts
-import { runProcessMain, onProcessExit, createCloser } from 'emitnlog/utils';
+import { runProcessMain, onProcessExit } from 'emitnlog/utils';
 import { createFileLogger } from 'emitnlog/logger';
 
 runProcessMain(
-  async (start) => {
+  import.meta.url,
+  async ({ start, closer }) => {
     const logger = createFileLogger('info', './logs/app.log');
-    const closer = createCloser();
 
     // Register cleanup for process signals
     closer.add(

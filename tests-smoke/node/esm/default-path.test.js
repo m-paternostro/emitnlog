@@ -46,6 +46,6 @@ describe('ESM path imports', () => {
     expect(typeof emptyArray).toBe('function');
 
     expect(typeof runProcessMain).toBe('function');
-    expect(isProcessMain()).toBe(false);
+    expect(isProcessMain(import.meta.url)).toBe(false);
   });
 });

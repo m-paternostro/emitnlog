@@ -41,6 +41,6 @@ describe('CJS Flat imports', () => {
     expect(typeof emitnlog.emptyArray).toBe('function');
 
     expect(typeof emitnlog.runProcessMain).toBe('function');
-    expect(emitnlog.isProcessMain()).toBe(false);
+    expect(emitnlog.isProcessMain(__filename)).toBe(false);
   });
 });
