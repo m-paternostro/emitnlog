@@ -22,7 +22,8 @@
     "Paternostro",
     "stringifiable",
     "stringifier",
-    "Stringifier"
+    "Stringifier",
+    "unregisters"
   ],
   "diffEditor.ignoreTrimWhitespace": true,
   "editor.bracketPairColorization.enabled": true,

@@ -8,6 +8,8 @@ import { isProcessMain, onProcessExit, runProcessMain } from '../../../src/utils
 import inner from '../../../src/utils/node/process-lifecycle.ts';
 import { createTestLogger } from '../../test-kit.ts';
 
+const moduleReference = import.meta.url;
+
 describe('emitnlog.utils.node.process-lifecycle', () => {
   describe('isProcessMain', () => {
     afterEach(() => {
@@ -15,17 +17,32 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
     });
 
     test('returns false when process.argv[1] does not match current file', () => {
-      expect(isProcessMain()).toBe(false);
+      expect(isProcessMain(moduleReference)).toBe(false);
+    });
+
+    test('returns false when module reference is undefined', () => {
+      expect(isProcessMain(undefined)).toBe(false);
+    });
+
+    test('returns false when module reference is dynamically determined', () => {
+      const dynamicModuleReference =
+        typeof __filename === 'string'
+          ? __filename
+          : typeof import.meta === 'object' && import.meta.url
+            ? import.meta.url
+            : undefined;
+
+      expect(isProcessMain(dynamicModuleReference)).toBe(false);
     });
 
     test('returns true when test hook forces it', () => {
       inner[Symbol.for('@emitnlog:test')].processMain = true;
-      expect(isProcessMain()).toBe(true);
+      expect(isProcessMain(moduleReference)).toBe(true);
     });
 
     test('returns false when test hook forces it', () => {
       inner[Symbol.for('@emitnlog:test')].processMain = false;
-      expect(isProcessMain()).toBe(false);
+      expect(isProcessMain(moduleReference)).toBe(false);
     });
   });
 
@@ -43,7 +60,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       const mainSpy = vi.fn().mockResolvedValue(undefined);
       const startTime = Date.now();
 
-      runProcessMain(mainSpy);
+      runProcessMain(moduleReference, mainSpy);
 
       // Wait for the async operation to complete
       await vi.waitFor(() => {
@@ -66,12 +83,22 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
 
       const mainSpy = vi.fn().mockResolvedValue(undefined);
 
-      runProcessMain(mainSpy);
+      runProcessMain(moduleReference, mainSpy);
 
       // Give it time to potentially execute (it shouldn't)
       await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(mainSpy).not.toHaveBeenCalled();
+    });
+
+    test('executes main function when module reference is undefined and current file is the entry point', async () => {
+      const mainSpy = vi.fn().mockResolvedValue(undefined);
+
+      runProcessMain(undefined, mainSpy);
+
+      await vi.waitFor(() => {
+        expect(mainSpy).toHaveBeenCalledOnce();
+      });
     });
 
     test('calls process.exit(1) when main function throws synchronously', async () => {
@@ -81,7 +108,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
         throw error;
       });
 
-      runProcessMain(mainSpy, { logger: OFF_LOGGER });
+      runProcessMain(moduleReference, mainSpy, { logger: OFF_LOGGER });
 
       await vi.waitFor(() => {
         expect(exitSpy).toHaveBeenCalledWith(1);
@@ -95,7 +122,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       const error = new Error('Async failure');
       const mainSpy = vi.fn().mockRejectedValue(error);
 
-      runProcessMain(mainSpy, { logger: OFF_LOGGER });
+      runProcessMain(moduleReference, mainSpy, { logger: OFF_LOGGER });
 
       await vi.waitFor(() => {
         expect(exitSpy).toHaveBeenCalledWith(1);
@@ -108,7 +135,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       const logger = createTestLogger();
       const mainSpy = vi.fn().mockResolvedValue(undefined);
 
-      runProcessMain(mainSpy, { logger });
+      runProcessMain(moduleReference, mainSpy, { logger });
 
       await vi.waitFor(() => {
         expect(mainSpy).toHaveBeenCalledOnce();
@@ -121,7 +148,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       const loggerFactorySpy = vi.fn().mockReturnValue(OFF_LOGGER);
       const mainSpy = vi.fn().mockResolvedValue(undefined);
 
-      runProcessMain(mainSpy, { logger: loggerFactorySpy });
+      runProcessMain(moduleReference, mainSpy, { logger: loggerFactorySpy });
 
       await vi.waitFor(() => {
         expect(mainSpy).toHaveBeenCalledOnce();
@@ -138,7 +165,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
 
       const mainSpy = vi.fn().mockResolvedValue(undefined);
 
-      runProcessMain(mainSpy, { logger });
+      runProcessMain(moduleReference, mainSpy, { logger });
 
       await vi.waitFor(() => {
         expect(mainSpy).toHaveBeenCalledOnce();
@@ -157,7 +184,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       const error = new Error('Test error');
       const mainSpy = vi.fn().mockRejectedValue(error);
 
-      runProcessMain(mainSpy, { logger });
+      runProcessMain(moduleReference, mainSpy, { logger });
 
       await vi.waitFor(() => {
         expect(exitSpy).toHaveBeenCalledWith(1);
@@ -172,7 +199,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
         closer.add(resource);
       });
 
-      runProcessMain(mainSpy, { logger: OFF_LOGGER });
+      runProcessMain(moduleReference, mainSpy, { logger: OFF_LOGGER });
 
       await vi.waitFor(() => {
         expect(mainSpy).toHaveBeenCalledOnce();
@@ -193,7 +220,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
         throw error;
       });
 
-      runProcessMain(mainSpy, { logger: OFF_LOGGER });
+      runProcessMain(moduleReference, mainSpy, { logger: OFF_LOGGER });
 
       await vi.waitFor(() => {
         expect(exitSpy).toHaveBeenCalledWith(1);
@@ -212,7 +239,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
 
       const mainSpy = vi.fn().mockResolvedValue(undefined);
 
-      runProcessMain(mainSpy, { logger });
+      runProcessMain(moduleReference, mainSpy, { logger });
 
       await vi.waitFor(() => {
         expect(mainSpy).toHaveBeenCalledOnce();
@@ -235,7 +262,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       const error = new Error('Main error');
       const mainSpy = vi.fn().mockRejectedValue(error);
 
-      runProcessMain(mainSpy, { logger });
+      runProcessMain(moduleReference, mainSpy, { logger });
 
       await vi.waitFor(() => {
         expect(exitSpy).toHaveBeenCalledWith(1);

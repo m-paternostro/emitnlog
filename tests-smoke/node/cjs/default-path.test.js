@@ -46,6 +46,6 @@ describe('CJS path imports', () => {
     expect(typeof createDeferredValue).toBe('function');
     expect(typeof emptyArray).toBe('function');
     expect(typeof runProcessMain).toBe('function');
-    expect(isProcessMain()).toBe(false);
+    expect(isProcessMain(__filename)).toBe(false);
   });
 });

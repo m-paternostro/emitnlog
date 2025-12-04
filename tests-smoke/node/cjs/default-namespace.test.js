@@ -42,6 +42,6 @@ describe('CJS namespace imports', () => {
     expect(typeof utils.emptyArray).toBe('function');
 
     expect(typeof utils.runProcessMain).toBe('function');
-    expect(utils.isProcessMain()).toBe(false);
+    expect(utils.isProcessMain(__filename)).toBe(false);
   });
 });
