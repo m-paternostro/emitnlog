@@ -2,6 +2,7 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createConsoleErrorLogger } from '../../src/logger/index.ts';
+import { jsonParse } from '../../src/utils/index.ts';
 
 describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
   let consoleErrorSpy: MockInstance<typeof console.error>;
@@ -54,9 +55,9 @@ describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     const jsonOutput = consoleErrorSpy.mock.calls[0][0] as string;
-    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+    expect(() => jsonParse(jsonOutput)).not.toThrow();
 
-    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonOutput);
     expect(parsed.message).toBe('JSON test message');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -70,10 +71,10 @@ describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
 
     const jsonOutput = consoleErrorSpy.mock.calls[0][0] as string;
-    expect(() => JSON.parse(jsonOutput) as unknown).not.toThrow();
+    expect(() => jsonParse(jsonOutput)).not.toThrow();
     expect(jsonOutput).not.toContain('\n'); // Should be compact
 
-    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonOutput);
     expect(parsed.message).toBe('Unformatted JSON test message');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -90,7 +91,7 @@ describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
     expect(consoleErrorSpy.mock.calls[0].length).toBeGreaterThan(1);
 
     const jsonOutput = consoleErrorSpy.mock.calls[0][0] as string;
-    const parsed = JSON.parse(jsonOutput) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonOutput);
     expect(parsed.message).toBe('User action failed');
     expect(parsed.level).toBe('error');
 

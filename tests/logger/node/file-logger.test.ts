@@ -188,7 +188,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     await jsonLogger.close();
 
     const jsonContent = await readLogFile(jsonLogFile);
-    const parsed = JSON.parse(jsonContent.trim()) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(jsonContent.trim());
     expect(parsed.message).toBe('JSON format test');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -250,7 +250,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     await optionsLogger.close();
 
     const optionsContent = await readLogFile(path.join(testDir, 'options-format.log'));
-    const parsed = JSON.parse(optionsContent.trim()) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(optionsContent.trim());
     expect(parsed.message).toBe('Options format test');
 
     // Test that parameter format works with string path
@@ -262,7 +262,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     const paramContent = await readLogFile(path.join(testDir, 'param-format.log'));
     const lines = paramContent.trim().split('\n');
     expect(lines.length).toBe(1);
-    const paramParsed = JSON.parse(lines[0]) as Record<string, unknown>;
+    const paramParsed = jsonParse<Record<string, unknown>>(lines[0]);
     expect(paramParsed.message).toBe('Parameter format test');
   });
 
@@ -302,7 +302,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
         // Should be valid JSON
         const lines = content.trim().split('\n');
         const firstLine = format === 'json-pretty' ? content.trim() : lines[0];
-        const parsed = JSON.parse(firstLine) as Record<string, unknown>;
+        const parsed = jsonParse<Record<string, unknown>>(firstLine);
         expect(parsed.message).toBe(`Testing ${description}`);
         expect(parsed.level).toBe('info');
       } else {
@@ -321,7 +321,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     const content = await readLogFile();
 
     // Should contain valid JSON (pretty-printed, so parse the whole content)
-    const parsed = JSON.parse(content.trim()) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(content.trim());
     expect(parsed.message).toBe('JSON test message');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -342,7 +342,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     const lines = content.trim().split('\n');
     expect(lines.length).toBe(1);
 
-    const parsed = JSON.parse(lines[0]) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(lines[0]);
     expect(parsed.message).toBe('Unformatted JSON test message');
     expect(parsed.level).toBe('info');
     expect(parsed.timestamp).toBeDefined();
@@ -362,7 +362,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
     const content = await readLogFile();
 
-    const parsed = JSON.parse(content.trim()) as Record<string, unknown>;
+    const parsed = jsonParse<Record<string, unknown>>(content.trim());
     expect(parsed.message).toBe('User logged in');
     expect(parsed.level).toBe('info');
     expect(parsed.args).toEqual([context, additionalData]);
