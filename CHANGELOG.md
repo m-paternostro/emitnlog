@@ -1,5 +1,26 @@
 # emitnlog
 
+## 0.11.0
+
+### Minor Changes
+
+- efa23d8: Add `closer.addAll` to allow for adding multiple closable
+- e819696: Use the term 'ndjson' instead of 'json-compact'
+- 813cce3: Remove the `layout` option for the file logger: it is too confusing and error prone.
+- 659c7ad: Allow asSafeClosable to handle ClosableLike
+- 2eb7024: Add new utilities to handle code that is meant to be executed a the main entry point of the process or that needs to react to process exit signals.
+- 987b536: Add `safeClose` utility
+- 69e016b: Add `notifier.close` to indicate if the notifier has been closed and not activated again
+- 2e4ecc6: FileLogger does not throw errors by default now
+- 7a5cc40: Object parameter for `runProcessMain` passing the start date and a closer
+- 5cc74ee: Add `createSyncCloser` for sync closables
+
+### Patch Changes
+
+- 1e78eff: Export SwitchType
+- 0e5bca1: Add `jsonStringify` to eliminating most runtime failures that may happen when calling `JSON.stringify()`
+- 859e7f1: Remove the `editor.multiCursorModifier` setting so "cmd+click" goes to the definition as expected
+
 ## 0.10.1
 
 ### Patch Changes
