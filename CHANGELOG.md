@@ -1,5 +1,15 @@
 # emitnlog
 
+## 0.12.0
+
+### Minor Changes
+
+- f664528: Pass the option logger as a property of the input of `runProcessMain`
+
+### Patch Changes
+
+- 76347a8: Fix `isProcessMain` for ESM
+
 ## 0.11.0
 
 ### Minor Changes
