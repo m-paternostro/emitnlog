@@ -47,50 +47,7 @@ export type FileSinkOptions = {
    * Error handler callback for file operations. If not provided, errors are ignored.
    */
   readonly errorHandler?: (error: unknown) => void;
-
-  /**
-   * A options to customize the content of the file.
-   */
-  readonly layout?: {
-    /**
-     * The content to write right before the first log entry written by the logger.
-     *
-     * The first log entry is appended immediately after this value, so this value should include any line break or
-     * other formatting needed.
-     *
-     * Important: the header is always written before the first entry, regardless of the value of the `overwrite`
-     * property.
-     */
-    readonly header?: string;
-
-    /**
-     * The content to write right after the last log entry written by the logger.
-     *
-     * The footer is appended immediately after the last log entry when the file sink is closed so this value should
-     * include any line break or other formatting needed.
-     *
-     * Important: the footer is only written if the sink is closed.
-     *
-     * @default '\n'
-     */
-    readonly footer?: string;
-
-    /**
-     * The delimiter to use between entries.
-     *
-     * @default '\n'
-     */
-    readonly entryLineDelimiter?: string;
-  };
 };
-
-/**
- * A layout to be used as `FileSinkOptions.layout` to output a valid JSON-like content if each entry is itself a valid
- * JSON object - like the entries provided by the `ndjsonFormatter` and `jsonPrettyFormatter` formatters.
- */
-export const JSON_LAYOUT = { header: '[\n', footer: '\n]', entryLineDelimiter: ',\n' } as const satisfies NonNullable<
-  FileSinkOptions['layout']
->;
 
 export type FileSink = Simplify<
   AsyncFinalizer<LogSink> & {
@@ -157,7 +114,6 @@ export const fileSink = (
     errorHandler: options?.errorHandler
       ? (error: unknown) => options.errorHandler!(errorify(error))
       : NO_OP_ERROR_HANDLER,
-    layout: { entryLineDelimiter: '\n', footer: '\n', ...options?.layout } as const,
   } as const satisfies FileSinkOptions;
 
   if (!filePath) {
@@ -216,13 +172,8 @@ export const fileSink = (
     writeQueue = writeQueue.then(() => writeMessage(message).catch((error: unknown) => config.errorHandler(error)));
   };
 
-  const header = config.layout.header;
-  if (header) {
-    queueMessage(header);
-  }
-
-  const lineDelimiter = config.layout.entryLineDelimiter;
-
+  const lineDelimiter = '\n';
+  const footer = lineDelimiter;
   return {
     sink: (level, message, args): void => {
       if (closed) {
@@ -253,11 +204,7 @@ export const fileSink = (
       }
 
       closed = true;
-
-      const footer = config.layout.footer;
-      if (footer) {
-        queueMessage(footer);
-      }
+      queueMessage(footer);
       await writeQueue;
     },
   };

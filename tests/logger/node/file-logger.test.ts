@@ -4,9 +4,9 @@ import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { delay } from '../../../src/index-node.ts';
+import { delay, jsonParse } from '../../../src/index-node.ts';
 import type { FileLoggerOptions, LogFormat } from '../../../src/logger/index-node.ts';
-import { createFileLogger, emitter, tee } from '../../../src/logger/index-node.ts';
+import { createFileLogger, tee } from '../../../src/logger/index-node.ts';
 
 describe('emitnlog.logger.node.FileLogger', () => {
   const TEST_FLUSH_DELAY = { flushDelayMs: 50 } as const satisfies FileLoggerOptions;
@@ -647,97 +647,14 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content).not.toContain('First logger message');
   });
 
-  describe('layout option', () => {
-    test('should write custom header at the start of the file', async () => {
-      const logger = createFileLogger(testLogFile, { layout: { header: '=== LOG START ===\n' } });
+  describe('json formatters', () => {
+    const convertToJsonArray = (content: string): unknown[] => {
+      const delimited = content.replaceAll('}\n{', '},\n{');
+      return jsonParse<unknown[]>(`[${delimited}]`);
+    };
 
-      logger.info('First entry');
-      logger.info('Second entry');
-      await logger.close();
-
-      const content = await readLogFile();
-      expect(content).toMatch(/^=== LOG START ===\n/);
-      expect(content).toContain('First entry\n');
-      expect(content).toContain('Second entry\n');
-    });
-
-    test('should write custom footer at the end when sink is closed', async () => {
-      const logger = createFileLogger(testLogFile, { layout: { footer: '\n=== LOG END ===' } });
-
-      logger.info('First entry');
-      logger.info('Second entry');
-
-      const beforeClose = await readLogFile();
-      expect(beforeClose).not.toContain('=== LOG END ===');
-
-      await logger.close();
-
-      const content = await readLogFile();
-      expect(content).toMatch(/\n=== LOG END ===$/);
-      expect(content).toContain('First entry\n');
-      expect(content).toContain('Second entry\n');
-    });
-
-    test('should use custom entryLineDelimiter between entries', async () => {
-      const logger = createFileLogger(testLogFile, { layout: { entryLineDelimiter: ' | ' } });
-
-      logger.info('Entry 1');
-      logger.info('Entry 2');
-      logger.info('Entry 3');
-      await logger.close();
-
-      const content = await readLogFile();
-      // Should have pipes between entries, but not after the last one
-      const entryCount = (content.match(/ \| /g) ?? []).length;
-      expect(entryCount).toBe(2); // 3 entries means 2 delimiters
-      expect(content).toMatch(/Entry 1 \| .+Entry 2 \| .+Entry 3\n$/s);
-    });
-
-    test('should combine header, footer, and custom delimiter', async () => {
-      const logger = createFileLogger(testLogFile, {
-        layout: { header: '<!-- START -->\n', footer: '\n<!-- END -->', entryLineDelimiter: '\n---\n' },
-      });
-
-      logger.info('Log entry one');
-      logger.info('Log entry two');
-      await logger.close();
-
-      const content = await readLogFile();
-
-      // Check header at the start
-      expect(content).toMatch(/^<!-- START -->\n/);
-
-      // Check footer at the end
-      expect(content).toMatch(/\n<!-- END -->$/);
-
-      // Check delimiter between entries - should have one delimiter, not after the last entry
-      const delimiterCount = (content.match(/\n---\n/g) ?? []).length;
-      expect(delimiterCount).toBe(1);
-      expect(content).toContain('Log entry one');
-      expect(content).toContain('Log entry two');
-      expect(content).toMatch(/Log entry one\n---\n[\s\S]+Log entry two/);
-    });
-
-    test('should not write footer if sink is not closed', async () => {
-      const logger = createFileLogger(testLogFile, { layout: { footer: '\n=== END ===' } });
-
-      logger.info('Test entry');
-      await logger.flush();
-
-      const content = await readLogFile();
-      expect(content).toContain('Test entry');
-      expect(content).not.toContain('=== END ===');
-
-      // Close and verify footer is now present
-      await logger.close();
-      const finalContent = await readLogFile();
-      expect(finalContent).toContain('=== END ===');
-    });
-  });
-
-  describe('JSON_LAYOUT', () => {
     test('should produce valid JSON array with ndjson format', async () => {
-      const logger = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT });
+      const logger = createFileLogger(testLogFile, { format: 'ndjson' });
 
       logger.info('First message', { id: 1 });
       logger.warning('Second message', { id: 2 });
@@ -747,7 +664,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       const content = await readLogFile();
 
       // Should be a valid JSON array
-      const parsed = JSON.parse(content) as unknown[];
+      const parsed = convertToJsonArray(content);
       expect(Array.isArray(parsed)).toBe(true);
       expect(parsed).toHaveLength(3);
 
@@ -771,11 +688,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     });
 
     test('should produce valid JSON array with json-pretty format', async () => {
-      const logger = createFileLogger(testLogFile, {
-        level: 'debug',
-        format: 'json-pretty',
-        layout: emitter.JSON_LAYOUT,
-      });
+      const logger = createFileLogger(testLogFile, { level: 'debug', format: 'json-pretty' });
 
       logger.info('Pretty JSON message');
       logger.debug('Another message');
@@ -784,7 +697,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       const content = await readLogFile();
 
       // Should be a valid JSON array
-      const parsed = JSON.parse(content) as unknown[];
+      const parsed = convertToJsonArray(content);
       expect(Array.isArray(parsed)).toBe(true);
       expect(parsed).toHaveLength(2);
 
@@ -803,8 +716,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
       expect(content).toContain('\n  ');
     });
 
-    test('should handle single entry with JSON_LAYOUT', async () => {
-      const logger = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT });
+    test('should handle single entry', async () => {
+      const logger = createFileLogger(testLogFile, { format: 'ndjson' });
 
       logger.info('Single entry');
       await logger.close();
@@ -812,7 +725,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       const content = await readLogFile();
 
       // Should be a valid JSON array with one element
-      const parsed = JSON.parse(content) as unknown[];
+      const parsed = convertToJsonArray(content);
       expect(Array.isArray(parsed)).toBe(true);
       expect(parsed).toHaveLength(1);
 
@@ -822,8 +735,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
       expect(entry).not.toHaveProperty('args');
     });
 
-    test('should handle empty log file with JSON_LAYOUT', async () => {
-      const logger = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT });
+    test('should handle empty log file', async () => {
+      const logger = createFileLogger(testLogFile, { format: 'ndjson' });
 
       // Close immediately without logging anything
       await logger.close();
@@ -831,31 +744,31 @@ describe('emitnlog.logger.node.FileLogger', () => {
       const content = await readLogFile();
 
       // Should be a valid empty JSON array
-      const parsed = JSON.parse(content) as unknown[];
+      const parsed = convertToJsonArray(content);
       expect(Array.isArray(parsed)).toBe(true);
       expect(parsed).toHaveLength(0);
     });
 
-    test('should work with multiple loggers using JSON_LAYOUT and overwrite', async () => {
+    test('should work with multiple loggers using and overwrite', async () => {
       // First logger
-      const logger1 = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT, overwrite: true });
+      const logger1 = createFileLogger(testLogFile, { format: 'ndjson', overwrite: true });
 
       logger1.info('Logger 1 entry 1');
       logger1.info('Logger 1 entry 2');
       await logger1.close();
 
       const content1 = await readLogFile();
-      const parsed1 = JSON.parse(content1) as unknown[];
+      const parsed1 = convertToJsonArray(content1);
       expect(parsed1).toHaveLength(2);
 
       // Second logger (overwrites the first)
-      const logger2 = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT, overwrite: true });
+      const logger2 = createFileLogger(testLogFile, { format: 'ndjson', overwrite: true });
 
       logger2.warning('Logger 2 only entry');
       await logger2.close();
 
       const content2 = await readLogFile();
-      const parsed2 = JSON.parse(content2) as unknown[];
+      const parsed2 = convertToJsonArray(content2);
       expect(parsed2).toHaveLength(1);
 
       const entry = parsed2[0] as Record<string, unknown>;
