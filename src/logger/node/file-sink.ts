@@ -44,7 +44,7 @@ export type FileSinkOptions = {
   readonly mode?: number;
 
   /**
-   * Error handler callback for file operations If not provided, errors will be thrown
+   * Error handler callback for file operations. If not provided, errors are ignored.
    */
   readonly errorHandler?: (error: unknown) => void;
 
@@ -95,7 +95,7 @@ export const JSON_LAYOUT = { header: '[\n', footer: '\n]', entryLineDelimiter: '
 export type FileSink = Simplify<
   AsyncFinalizer<LogSink> & {
     /**
-     * The path to the log file
+     * The path to the log file.
      */
     readonly filePath: string;
   }
@@ -149,22 +149,21 @@ export const fileSink = (
   formatter: LogFormatter = plainFormatter,
   options?: FileSinkOptions,
 ): FileSink => {
-  if (!filePath) {
-    throw new Error('InvalidArgument: file path is required');
-  }
-
   const config = {
     datePrefix: options?.datePrefix ?? false,
     overwrite: options?.overwrite ?? false,
     encoding: options?.encoding ?? 'utf8',
     mode: options?.mode ?? 0o666,
-    errorHandler:
-      options?.errorHandler ??
-      ((error) => {
-        throw errorify(error);
-      }),
+    errorHandler: options?.errorHandler
+      ? (error: unknown) => options.errorHandler!(errorify(error))
+      : NO_OP_ERROR_HANDLER,
     layout: { entryLineDelimiter: '\n', footer: '\n', ...options?.layout } as const,
   } as const satisfies FileSinkOptions;
+
+  if (!filePath) {
+    config.errorHandler(new Error('InvalidArgument: file path is required'));
+    return { sink: () => void 0, filePath: '', flush: () => Promise.resolve(), close: () => Promise.resolve() };
+  }
 
   let resolvedPath: string;
   if (filePath.includes(path.sep)) {
@@ -263,3 +262,5 @@ export const fileSink = (
     },
   };
 };
+
+const NO_OP_ERROR_HANDLER = (): void => void 0;

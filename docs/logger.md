@@ -224,6 +224,8 @@ const jsonLogger = createFileLogger('/var/log/my-app.log', 'warning', 'json-comp
 jsonLogger.e`Database connection error: ${new Error('Connection timeout')}`;
 ```
 
+Important: by default the file logger does not throw any errors to ensure that the application is not affected if a file operation is unsuccessful. See the documentation on how to use an `errorHandler` when this behavior is not applicable.
+
 ### File Logger Factory Function
 
 ```ts
