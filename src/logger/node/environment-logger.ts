@@ -33,7 +33,7 @@ import { createFileLogger } from './factory.ts';
  * The possible values are
  *   - `plain`
  *   - `colorful`
- *   - `json-compact`
+ *   - `ndjson`
  *   - `json-pretty`
  * ```
  *

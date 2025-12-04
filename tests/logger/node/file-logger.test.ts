@@ -254,7 +254,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(parsed.message).toBe('Options format test');
 
     // Test that parameter format works with string path
-    const paramLogger = createFileLogger(path.join(testDir, 'param-format.log'), 'info', 'json-compact');
+    const paramLogger = createFileLogger(path.join(testDir, 'param-format.log'), 'info', 'ndjson');
 
     paramLogger.info('Parameter format test');
     await paramLogger.close();
@@ -271,7 +271,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       { format: 'plain', description: 'plain format' },
       { format: 'colorful', description: 'colorful format' },
       { format: 'json-pretty', description: 'JSON format' },
-      { format: 'json-compact', description: 'unformatted JSON format' },
+      { format: 'ndjson', description: 'NDJSON format' },
     ];
 
     // Create all loggers and log messages
@@ -298,7 +298,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       expect(content).toContain(`Testing ${description}`);
 
       // Format-specific assertions
-      if (format === 'json-pretty' || format === 'json-compact') {
+      if (format === 'json-pretty' || format === 'ndjson') {
         // Should be valid JSON
         const lines = content.trim().split('\n');
         const firstLine = format === 'json-pretty' ? content.trim() : lines[0];
@@ -331,7 +331,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   test('should work with unformatted JSON format', async () => {
-    const logger = createFileLogger(testLogFile, { format: 'json-compact' });
+    const logger = createFileLogger(testLogFile, { format: 'ndjson' });
 
     logger.info('Unformatted JSON test message');
     await logger.close();
@@ -736,8 +736,8 @@ describe('emitnlog.logger.node.FileLogger', () => {
   });
 
   describe('JSON_LAYOUT', () => {
-    test('should produce valid JSON array with json-compact format', async () => {
-      const logger = createFileLogger(testLogFile, { format: 'json-compact', layout: emitter.JSON_LAYOUT });
+    test('should produce valid JSON array with ndjson format', async () => {
+      const logger = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT });
 
       logger.info('First message', { id: 1 });
       logger.warning('Second message', { id: 2 });
@@ -804,7 +804,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     });
 
     test('should handle single entry with JSON_LAYOUT', async () => {
-      const logger = createFileLogger(testLogFile, { format: 'json-compact', layout: emitter.JSON_LAYOUT });
+      const logger = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT });
 
       logger.info('Single entry');
       await logger.close();
@@ -823,7 +823,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
     });
 
     test('should handle empty log file with JSON_LAYOUT', async () => {
-      const logger = createFileLogger(testLogFile, { format: 'json-compact', layout: emitter.JSON_LAYOUT });
+      const logger = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT });
 
       // Close immediately without logging anything
       await logger.close();
@@ -838,11 +838,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
 
     test('should work with multiple loggers using JSON_LAYOUT and overwrite', async () => {
       // First logger
-      const logger1 = createFileLogger(testLogFile, {
-        format: 'json-compact',
-        layout: emitter.JSON_LAYOUT,
-        overwrite: true,
-      });
+      const logger1 = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT, overwrite: true });
 
       logger1.info('Logger 1 entry 1');
       logger1.info('Logger 1 entry 2');
@@ -853,11 +849,7 @@ describe('emitnlog.logger.node.FileLogger', () => {
       expect(parsed1).toHaveLength(2);
 
       // Second logger (overwrites the first)
-      const logger2 = createFileLogger(testLogFile, {
-        format: 'json-compact',
-        layout: emitter.JSON_LAYOUT,
-        overwrite: true,
-      });
+      const logger2 = createFileLogger(testLogFile, { format: 'ndjson', layout: emitter.JSON_LAYOUT, overwrite: true });
 
       logger2.warning('Logger 2 only entry');
       await logger2.close();

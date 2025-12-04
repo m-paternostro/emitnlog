@@ -39,10 +39,10 @@ emergency - System is unusable
 Defines the format used to emit a log entry.
 
 ```
-plain         - One plain text line per entry, no styling.
-colorful      - ANSI-colored line, ideal for dev terminals.
-json-compact  - Compact JSON line, raw and delimiter-safe.
-json-pretty   - Pretty-printed JSON with indentation.
+plain        - One plain text line per entry, no styling.
+colorful     - ANSI-colored line, ideal for dev terminals.
+ndjson       - NDJSON format, in which each line is a proper JSON Object, raw and delimiter-safe.
+json-pretty  - Pretty-printed JSON with indentation.
 ```
 
 ## Template Logging
@@ -220,7 +220,7 @@ const logger = createFileLogger('app.log', 'debug');
 logger.i`Application started at ${new Date()}`;
 
 // With custom format
-const jsonLogger = createFileLogger('/var/log/my-app.log', 'warning', 'json-compact');
+const jsonLogger = createFileLogger('/var/log/my-app.log', 'warning', 'ndjson');
 jsonLogger.e`Database connection error: ${new Error('Connection timeout')}`;
 ```
 
@@ -299,7 +299,7 @@ import { createConsoleLogLogger, fromEnv } from 'emitnlog/logger';
 // With fallback options
 const logger = fromEnv({
   level: 'info', // Default level if EMITNLOG_LEVEL not set
-  format: 'json-compact', // Default format if EMITNLOG_FORMAT not set
+  format: 'ndjson', // Default format if EMITNLOG_FORMAT not set
   fallbackLogger: () => createConsoleLogLogger(),
 });
 
@@ -330,7 +330,7 @@ EMITNLOG_FORMAT=colorful
 # Production (.env.production)
 EMITNLOG_LOGGER=file:/var/log/app.log
 EMITNLOG_LEVEL=warning
-EMITNLOG_FORMAT=json-compact
+EMITNLOG_FORMAT=ndjson
 
 # Testing (.env.test)
 EMITNLOG_LOGGER=console-error
@@ -560,7 +560,7 @@ import { emitter } from 'emitnlog/logger';
 const formatters = {
   plain: emitter.plainFormatter,
   colorful: emitter.colorfulFormatter,
-  jsonCompact: emitter.jsonCompactFormatter,
+  ndjson: emitter.ndjsonFormatter,
   jsonPretty: emitter.jsonPrettyFormatter,
   basic: emitter.basicFormatter,
 };

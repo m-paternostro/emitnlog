@@ -60,8 +60,8 @@ describe('emitnlog.logger.factory', () => {
       expect(consoleLogSpy).toHaveBeenCalledWith('2024-01-15T12:30:45.123Z [info     ] Test message');
     });
 
-    test('should support json-compact format', () => {
-      const logger = createConsoleLogLogger('info', 'json-compact');
+    test('should support ndjson format', () => {
+      const logger = createConsoleLogLogger('info', 'ndjson');
 
       logger.info('Test message', 'arg1', 42);
 
@@ -128,7 +128,7 @@ describe('emitnlog.logger.factory', () => {
 
     test('should support all formats', () => {
       const plainLogger = createConsoleErrorLogger('info', 'plain');
-      const jsonLogger = createConsoleErrorLogger('info', 'json-compact');
+      const jsonLogger = createConsoleErrorLogger('info', 'ndjson');
 
       plainLogger.info('Plain');
       jsonLogger.info('JSON');
@@ -222,7 +222,7 @@ describe('emitnlog.logger.factory', () => {
     test('should return correct formatter for each format', () => {
       const plainFormatter = toLogFormatter('plain');
       const colorfulFormatter = toLogFormatter('colorful');
-      const jsonCompactFormatter = toLogFormatter('json-compact');
+      const ndjsonFormatter = toLogFormatter('ndjson');
       const jsonPrettyFormatter = toLogFormatter('json-pretty');
 
       const testLevel: LogLevel = 'info';
@@ -231,7 +231,7 @@ describe('emitnlog.logger.factory', () => {
 
       expect(plainFormatter(testLevel, testMessage, testArgs)).toContain('[info     ]');
       expect(colorfulFormatter(testLevel, testMessage, testArgs)).toMatch(/\x1b\[\d+m/);
-      expect(jsonCompactFormatter(testLevel, testMessage, testArgs)).toContain('"level":"info"');
+      expect(ndjsonFormatter(testLevel, testMessage, testArgs)).toContain('"level":"info"');
       expect(jsonPrettyFormatter(testLevel, testMessage, testArgs)).toContain('\n');
     });
   });

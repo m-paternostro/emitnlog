@@ -134,9 +134,9 @@ describe('emitnlog.logger.emitter.formatter', () => {
     });
   });
 
-  describe('jsonCompactFormatter', () => {
+  describe('ndjsonFormatter', () => {
     test('should format as compact JSON', () => {
-      const formatted = emitter.jsonCompactFormatter('info', 'Test message', []);
+      const formatted = emitter.ndjsonFormatter('info', 'Test message', []);
       const parsed = JSON.parse(formatted);
 
       expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
@@ -144,21 +144,21 @@ describe('emitnlog.logger.emitter.formatter', () => {
 
     test('should include args in JSON', () => {
       const args = ['string', 42, { key: 'value' }, true];
-      const formatted = emitter.jsonCompactFormatter('error', 'Error occurred', args);
+      const formatted = emitter.ndjsonFormatter('error', 'Error occurred', args);
       const parsed = JSON.parse(formatted);
 
       expect(parsed).toEqual({ level: 'error', message: 'Error occurred', args: args, timestamp: expect.any(Number) });
     });
 
     test('should produce single-line JSON', () => {
-      const formatted = emitter.jsonCompactFormatter('info', 'Message', [{ nested: { deep: 'value' } }]);
+      const formatted = emitter.ndjsonFormatter('info', 'Message', [{ nested: { deep: 'value' } }]);
       expect(formatted).not.toContain('\n');
       expect(formatted.startsWith('{')).toBe(true);
       expect(formatted.endsWith('}')).toBe(true);
     });
 
     test('should handle special characters in message', () => {
-      const formatted = emitter.jsonCompactFormatter('info', 'Line\nwith\ttabs"quotes"', []);
+      const formatted = emitter.ndjsonFormatter('info', 'Line\nwith\ttabs"quotes"', []);
       const parsed = JSON.parse(formatted) as { message: string };
 
       expect(parsed.message).toBe('Line\nwith\ttabs"quotes"');
@@ -172,7 +172,7 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const circular: CircularObject = { name: 'circular' };
       circular.self = circular;
 
-      const formatted = emitter.jsonCompactFormatter('info', 'Circular ref', [circular]);
+      const formatted = emitter.ndjsonFormatter('info', 'Circular ref', [circular]);
       const parsed = JSON.parse(formatted) as { level: string; message: string; args: unknown[] };
 
       expect(parsed.level).toBe('info');

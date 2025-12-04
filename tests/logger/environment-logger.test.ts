@@ -109,11 +109,11 @@ describe('emitnlog.logger.environment-logger', () => {
         const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
         process.env.EMITNLOG_LEVEL = 'warning';
-        process.env.EMITNLOG_FORMAT = 'json-compact';
+        process.env.EMITNLOG_FORMAT = 'ndjson';
 
         fromEnv({ level: 'info', format: 'plain', fallbackLogger: fallbackLoggerSpy });
 
-        expect(fallbackLoggerSpy).toHaveBeenCalledWith('warning', 'json-compact');
+        expect(fallbackLoggerSpy).toHaveBeenCalledWith('warning', 'ndjson');
       });
 
       test('should pass options level and format to fallbackLogger when env vars not set', () => {
@@ -286,7 +286,7 @@ describe('emitnlog.logger.environment-logger', () => {
 
     describe('EMITNLOG_FORMAT environment variable', () => {
       test('should use valid formats from environment', () => {
-        const formats = ['plain', 'colorful', 'json-compact', 'json-pretty'] as const;
+        const formats = ['plain', 'colorful', 'ndjson', 'json-pretty'] as const;
 
         formats.forEach((format) => {
           process.env.EMITNLOG_LOGGER = 'console-log';
@@ -328,11 +328,11 @@ describe('emitnlog.logger.environment-logger', () => {
 
       test('should prefer environment format over options format', () => {
         process.env.EMITNLOG_LOGGER = 'console-log';
-        process.env.EMITNLOG_FORMAT = 'json-compact';
+        process.env.EMITNLOG_FORMAT = 'ndjson';
 
         fromEnv({ format: 'plain' });
 
-        // Should not warn since 'json-compact' is valid
+        // Should not warn since 'ndjson' is valid
         expect(mockConsoleWarn).not.toHaveBeenCalled();
       });
     });
@@ -352,25 +352,25 @@ describe('emitnlog.logger.environment-logger', () => {
       test('should create FileLogger with level and format', () => {
         process.env.EMITNLOG_LOGGER = 'file:test.log';
         process.env.EMITNLOG_LEVEL = 'warning';
-        process.env.EMITNLOG_FORMAT = 'json-compact';
+        process.env.EMITNLOG_FORMAT = 'ndjson';
 
         fromEnv();
 
         expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('test.log', {
           datePrefix: undefined,
           level: 'warning',
-          format: 'json-compact',
+          format: 'ndjson',
         });
       });
 
       test('should handle mix of valid and invalid environment variables', () => {
         process.env.EMITNLOG_LOGGER = 'console-log';
         process.env.EMITNLOG_LEVEL = 'invalid-level';
-        process.env.EMITNLOG_FORMAT = 'json-compact';
+        process.env.EMITNLOG_FORMAT = 'ndjson';
 
         const logger = fromEnv({ level: 'debug' });
 
-        expect(factory.createConsoleLogLogger).toHaveBeenCalledWith('debug', 'json-compact');
+        expect(factory.createConsoleLogLogger).toHaveBeenCalledWith('debug', 'ndjson');
         expect(logger.level).toBe('debug'); // Falls back to options level
         expect(mockConsoleWarn).toHaveBeenCalledWith(
           "The value of the environment variable 'EMITNLOG_LEVEL' is not a valid level: 'invalid-level'.\nConsult the emitnlog documentation for the list of valid levels.",
@@ -476,10 +476,10 @@ describe('emitnlog.logger.environment-logger', () => {
         const fallbackLogger = createTestLogger();
         const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
-        const logger = fromEnv({ level: 'alert', format: 'json-compact', fallbackLogger: fallbackLoggerSpy });
+        const logger = fromEnv({ level: 'alert', format: 'ndjson', fallbackLogger: fallbackLoggerSpy });
 
         expect(logger).toBe(fallbackLogger);
-        expect(fallbackLoggerSpy).toHaveBeenCalledWith('alert', 'json-compact');
+        expect(fallbackLoggerSpy).toHaveBeenCalledWith('alert', 'ndjson');
       });
     });
   });
@@ -495,11 +495,11 @@ describe('emitnlog.logger.environment-logger', () => {
       const fallbackLoggerSpy = vi.fn((..._args: unknown[]) => fallbackLogger);
 
       process.env.EMITNLOG_LEVEL = 'warning';
-      process.env.EMITNLOG_FORMAT = 'json-compact';
+      process.env.EMITNLOG_FORMAT = 'ndjson';
 
       neutralFromEnv({ level: 'info', format: 'plain', fallbackLogger: fallbackLoggerSpy });
 
-      expect(fallbackLoggerSpy).toHaveBeenCalledWith('warning', 'json-compact');
+      expect(fallbackLoggerSpy).toHaveBeenCalledWith('warning', 'ndjson');
     });
 
     test('should create console-log logger when EMITNLOG_LOGGER is "console-log"', () => {
@@ -557,14 +557,14 @@ describe('emitnlog.logger.environment-logger', () => {
     test('should create FileLogger that can be used', () => {
       process.env.EMITNLOG_LOGGER = 'file:test.log';
       process.env.EMITNLOG_LEVEL = 'debug';
-      process.env.EMITNLOG_FORMAT = 'json-compact';
+      process.env.EMITNLOG_FORMAT = 'ndjson';
 
       const logger = fromEnv();
 
       expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('test.log', {
         datePrefix: undefined,
         level: 'debug',
-        format: 'json-compact',
+        format: 'ndjson',
       });
 
       expect(() => {
@@ -594,7 +594,7 @@ describe('emitnlog.logger.environment-logger', () => {
       // Simulate a real application setup
       process.env.EMITNLOG_LOGGER = 'file:logs/application.log';
       process.env.EMITNLOG_LEVEL = 'info';
-      process.env.EMITNLOG_FORMAT = 'json-compact';
+      process.env.EMITNLOG_FORMAT = 'ndjson';
 
       const fallbackLogger = createTestLogger();
 
@@ -607,7 +607,7 @@ describe('emitnlog.logger.environment-logger', () => {
       expect(nodeFactory.createFileLogger).toHaveBeenCalledWith('logs/application.log', {
         datePrefix: undefined,
         level: 'info',
-        format: 'json-compact',
+        format: 'ndjson',
       });
 
       expect(logger).not.toBe(fallbackLogger);

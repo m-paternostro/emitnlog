@@ -8,8 +8,8 @@ import type { LogFormatter } from './emitter/formatter.ts';
 import {
   basicFormatter,
   colorfulFormatter,
-  jsonCompactFormatter,
   jsonPrettyFormatter,
+  ndjsonFormatter,
   plainFormatter,
 } from './emitter/formatter.ts';
 import type { BaseLoggerOptions } from './implementation/base-logger.ts';
@@ -20,10 +20,10 @@ import { injectPrefixInformation, isPrefixedLogger } from './prefixed-logger.ts'
  *
  * - 'plain': The line is emitted as a plain string.
  * - 'colorful': The line is emitted with ANSI color codes.
- * - 'json-compact': The line is emitted as a JSON string.
- * - 'json-pretty': The line is emitted as a formatted JSON string.
+ * - 'ndjson': The line is emitted as a single line JSON Object.
+ * - 'json-pretty': The line is emitted as a multi-line, formatted JSON Object.
  */
-export type LogFormat = 'plain' | 'colorful' | 'json-compact' | 'json-pretty';
+export type LogFormat = 'plain' | 'colorful' | 'ndjson' | 'json-pretty';
 
 /**
  * Creates a logger that emits log messages to standard output (console.log) with optional formatting.
@@ -44,7 +44,7 @@ export type LogFormat = 'plain' | 'colorful' | 'json-compact' | 'json-pretty';
  * @example With custom level and format
  *
  * ```ts
- * const logger = createConsoleLogLogger('debug', 'json-compact');
+ * const logger = createConsoleLogLogger('debug', 'ndjson');
  * logger.debug('Debug information', { userId: 123 });
  * ```
  *
@@ -78,9 +78,9 @@ export const createConsoleLogLogger = (
  * @example Production configuration
  *
  * ```ts
- * const logger = createConsoleErrorLogger('error', 'json-compact');
+ * const logger = createConsoleErrorLogger('error', 'ndjson');
  * logger.info("This won't be logged (below error level)");
- * logger.error('This will be logged as JSON to stderr');
+ * logger.error('This will be logged as NDJSON to stderr');
  * ```
  *
  * @param level The minimum log level (default: 'info')
@@ -116,7 +116,7 @@ export const createConsoleErrorLogger = (
  * @example Production configuration
  *
  * ```ts
- * const logger = createConsoleByLevelLogger('warning', 'json-compact');
+ * const logger = createConsoleByLevelLogger('warning', 'ndjson');
  * // Only warnings and above are logged, all to console.error as JSON
  * ```
  *
@@ -142,7 +142,7 @@ export const createConsoleByLevelLogger = (
  * ```ts
  * import { toLogFormatter } from 'emitnlog/logger';
  *
- * const formatter = toLogFormatter('json-compact');
+ * const formatter = toLogFormatter('ndjson');
  * const formatted = formatter('info', 'Hello world', []);
  * // formatted is a JSON string
  * ```
@@ -158,8 +158,8 @@ export const toLogFormatter = (format: LogFormat): LogFormatter => {
     case 'plain':
       return plainFormatter;
 
-    case 'json-compact':
-      return jsonCompactFormatter;
+    case 'ndjson':
+      return ndjsonFormatter;
 
     case 'json-pretty':
       return jsonPrettyFormatter;

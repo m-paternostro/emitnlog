@@ -17,6 +17,7 @@
     "flushables",
     "github",
     "GITHUB",
+    "ndjson",
     "nullable",
     "Paternostro",
     "stringifiable",

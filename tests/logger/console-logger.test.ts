@@ -65,7 +65,7 @@ describe('emitnlog.logger.factory.createConsoleLogLogger', () => {
   });
 
   test('should work with unformatted JSON format', () => {
-    const logger = createConsoleLogLogger('info', 'json-compact');
+    const logger = createConsoleLogLogger('info', 'ndjson');
 
     logger.info('Unformatted JSON test message');
 
