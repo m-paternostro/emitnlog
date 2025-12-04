@@ -30,7 +30,7 @@ import { createLoggerFromEnv, decodeEnv, toEnv } from './shared.ts';
  * The possible values are
  *   - `plain`
  *   - `colorful`
- *   - `json-compact`
+ *   - `ndjson`
  *   - `json-pretty`
  * ```
  *

@@ -73,13 +73,14 @@ export const colorfulFormatter: LogFormatter = (level, message) => {
 };
 
 /**
- * JSON formatter that outputs compact, single-line JSON objects.
+ * JSON formatter that outputs compact, single-line JSON objects using the
+ * [NDJSON](https://en.wikipedia.org/wiki/JSON_streaming#Newline-delimited_JSON) format.
  *
  * Produces structured JSON-like output suitable for log aggregation systems, automated parsing, or storage in
  * JSON-based logging systems.
  *
- * Important: as shown in the example, each emitted entry is itself a valid JSON object - however the text with all
- * entries is not itself a valid JSON, lacking colons and a root delimiter.
+ * Important: as shown in the example, the each emitted entry is itself a line containing a valid JSON object - however
+ * the text with all entries is not itself a valid JSON, lacking colons and a root delimiter.
  *
  * @example Output format
  *
@@ -88,7 +89,7 @@ export const colorfulFormatter: LogFormatter = (level, message) => {
  * {"level":"error","timestamp":1705312246456,"message":"Connection failed","args":[{"host":"db.example.com"}]}
  * ```
  */
-export const jsonCompactFormatter: LogFormatter = (level, message, args) => jsonFormatter(level, message, args, false);
+export const ndjsonFormatter: LogFormatter = (level, message, args) => jsonFormatter(level, message, args, false);
 
 /**
  * JSON formatter that outputs pretty-printed, multi-line JSON objects.
@@ -96,14 +97,23 @@ export const jsonCompactFormatter: LogFormatter = (level, message, args) => json
  * Produces readable JSON output with proper indentation. Useful for debugging or when human readability is more
  * important than compact size.
  *
- * Important: as shown in the example, each emitted entry is itself a valid JSON object - however the text with all
- * entries is not itself a valid JSON, lacking colons and a root delimiter.
+ * Important: as shown in the example, each emitted entry is itself a valid JSON object covering multiple lines -
+ * however the text with all entries is not itself a valid JSON, lacking colons and a root delimiter.
  *
  * @example Output format
  *
  * ```json
- * { "level": "info", "timestamp": 1705312245123, "message": "Application started" }
- * { "level": "error", "timestamp": 1705312246456, "message": "Connection failed", "args": [ { "host": "db.example.com" } ] }
+ * {
+ *    "level": "info",
+ *    "timestamp": 1705312245123,
+ *    "message": "Application started"
+ * }
+ * {
+ *   "level": "error",
+ *   "timestamp": 1705312246456,
+ *   "message": "Connection failed",
+ *   "args": [ { "host": "db.example.com" } ]
+ * }
  * ```
  */
 export const jsonPrettyFormatter: LogFormatter = (level, message, args) => jsonFormatter(level, message, args, true);

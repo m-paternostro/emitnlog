@@ -22,7 +22,7 @@ export type FileSinkOptions = {
   readonly datePrefix?: boolean;
 
   /**
-   * Whether to overwrite an existing file on the first emitted or not (the default is to always append new log
+   * Whether to overwrite an existing file on the first emitted entry or not (the default is to always append new log
    * entries).
    *
    * @default false
@@ -86,7 +86,7 @@ export type FileSinkOptions = {
 
 /**
  * A layout to be used as `FileSinkOptions.layout` to output a valid JSON-like content if each entry is itself a valid
- * JSON object - like the entries provided by the `jsonCompactFormatter` and `jsonPrettyFormatter` formatters.
+ * JSON object - like the entries provided by the `ndjsonFormatter` and `jsonPrettyFormatter` formatters.
  */
 export const JSON_LAYOUT = { header: '[\n', footer: '\n]', entryLineDelimiter: ',\n' } as const satisfies NonNullable<
   FileSinkOptions['layout']

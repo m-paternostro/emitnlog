@@ -173,7 +173,7 @@ const isLogFormat = (value: unknown): value is LogFormat => {
   switch (format) {
     case 'plain':
     case 'colorful':
-    case 'json-compact':
+    case 'ndjson':
     case 'json-pretty':
       return true;
 

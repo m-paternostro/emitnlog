@@ -90,7 +90,7 @@ export function createFileLogger(filePath: string, level?: LogLevel, format?: Lo
  *
  * const logger = createFileLogger('~/logs/app.log', {
  *   level: 'debug',
- *   format: 'json-compact',
+ *   format: 'ndjson',
  *   maxBufferSize: 50,
  *   flushDelayMs: 2000,
  *   datePrefix: true,
@@ -146,7 +146,7 @@ export function createFileLogger(
         formatter = plainArgAppendingFormatter(formatter);
         break;
 
-      case 'json-compact':
+      case 'ndjson':
       case 'json-pretty':
         break;
 
