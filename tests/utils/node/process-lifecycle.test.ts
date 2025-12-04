@@ -2,11 +2,19 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EventEmitter } from 'node:events';
 
+import type { LogEntry } from '../../../src/logger/index.ts';
 import { OFF_LOGGER } from '../../../src/logger/index.ts';
 import type { Closer, ProcessExitEvent, ProcessNotifier } from '../../../src/utils/index-node.ts';
-import { isProcessMain, onProcessExit, runProcessMain } from '../../../src/utils/index-node.ts';
+import {
+  asClosable,
+  createDeferredValue,
+  isProcessMain,
+  onProcessExit,
+  runProcessMain,
+} from '../../../src/utils/index-node.ts';
 import inner from '../../../src/utils/node/process-lifecycle.ts';
-import { createTestLogger } from '../../test-kit.ts';
+import type { MemoryLogger } from '../../test-kit.ts';
+import { createMemoryLogger, createTestLogger } from '../../test-kit.ts';
 
 const moduleReference = import.meta.url;
 
@@ -157,6 +165,55 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       expect(loggerFactorySpy).toHaveBeenCalledOnce();
       const factoryArg = loggerFactorySpy.mock.calls[0][0];
       expect(factoryArg).toBeInstanceOf(Date);
+    });
+
+    test('passes OFF_LOGGER to main when logger option is not provided', async () => {
+      const mainSpy = vi.fn().mockResolvedValue(undefined);
+
+      runProcessMain(moduleReference, mainSpy);
+
+      await vi.waitFor(() => {
+        expect(mainSpy).toHaveBeenCalledOnce();
+      });
+
+      const { logger } = mainSpy.mock.calls[0][0];
+      expect(logger).toBe(OFF_LOGGER);
+    });
+
+    test('exposes lifecycle logger to main input', async () => {
+      const deferredClose = createDeferredValue();
+
+      let entries: readonly LogEntry[] | undefined;
+      runProcessMain(
+        moduleReference,
+        async ({ logger, closer }) => {
+          logger.i`custom lifecycle log`;
+
+          closer.addAll(
+            asClosable(() => {
+              deferredClose.resolve();
+            }),
+
+            asClosable(() => {
+              entries = [...(logger as MemoryLogger).entries];
+            }),
+          );
+        },
+        { logger: () => createMemoryLogger() },
+      );
+
+      await deferredClose.promise;
+
+      expect(entries).toBeDefined();
+      expect(entries).toEqual([
+        {
+          level: 'info',
+          message: expect.stringContaining('starting the process main operation at'),
+          timestamp: expect.any(Number),
+        },
+        { level: 'info', message: 'custom lifecycle log', timestamp: expect.any(Number) },
+        { level: 'info', message: expect.stringContaining('the process has closed at'), timestamp: expect.any(Number) },
+      ]);
     });
 
     test('closes logger after successful execution', async () => {

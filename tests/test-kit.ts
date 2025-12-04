@@ -107,8 +107,8 @@ type CustomMatcherResult = { readonly pass: boolean; readonly message: () => str
  * @returns A custom matcher result.
  */
 const toHaveLoggedWith = (logger: Mocked<Logger>, level: LogLevel, expected: string | RegExp): CustomMatcherResult => {
-  const calls = (logger as unknown as InternalTestLogger).emit.mock.calls;
-  if (!calls.length) {
+  const calls = (logger as unknown as Partial<InternalTestLogger>).emit?.mock.calls;
+  if (!calls?.length) {
     return {
       pass: false,
       message: () =>

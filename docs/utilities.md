@@ -1001,6 +1001,7 @@ The argument passed to the "main" function is an object with the following prope
 
 - `start` whose value is the `Date` representing when the process began, useful for logging and tracking execution time.
 - `closer` whose value is a [Closer](#createcloser), useful to register cleanup operations.
+- `logger`: a logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
 
 #### With Logger
 
@@ -1010,11 +1011,7 @@ import { runProcessMain } from 'emitnlog/utils';
 
 runProcessMain(
   import.meta.url,
-  async ({ start, closer }) => {
-    // Create your main logger
-    const logger = createLogger(`app-${start.valueOf()}`);
-    closer.add(logger);
-
+  async ({ start, closer, logger }) => {
     logger.i`Starting application`;
     await startServer();
     logger.i`Server ready`;
@@ -1036,16 +1033,20 @@ The `logger` option can be:
 #### Advanced Usage
 
 ```ts
-import { runProcessMain, onProcessExit } from 'emitnlog/utils';
+import { createDeferredValue, runProcessMain, onProcessExit } from 'emitnlog/utils';
 import { createFileLogger } from 'emitnlog/logger';
 
 runProcessMain(
   import.meta.url,
   async ({ start, closer }) => {
-    const logger = createFileLogger('info', './logs/app.log');
+    const logger = createFileLogger('info', `./logs/app-${start.valueOf()}-details.log`);
+
+    const deferredClose = createDeferredValue();
 
     // Register cleanup for process signals
-    closer.add(
+    closer.addAll(
+      logger,
+
       onProcessExit(
         (event) => {
           if (event.error) {
@@ -1053,19 +1054,19 @@ runProcessMain(
           } else {
             logger.i`Process exiting due to ${event.signal}`;
           }
-
-          void closer.close();
         },
         { logger },
       ),
+
+      // Start the application
+      await startServer().then((server) => {
+        server.onClose(() => deferredClose.resolve());
+        return server;
+      }),
     );
 
-    // Start your application
-    const server = await startServer();
-    closer.add(server);
-
-    // Wait indefinitely (or until signal)
-    await new Promise(() => {});
+    // Wait until signal or the end of the server
+    await deferredClose.promise;
   },
   { logger: (start) => createFileLogger('info', `./logs/app-${start.valueOf()}.log`) },
 );
