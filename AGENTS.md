@@ -44,6 +44,7 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
     - Code that uses a readonly structure (created by a different code) should treat it as a immutable, frozen JavaScript object.
   - Prefer members (like `const foo = (...) =>`) over functions (`function foo(...) {...}`)
   - Prefer `type` over `interface`, unless creating a type that requires `this`.
+  - Do not implement code that uses `continue`: choose a different approach to implement the design.
   - Prefer reusing utilities from `src/utils`. If a utility complicates the code, flag it for discussion (it might need improvement or removal).
   - The default value for optional boolean properties should be `false`.
 - Style and design:
@@ -112,9 +113,6 @@ The user‑facing `README.md` and topic docs under `docs/` are the primary publi
 
 ## Working With Agents
 
-- Exploration:
-  - Use a fast code search tool available in the environment (for example `rg` if installed; otherwise `git grep`, `grep -R`, `fd`, etc.). The goal is speed and reliability, not a specific binary.
-  - Read files in chunks sized to the tool’s output limits. If unsure, start with small chunks (around 200–300 lines or similar byte caps) and adjust to the harness/agent constraints.
 - Edits:
   - Use targeted patches; keep diffs minimal and focused on the task at hand.
   - Adhere to existing code style and docs patterns; do not add external dependencies (project policy is zero dependencies) unless explicitly requested.
