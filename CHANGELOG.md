@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.12.1
+
+### Patch Changes
+
+- eccdd08: Expose logger "with utils" (like `withLevel`) on the node index.ts
+
 ## 0.12.0
 
 ### Minor Changes
