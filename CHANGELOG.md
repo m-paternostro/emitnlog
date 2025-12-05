@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.13.1
+
+### Patch Changes
+
+- 874f1c6: Include CHANGELOG.md on released package
+
 ## 0.13.0
 
 ### Minor Changes
