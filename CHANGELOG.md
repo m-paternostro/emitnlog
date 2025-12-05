@@ -1,5 +1,13 @@
 # emitnlog
 
+## 0.13.0
+
+### Minor Changes
+
+- 41792bd: Review "with utilities" so they work properly with prefixed logger. Renames
+  - `withEmitLevel` to `withFixedLevel`
+  - `withLevel` to `withMinimumLevel`
+
 ## 0.12.1
 
 ### Patch Changes
