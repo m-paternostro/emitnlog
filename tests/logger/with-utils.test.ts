@@ -1,27 +1,27 @@
 import { describe, expect, test } from 'vitest';
 
 import type { Logger, LogLevel } from '../../src/logger/index.ts';
-import { OFF_LOGGER, withEmitLevel, withLevel, withPrefix } from '../../src/logger/index.ts';
+import { OFF_LOGGER, withFixedLevel, withMinimumLevel, withPrefix } from '../../src/logger/index.ts';
 import type { MemoryLogger } from '../test-kit.ts';
 import { createMemoryLogger, createTestLogger } from '../test-kit.ts';
 
 describe('emitnlog.logger.with-utils', () => {
-  describe('withEmitLevel', () => {
+  describe('withFixedLevel', () => {
     describe('OFF_LOGGER handling', () => {
       test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
-        const logger = withEmitLevel(OFF_LOGGER, 'error');
+        const logger = withFixedLevel(OFF_LOGGER, 'error');
         expect(logger).toBe(OFF_LOGGER);
       });
 
       test('should not return OFF_LOGGER when level is off', () => {
         const baseLogger = createMemoryLogger();
-        const logger = withEmitLevel(baseLogger, 'off');
+        const logger = withFixedLevel(baseLogger, 'off');
         expect(logger).not.toBe(OFF_LOGGER);
       });
 
       test('should not return OFF_LOGGER when function returns off', () => {
         const baseLogger = createMemoryLogger();
-        const logger = withEmitLevel(baseLogger, () => 'off');
+        const logger = withFixedLevel(baseLogger, () => 'off');
         expect(logger).not.toBe(OFF_LOGGER);
       });
     });
@@ -29,7 +29,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('fixed level emission', () => {
       test('should emit all entries at a fixed level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         errorLogger.info('info message');
         errorLogger.warning('warning message');
@@ -43,7 +43,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should emit debug messages as info', () => {
         const memoryLogger = createMemoryLogger('debug');
-        const infoLogger = withEmitLevel(memoryLogger, 'info');
+        const infoLogger = withFixedLevel(memoryLogger, 'info');
 
         infoLogger.debug('debug message');
 
@@ -54,7 +54,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should emit info messages as critical', () => {
         const memoryLogger = createMemoryLogger('info');
-        const criticalLogger = withEmitLevel(memoryLogger, 'critical');
+        const criticalLogger = withFixedLevel(memoryLogger, 'critical');
 
         criticalLogger.info('info message');
 
@@ -67,7 +67,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('level filtering preservation', () => {
       test('should respect original logger level filtering', () => {
         const memoryLogger = createMemoryLogger('info');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         errorLogger.debug('debug message'); // Should be filtered out by baseLogger.level
         errorLogger.info('info message'); // Should be emitted as error
@@ -82,7 +82,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should filter out messages below base logger level', () => {
         const memoryLogger = createMemoryLogger('warning');
-        const criticalLogger = withEmitLevel(memoryLogger, 'critical');
+        const criticalLogger = withFixedLevel(memoryLogger, 'critical');
 
         criticalLogger.trace('trace message');
         criticalLogger.debug('debug message');
@@ -100,7 +100,7 @@ describe('emitnlog.logger.with-utils', () => {
       test('should maintain level synchronization', () => {
         let level: LogLevel = 'info';
         const memoryLogger = createMemoryLogger(() => level);
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         expect(errorLogger.level).toBe('info');
 
@@ -115,7 +115,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('dynamic level mapping', () => {
       test('should map levels using a function', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const mappedLogger = withEmitLevel(memoryLogger, (level) => {
+        const mappedLogger = withFixedLevel(memoryLogger, (level) => {
           if (level === 'trace' || level === 'debug') {
             return 'info';
           }
@@ -140,7 +140,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle function returning off for specific levels', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const filteredLogger = withEmitLevel(memoryLogger, (level: LogLevel) => {
+        const filteredLogger = withFixedLevel(memoryLogger, (level: LogLevel) => {
           if (level === 'trace' || level === 'debug') {
             return 'off';
           }
@@ -161,7 +161,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle level mapping with filtering', () => {
         const memoryLogger = createMemoryLogger('info');
-        const mappedLogger = withEmitLevel(memoryLogger, (level: LogLevel) => {
+        const mappedLogger = withFixedLevel(memoryLogger, (level: LogLevel) => {
           if (level === 'info') {
             return 'warning';
           }
@@ -186,7 +186,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('template literal logging', () => {
       test('should emit template literals at fixed level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         const value = 42;
         errorLogger.i`Value is ${value}`;
@@ -201,7 +201,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should emit template literals with mapped levels', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const mappedLogger = withEmitLevel(memoryLogger, (level: LogLevel) => (level === 'info' ? 'warning' : level));
+        const mappedLogger = withFixedLevel(memoryLogger, (level: LogLevel) => (level === 'info' ? 'warning' : level));
 
         const value = 'test';
         mappedLogger.i`Info: ${value}`;
@@ -216,7 +216,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle lazy evaluation in template literals', () => {
         const memoryLogger = createMemoryLogger('info');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         let count = 0;
         const expensiveOperation = () => {
@@ -237,7 +237,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('lazy message functions', () => {
       test('should handle lazy message functions with fixed level', () => {
         const memoryLogger = createMemoryLogger('info');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         let count = 0;
         const lazyMessage = () => {
@@ -256,7 +256,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle lazy message functions with mapped levels', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const mappedLogger = withEmitLevel(memoryLogger, (level: LogLevel) => (level === 'debug' ? 'info' : level));
+        const mappedLogger = withFixedLevel(memoryLogger, (level: LogLevel) => (level === 'debug' ? 'info' : level));
 
         let debugCount = 0;
         let infoCount = 0;
@@ -284,7 +284,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('args handling', () => {
       test('should forward args with fixed level', () => {
         const memoryLogger = createMemoryLogger('info');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         const context = { userId: '123' };
         errorLogger.args(context).info('User action');
@@ -297,7 +297,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should forward multiple args', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const criticalLogger = withEmitLevel(memoryLogger, 'critical');
+        const criticalLogger = withFixedLevel(memoryLogger, 'critical');
 
         criticalLogger.args('arg1', 42, { key: 'value' }).info('Message');
 
@@ -308,7 +308,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle args with mapped levels', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const mappedLogger = withEmitLevel(memoryLogger, (level: LogLevel) => (level === 'info' ? 'warning' : level));
+        const mappedLogger = withFixedLevel(memoryLogger, (level: LogLevel) => (level === 'info' ? 'warning' : level));
 
         const context = { traceId: 'abc123' };
         mappedLogger.args(context).info('Operation complete');
@@ -323,7 +323,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('error handling', () => {
       test('should handle Error objects with fixed level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const criticalLogger = withEmitLevel(memoryLogger, 'critical');
+        const criticalLogger = withFixedLevel(memoryLogger, 'critical');
 
         const error = new Error('Something failed');
         criticalLogger.error(error);
@@ -336,7 +336,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle error-like objects', () => {
         const memoryLogger = createMemoryLogger('info');
-        const emergencyLogger = withEmitLevel(memoryLogger, 'emergency');
+        const emergencyLogger = withFixedLevel(memoryLogger, 'emergency');
 
         const errorObj = { error: 'Custom error data' };
         emergencyLogger.error(errorObj);
@@ -351,7 +351,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('all log levels', () => {
       test('should emit all log levels at fixed level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         errorLogger.trace('Trace');
         errorLogger.debug('Debug');
@@ -371,7 +371,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should emit all template literal methods at fixed level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const warningLogger = withEmitLevel(memoryLogger, 'warning');
+        const warningLogger = withFixedLevel(memoryLogger, 'warning');
 
         warningLogger.t`Trace`;
         warningLogger.d`Debug`;
@@ -393,7 +393,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('log method', () => {
       test('should handle log method with fixed level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         errorLogger.log('info', 'Info message');
         errorLogger.log('warning', 'Warning message');
@@ -407,7 +407,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle log method with mapped levels', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const mappedLogger = withEmitLevel(memoryLogger, (level: LogLevel) => {
+        const mappedLogger = withFixedLevel(memoryLogger, (level: LogLevel) => {
           if (level === 'info') return 'notice';
           if (level === 'warning') return 'error';
           return level;
@@ -427,7 +427,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('integration tests', () => {
       test('should work with example from documentation - fixed level', () => {
         const baseLogger = createMemoryLogger('info');
-        const errorLogger = withEmitLevel(baseLogger, 'error');
+        const errorLogger = withFixedLevel(baseLogger, 'error');
 
         errorLogger.d`debug`; // Not emitted (filtered out by baseLogger.level)
         errorLogger.i`info`; // Emitted as an error
@@ -442,7 +442,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should work with example from documentation - dynamic level', () => {
         const baseLogger = createMemoryLogger('trace');
-        const infoLogger = withEmitLevel(baseLogger, (level: LogLevel) =>
+        const infoLogger = withFixedLevel(baseLogger, (level: LogLevel) =>
           level === 'trace' || level === 'debug' ? 'info' : level,
         );
 
@@ -462,7 +462,7 @@ describe('emitnlog.logger.with-utils', () => {
       test('should work with dynamic logger level changes', () => {
         let level: LogLevel = 'debug';
         const baseLogger = createMemoryLogger(() => level);
-        const errorLogger = withEmitLevel(baseLogger, 'error');
+        const errorLogger = withFixedLevel(baseLogger, 'error');
 
         expect(errorLogger.level).toBe('debug');
 
@@ -487,10 +487,10 @@ describe('emitnlog.logger.with-utils', () => {
         const baseLogger = createMemoryLogger('trace');
 
         // Map trace/debug to info, then emit everything as warning
-        const step1 = withEmitLevel(baseLogger, (level: LogLevel) =>
+        const step1 = withFixedLevel(baseLogger, (level: LogLevel) =>
           level === 'trace' || level === 'debug' ? 'info' : level,
         );
-        const step2 = withEmitLevel(step1, 'warning');
+        const step2 = withFixedLevel(step1, 'warning');
 
         step2.trace('trace message');
         step2.info('info message');
@@ -505,8 +505,8 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should maintain separate logger instances', () => {
         const baseLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(baseLogger, 'error');
-        const warningLogger = withEmitLevel(baseLogger, 'warning');
+        const errorLogger = withFixedLevel(baseLogger, 'error');
+        const warningLogger = withFixedLevel(baseLogger, 'warning');
 
         errorLogger.info('from error logger');
         warningLogger.info('from warning logger');
@@ -522,7 +522,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('edge cases', () => {
       test('should handle empty message', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         errorLogger.info('');
 
@@ -533,7 +533,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle very long messages', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         const longMessage = 'A'.repeat(10000);
         errorLogger.info(longMessage);
@@ -545,7 +545,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle rapid successive calls', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const errorLogger = withEmitLevel(memoryLogger, 'error');
+        const errorLogger = withFixedLevel(memoryLogger, 'error');
 
         for (let i = 0; i < 100; i++) {
           errorLogger.info(`Message ${i}`);
@@ -560,7 +560,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should handle mapper function that always returns the same level', () => {
         const memoryLogger = createMemoryLogger('trace');
-        const constantLogger = withEmitLevel(memoryLogger, () => 'notice');
+        const constantLogger = withFixedLevel(memoryLogger, () => 'notice');
 
         constantLogger.trace('trace');
         constantLogger.error('error');
@@ -576,7 +576,7 @@ describe('emitnlog.logger.with-utils', () => {
     describe('type safety', () => {
       test('should maintain Logger type', () => {
         const baseLogger: Logger = createMemoryLogger();
-        const errorLogger: Logger = withEmitLevel(baseLogger, 'error');
+        const errorLogger: Logger = withFixedLevel(baseLogger, 'error');
 
         // Type check - should compile without errors
         errorLogger.info('test');
@@ -587,7 +587,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should work with MemoryLogger type', () => {
         const baseLogger: MemoryLogger = createMemoryLogger();
-        const errorLogger = withEmitLevel(baseLogger, 'error');
+        const errorLogger = withFixedLevel(baseLogger, 'error');
 
         errorLogger.info('test');
 
@@ -599,7 +599,7 @@ describe('emitnlog.logger.with-utils', () => {
 
       test('should work with TestLogger type', () => {
         const baseLogger = createTestLogger();
-        const errorLogger = withEmitLevel(baseLogger, 'error');
+        const errorLogger = withFixedLevel(baseLogger, 'error');
 
         errorLogger.info('test message');
 
@@ -613,39 +613,102 @@ describe('emitnlog.logger.with-utils', () => {
         const baseLogger = createMemoryLogger();
         const prefixedLogger = withPrefix(baseLogger, 'prefix1');
 
-        const errorLogger = withEmitLevel(prefixedLogger, 'error');
+        const errorLogger = withFixedLevel(prefixedLogger, 'error');
         errorLogger.info('test message 1');
+        expect(baseLogger.entries).toHaveLength(1);
+        expect(baseLogger.entries[0].level).toBe('error');
         expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
 
         const prefixedErrorLogger = withPrefix(errorLogger, 'prefix2');
         prefixedErrorLogger.info('test message 2');
-        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
+        expect(baseLogger.entries).toHaveLength(2);
+        expect(baseLogger.entries[1].level).toBe('error');
         expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
 
         errorLogger.info('test message 3');
-        expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
-        expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
+        expect(baseLogger.entries).toHaveLength(3);
+        expect(baseLogger.entries[2].level).toBe('error');
         expect(baseLogger.entries[2].message).toBe('prefix1: test message 3');
+
+        errorLogger.debug('test message 4');
+        expect(baseLogger.entries).toHaveLength(3);
+      });
+
+      test('should work with multiple prefixed loggers', () => {
+        const emitSomeLogs = (logger: Logger) => {
+          logger.info('info message');
+          logger.w`warning message`;
+          logger.error('error message');
+        };
+
+        const baseLogger = createMemoryLogger('trace');
+        const mainLogger = withPrefix(baseLogger, 'main');
+        const traceLogger = withFixedLevel(mainLogger, 'trace');
+
+        emitSomeLogs(traceLogger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'trace', message: 'main: info message', timestamp: expect.any(Number) },
+          { level: 'trace', message: 'main: warning message', timestamp: expect.any(Number) },
+          { level: 'trace', message: 'main: error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        emitSomeLogs(mainLogger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'info', message: 'main: info message', timestamp: expect.any(Number) },
+          { level: 'warning', message: 'main: warning message', timestamp: expect.any(Number) },
+          { level: 'error', message: 'main: error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        const p1Logger = withPrefix(traceLogger, 'p1');
+        emitSomeLogs(p1Logger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'trace', message: 'main.p1: info message', timestamp: expect.any(Number) },
+          { level: 'trace', message: 'main.p1: warning message', timestamp: expect.any(Number) },
+          { level: 'trace', message: 'main.p1: error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        const p2Logger = withPrefix(p1Logger, 'p2');
+        emitSomeLogs(p2Logger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'trace', message: 'main.p1.p2: info message', timestamp: expect.any(Number) },
+          { level: 'trace', message: 'main.p1.p2: warning message', timestamp: expect.any(Number) },
+          { level: 'trace', message: 'main.p1.p2: error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        emitSomeLogs(mainLogger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'info', message: 'main: info message', timestamp: expect.any(Number) },
+          { level: 'warning', message: 'main: warning message', timestamp: expect.any(Number) },
+          { level: 'error', message: 'main: error message', timestamp: expect.any(Number) },
+        ]);
       });
     });
   });
 
-  describe('withLevel', () => {
+  describe('withMinimumLevel', () => {
     describe('OFF_LOGGER handling', () => {
       test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
-        const logger = withLevel(OFF_LOGGER, 'error');
+        const logger = withMinimumLevel(OFF_LOGGER, 'error');
         expect(logger).toBe(OFF_LOGGER);
       });
 
       test('should not return OFF_LOGGER when level is off', () => {
         const baseLogger = createMemoryLogger();
-        const logger = withLevel(baseLogger, 'off');
+        const logger = withMinimumLevel(baseLogger, 'off');
         expect(logger).not.toBe(OFF_LOGGER);
       });
 
       test('should not return OFF_LOGGER when level provider returns off', () => {
         const baseLogger = createMemoryLogger('trace');
-        const logger = withLevel(baseLogger, () => 'off');
+        const logger = withMinimumLevel(baseLogger, () => 'off');
 
         logger.error('suppressed');
 
@@ -657,7 +720,7 @@ describe('emitnlog.logger.with-utils', () => {
 
     test('should filter entries using provided level before delegating', () => {
       const memoryLogger = createMemoryLogger('trace');
-      const warningLogger = withLevel(memoryLogger, 'warning');
+      const warningLogger = withMinimumLevel(memoryLogger, 'warning');
 
       warningLogger.info('info message');
       warningLogger.warning('warning message');
@@ -670,22 +733,24 @@ describe('emitnlog.logger.with-utils', () => {
       expect(memoryLogger.entries[1].message).toBe('error message');
     });
 
-    test('should respect base logger filtering after delegation', () => {
+    test('should modify entry level if needed', () => {
       const memoryLogger = createMemoryLogger('error');
-      const verboseLogger = withLevel(memoryLogger, 'trace');
+      const verboseLogger = withMinimumLevel(memoryLogger, 'debug');
 
-      verboseLogger.info('info message'); // Filtered by base logger
+      verboseLogger.info('info message'); // Bumped up to be used by base logger
       verboseLogger.error('error message');
 
-      expect(memoryLogger.entries).toHaveLength(1);
+      expect(memoryLogger.entries).toHaveLength(2);
       expect(memoryLogger.entries[0].level).toBe('error');
-      expect(memoryLogger.entries[0].message).toBe('error message');
+      expect(memoryLogger.entries[0].message).toBe('info message');
+      expect(memoryLogger.entries[1].level).toBe('error');
+      expect(memoryLogger.entries[1].message).toBe('error message');
     });
 
     test('should reflect dynamic level provider changes', () => {
       let currentLevel: LogLevel | 'off' = 'info';
       const memoryLogger = createMemoryLogger('trace');
-      const adjustableLogger = withLevel(memoryLogger, () => currentLevel);
+      const adjustableLogger = withMinimumLevel(memoryLogger, () => currentLevel);
 
       expect(adjustableLogger.level).toBe('info');
 
@@ -709,7 +774,7 @@ describe('emitnlog.logger.with-utils', () => {
 
     test('should forward original entry level and args', () => {
       const memoryLogger = createMemoryLogger('trace');
-      const warningLogger = withLevel(memoryLogger, 'warning');
+      const warningLogger = withMinimumLevel(memoryLogger, 'warning');
       const context = { requestId: 'abc' };
 
       warningLogger.args(context).error('problem', { retry: false });
@@ -726,7 +791,7 @@ describe('emitnlog.logger.with-utils', () => {
         const baseLogger = createMemoryLogger();
         const prefixedLogger = withPrefix(baseLogger, 'prefix1');
 
-        const errorLogger = withLevel(prefixedLogger, 'error');
+        const errorLogger = withMinimumLevel(prefixedLogger, 'error');
         errorLogger.critical('test message 1');
         expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
 
@@ -739,6 +804,53 @@ describe('emitnlog.logger.with-utils', () => {
         expect(baseLogger.entries[0].message).toBe('prefix1: test message 1');
         expect(baseLogger.entries[1].message).toBe('prefix1.prefix2: test message 2');
         expect(baseLogger.entries[2].message).toBe('prefix1: test message 3');
+      });
+
+      test('should work with multiple prefixed loggers', () => {
+        const emitSomeLogs = (logger: Logger) => {
+          logger.info('info message');
+          logger.w`warning message`;
+          logger.error('error message');
+        };
+
+        const baseLogger = createMemoryLogger('warning');
+        //const mainLogger = withPrefix(baseLogger, 'main');
+        const warningLogger = withMinimumLevel(baseLogger, 'info');
+
+        emitSomeLogs(baseLogger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'warning', message: 'warning message', timestamp: expect.any(Number) },
+          { level: 'error', message: 'error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        emitSomeLogs(warningLogger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'warning', message: 'info message', timestamp: expect.any(Number) },
+          { level: 'warning', message: 'warning message', timestamp: expect.any(Number) },
+          { level: 'error', message: 'error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        const p1Logger = withPrefix(warningLogger, 'p1');
+        emitSomeLogs(p1Logger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'warning', message: 'p1: info message', timestamp: expect.any(Number) },
+          { level: 'warning', message: 'p1: warning message', timestamp: expect.any(Number) },
+          { level: 'error', message: 'p1: error message', timestamp: expect.any(Number) },
+        ]);
+
+        baseLogger.clear();
+
+        const p2Logger = withPrefix(p1Logger, 'p2');
+        emitSomeLogs(p2Logger);
+        expect(baseLogger.entries).toEqual([
+          { level: 'warning', message: 'p1.p2: info message', timestamp: expect.any(Number) },
+          { level: 'warning', message: 'p1.p2: warning message', timestamp: expect.any(Number) },
+          { level: 'error', message: 'p1.p2: error message', timestamp: expect.any(Number) },
+        ]);
       });
     });
   });

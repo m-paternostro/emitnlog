@@ -461,15 +461,15 @@ interface PrefixOptions {
 
 ## Utilities
 
-### withLevel
+### withMinimumLevel
 
 Creates a logger that reuses an existing logger but evaluates entries with a new minimum level before delegating.
 
 ```ts
-import { createConsoleLogLogger, withLevel } from 'emitnlog/logger';
+import { createConsoleLogLogger, withMinimumLevel } from 'emitnlog/logger';
 
 const baseLogger = createConsoleLogLogger('trace');
-const errorOnlyLogger = withLevel(baseLogger, 'error');
+const errorOnlyLogger = withMinimumLevel(baseLogger, 'error');
 
 errorOnlyLogger.i`info`; // Not emitted (below 'error')
 errorOnlyLogger.e`error`; // Emitted and delegated to baseLogger
@@ -479,10 +479,10 @@ The level can be provided dynamically, allowing log level adjustments without re
 
 ```ts
 import type { LogLevel } from 'emitnlog/logger';
-import { createConsoleLogLogger, withLevel } from 'emitnlog/logger';
+import { createConsoleLogLogger, withMinimumLevel } from 'emitnlog/logger';
 
 let currentLevel: LogLevel | 'off' = 'info';
-const logger = withLevel(createConsoleLogLogger('trace'), () => currentLevel);
+const logger = withMinimumLevel(createConsoleLogLogger('trace'), () => currentLevel);
 
 logger.i`info`; // Emitted while currentLevel is 'info'
 
@@ -491,17 +491,17 @@ logger.i`info`; // Filtered out
 logger.e`error`; // Emitted
 ```
 
-### withEmitLevel
+### withFixedLevel
 
 Returns a logger that emits all entries using a fixed level, regardless of the log method used.
 
 ```ts
-import { createConsoleLogLogger, withEmitLevel } from 'emitnlog/logger';
+import { createConsoleLogLogger, withFixedLevel } from 'emitnlog/logger';
 
 const baseLogger = createConsoleLogLogger('info');
 
 // A logger that emits 'info' or higher severities, all as errors.
-const errorLogger = withEmitLevel(baseLogger, 'error');
+const errorLogger = withFixedLevel(baseLogger, 'error');
 
 errorLogger.d`debug`; // Not emitted (filtered out by baseLogger.level)
 errorLogger.i`info`; // Emitted as an error

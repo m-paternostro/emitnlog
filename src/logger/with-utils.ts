@@ -1,26 +1,28 @@
 import { emptyArray } from '../utils/common/singleton.ts';
 import type { Logger, LogLevel } from './definition.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
+import { shouldEmitEntry } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
-import { injectPrefixInformation, isPrefixedLogger } from './prefixed-logger.ts';
+import { handlePrefixWrapping } from './prefixed-logger.ts';
 
 /**
  * Returns a logger that emits all entries using a fixed level, regardless of the log method used.
  *
- * Note: The returned logger preserves the original logger’s level filtering behavior, but every emitted entry is
- * rewritten to use the provided `level`. To create a logger with a different level, use {@link withLevel}.
+ * Note: The returned logger preserves the decorated logger’s level filtering behavior, but every emitted entry is
+ * rewritten to use the provided "filtering level". To create a logger with a different filtering level, use
+ * {@link withMinimumLevel}.
  *
  * This is useful when you want messages of any severity to be treated as, say, errors.
  *
  * @example
  *
  * ```ts
- * import { createConsoleLogLogger, withEmitLevel } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withFixedLevel } from 'emitnlog/logger';
  *
  * const baseLogger = createConsoleLogLogger('info');
  *
  * // A logger that emits 'info' or higher severities, all as errors.
- * const errorLogger = withEmitLevel(baseLogger, 'error');
+ * const errorLogger = withFixedLevel(baseLogger, 'error');
  *
  * errorLogger.d`debug`; // Not emitted (filtered out by baseLogger.level)
  * errorLogger.i`info`; // Emitted as an error
@@ -30,12 +32,12 @@ import { injectPrefixInformation, isPrefixedLogger } from './prefixed-logger.ts'
  * @example Dynamic level
  *
  * ```ts
- * import { createConsoleLogLogger, withEmitLevel } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withFixedLevel } from 'emitnlog/logger';
  *
  * const baseLogger = createConsoleLogLogger('trace');
  *
  * // A logger that emits all severities, outputting 'info' entries for 'trace' and 'debug'
- * const infoLogger = withEmitLevel(baseLogger, (level) =>
+ * const infoLogger = withFixedLevel(baseLogger, (level) =>
  *   level === 'trace' || level === 'debug' ? 'info' : level,
  * );
  *
@@ -44,11 +46,11 @@ import { injectPrefixInformation, isPrefixedLogger } from './prefixed-logger.ts'
  * infoLogger.c`error`; // Emitted as a critical
  * ```
  *
- * @param logger The original logger to wrap.
+ * @param logger The logger to decorate.
  * @param level The level to emit all entries as (or a function that maps that level).
  * @returns A new logger that emits entries as if they were logged with `level`.
  */
-export const withEmitLevel = (
+export const withFixedLevel = (
   logger: Logger,
   level: LogLevel | 'off' | ((entryLevel: LogLevel) => LogLevel | 'off'),
 ): Logger => {
@@ -56,32 +58,52 @@ export const withEmitLevel = (
     return OFF_LOGGER;
   }
 
-  const newLogger = createLogger(
-    () => logger.level,
-    (entryLevel, message, args) => {
-      const emitLevel = typeof level === 'function' ? level(entryLevel) : level;
-      if (emitLevel !== 'off') {
-        logger.log(emitLevel, message, ...(args ?? emptyArray()));
-      }
-    },
+  return handlePrefixWrapping(logger, (original: Logger) =>
+    createLogger(
+      () => original.level,
+      (entryLevel, message, args) => {
+        const emitLevel = typeof level === 'function' ? level(entryLevel) : level;
+        if (emitLevel !== 'off') {
+          original.log(emitLevel, message, ...(args ?? emptyArray()));
+        }
+      },
+    ),
   );
-
-  return isPrefixedLogger(logger) ? injectPrefixInformation(logger, newLogger) : newLogger;
 };
 
 /**
- * Returns a logger that evaluates entries with a new minimum level while reusing the original logger for emission.
+ * Returns a logger that evaluates entries against a new minimum level before delegating to the decorated logger.
  *
- * Note: The returned logger only changes the level threshold used to decide whether an entry should be emitted. When an
- * entry passes that check it is logged through the original logger with its original level.
+ * This decorator introduces an additional level threshold, without disabling the original logger’s own filtering:
+ *
+ * - First, the provided `level` (or `level` function) is used to decide whether an entry should be considered for
+ *   emission.
+ * - Then, if the decorated logger’s own level is stricter than the entry’s level, the entry is bumped up to that stricter
+ *   level so it isn’t filtered out when delegated.
+ *
+ * In other words, the effective emission threshold is the stricter of:
+ *
+ * - The level configured via `withMinimumLevel`, and
+ * - The decorated logger’s current level.
+ *
+ * This is useful when you want to tighten or dynamically adjust the minimum severity for a specific call site, while
+ * still respecting the base logger’s configuration and output behavior (including prefixes, destinations, and argument
+ * handling).
+ *
+ * The returned logger:
+ *
+ * - Preserves the decorated logger’s output behavior and destination.
+ * - Reflects dynamic changes in both the provided `level` function and the decorated logger’s own level.
+ * - Treats a `level` of `'off'` as “never emit”, while still returning a real logger (use {@link OFF_LOGGER} directly when
+ *   you want a singleton no-op logger).
  *
  * @example Enforce a stricter level
  *
  * ```ts
- * import { createConsoleLogLogger, withLevel } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withMinimumLevel } from 'emitnlog/logger';
  *
  * const baseLogger = createConsoleLogLogger('trace');
- * const errorOnlyLogger = withLevel(baseLogger, 'error');
+ * const errorOnlyLogger = withMinimumLevel(baseLogger, 'error');
  *
  * errorOnlyLogger.i`info`; // Not emitted
  * errorOnlyLogger.e`error`; // Emitted as an error
@@ -90,10 +112,10 @@ export const withEmitLevel = (
  * @example Dynamic level
  *
  * ```ts
- * import { createConsoleLogLogger, withLevel } from 'emitnlog/logger';
+ * import { createConsoleLogLogger, withMinimumLevel } from 'emitnlog/logger';
  *
  * let currentLevel: LogLevel = 'info';
- * const adjustableLogger = withLevel(createConsoleLogLogger('trace'), () => currentLevel);
+ * const adjustableLogger = withMinimumLevel(createConsoleLogLogger('trace'), () => currentLevel);
  *
  * adjustableLogger.i`info`; // Emitted while currentLevel is 'info'
  *
@@ -102,18 +124,23 @@ export const withEmitLevel = (
  * adjustableLogger.e`error`; // Emitted
  * ```
  *
- * @param logger The original logger to wrap.
+ * @param logger The logger to decorate.
  * @param level The level (or level provider) to use as the minimum severity threshold.
- * @returns A logger that filters entries using `level` before delegating to `logger`.
+ * @returns A logger that filters entries using `level` and then delegates to `logger`, ensuring the delegated level is
+ *   never lower than the decorated logger’s own level.
  */
-export const withLevel = (logger: Logger, level: LogLevel | 'off' | (() => LogLevel | 'off')): Logger => {
+export const withMinimumLevel = (logger: Logger, level: LogLevel | 'off' | (() => LogLevel | 'off')): Logger => {
   if (logger === OFF_LOGGER) {
     return OFF_LOGGER;
   }
 
-  const newLogger = createLogger(level, (entryLevel, message, args) => {
-    logger.log(entryLevel, message, ...(args ?? emptyArray()));
-  });
-
-  return isPrefixedLogger(logger) ? injectPrefixInformation(logger, newLogger) : newLogger;
+  return handlePrefixWrapping(logger, (original: Logger) =>
+    createLogger(level, (entryLevel, message, args) => {
+      const originalLevel = original.level;
+      if (originalLevel !== 'off' && !shouldEmitEntry(originalLevel, entryLevel)) {
+        entryLevel = originalLevel;
+      }
+      original.log(entryLevel, message, ...(args ?? emptyArray()));
+    }),
+  );
 };

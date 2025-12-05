@@ -603,9 +603,9 @@ export const inspectPrefixedLogger = (logger: Logger): PrefixInformation | undef
  * - This method modifies `target` so that object must not be read-only.
  * - This method does not cause `target` to write out the prefixed messages: this MUST be already handled by `target`
  *
- * @param source A prefixed logger
+ * @param source A logger
  * @param target A logger to inject the prefix information into
- * @returns The modified target logger, cast as the type
+ * @returns If source is prefixed, the modified target logger. Otherwise the unmodified target.
  */
 export const injectPrefixInformation = <P extends PrefixedLogger>(source: P, target: Logger): P => {
   const prefixInformation = inspectPrefixedLogger(source);
@@ -617,6 +617,33 @@ export const injectPrefixInformation = <P extends PrefixedLogger>(source: P, tar
   }
 
   return target as unknown as P;
+};
+
+/**
+ * Important: this is an advanced utility, meant for logger implementors.
+ *
+ * If needed, creates a new prefixed logger that wraps the root-most logger in a prefix chain with the specified wrapper
+ * so that the wrapping is applied after all prefixes are combined.
+ *
+ * @param source A logger
+ * @param wrapper The wrapper to be applied
+ * @returns If logger is prefixed, the new prefixed logger with the root-most logger wrapped. Otherwise the wrapped
+ *   version of the specified logger.
+ */
+export const handlePrefixWrapping = (logger: Logger, wrapper: (logger: Logger) => Logger): Logger => {
+  const prefixInformation = inspectPrefixedLogger(logger);
+  if (prefixInformation) {
+    const wrapped = handlePrefixWrapping(prefixInformation.rootLogger, wrapper);
+    logger = createPrefixedLogger(
+      wrapped,
+      prefixInformation.prefix,
+      prefixInformation.separator,
+      prefixInformation.messageSeparator,
+    );
+  } else {
+    logger = wrapper(logger);
+  }
+  return logger;
 };
 
 type WithPrefixResult<
