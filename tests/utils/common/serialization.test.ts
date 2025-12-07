@@ -58,10 +58,13 @@ describe('emitnlog.utils.serialization', () => {
       readonly optional?: number;
       readonly skip?: undefined;
       readonly note?: string | (() => string);
-      readonly meta: { readonly value: unknown };
+      readonly meta: { value: unknown };
+      readonly readonlyMeta: { readonly value: unknown };
       readonly onInit?: () => void;
       readonly token?: symbol;
       readonly nested: { readonly values: readonly [Date, { readonly when?: Date | undefined }] };
+      array: string[];
+      readonly readonlyArray: readonly string[];
     };
 
     const complex: Complex = {
@@ -70,11 +73,14 @@ describe('emitnlog.utils.serialization', () => {
       optional: 7,
       note: 'hello there',
       meta: { value: { ok: true } },
+      readonlyMeta: { value: { regex: /test/gi } },
       onInit: () => {
         // noop
       },
       token: Symbol('secret'),
       nested: { values: [new Date('2023-04-05T06:07:08.009Z'), { when: new Date('2022-10-11T12:13:14.015Z') }] },
+      array: ['foo', 'bar'],
+      readonlyArray: ['1', '2'],
     };
 
     const parsed = jsonParse<Complex>(JSON.stringify(complex));
@@ -85,7 +91,10 @@ describe('emitnlog.utils.serialization', () => {
       optional: 7,
       note: 'hello there',
       meta: { value: { ok: true } },
+      readonlyMeta: { value: { regex: {} } },
       nested: { values: ['2023-04-05T06:07:08.009Z', { when: '2022-10-11T12:13:14.015Z' }] },
+      array: ['foo', 'bar'],
+      readonlyArray: ['1', '2'],
     });
 
     const parsedComplex: JsonSafe<Complex> = parsed;
@@ -127,5 +136,108 @@ describe('emitnlog.utils.serialization', () => {
     const formatted = jsonStringify(parsed, replacer, 2);
 
     expect(formatted).toBe('{\n  "foo": "bar"\n}');
+  });
+
+  test('round trips JsonSafe values', () => {
+    type SimpleObject = { readonly name: string };
+    const objects = [{ name: 'Alice' }, { name: 'Bob' }];
+    const roundTrip = jsonParse<readonly SimpleObject[]>(jsonStringify(objects));
+    expect(roundTrip).toStrictEqual(objects);
+  });
+
+  test('type assignments with JsonSafe', () => {
+    const load = <T extends JsonSafe>(value: T): T => value;
+
+    const array = load<string[]>(['a', 'b', 'c']);
+    assertType<Equal<typeof array, string[]>>(true);
+    // @ts-expect-error array is writable
+    assertType<Equal<typeof array, readonly string[]>>(true);
+    void array;
+
+    const readonlyArray = load<readonly string[]>(['a', 'b', 'c']);
+    assertType<Equal<typeof readonlyArray, readonly string[]>>(true);
+    // @ts-expect-error readonlyArray is readonly
+    assertType<Equal<typeof readonlyArray, string[]>>(true);
+    void readonlyArray;
+
+    const object = load<{ foo: string }>({ foo: 'bar' });
+    assertType<Equal<typeof object, { foo: string }>>(true);
+    // @ts-expect-error object is writable
+    assertType<Equal<typeof object, { readonly foo: string }>>(true);
+    // @ts-expect-error object is required
+    assertType<Equal<typeof object, { foo?: string }>>(true);
+    void object;
+
+    const partialObject = load<{ foo?: string }>({ foo: 'bar' });
+    assertType<Equal<typeof partialObject, { foo?: string }>>(true);
+    // @ts-expect-error object is writable
+    assertType<Equal<typeof partialObject, { readonly foo: string }>>(true);
+    // @ts-expect-error partialObject is partial
+    assertType<Equal<typeof partialObject, { foo: string }>>(true);
+    void partialObject;
+
+    const readonlyObject = load<{ readonly foo: string }>({ foo: 'bar' });
+    assertType<Equal<typeof readonlyObject, { readonly foo: string }>>(true);
+    // @ts-expect-error readonlyObject is readonly
+    assertType<Equal<typeof readonlyObject, { foo: string }>>(true);
+    // @ts-expect-error object is required
+    assertType<Equal<typeof readonlyObject, { readonly foo?: string }>>(true);
+    void readonlyObject;
+
+    const readonlyPartialObject = load<{ readonly foo?: string }>({ foo: 'bar' });
+    assertType<Equal<typeof readonlyPartialObject, { readonly foo?: string }>>(true);
+    // @ts-expect-error readonlyPartialObject is readonly
+    assertType<Equal<typeof readonlyPartialObject, { foo?: string }>>(true);
+    // @ts-expect-error readonlyPartialObject is required
+    assertType<Equal<typeof readonlyPartialObject, { readonly foo: string }>>(true);
+    void readonlyPartialObject;
+  });
+
+  test('type assignments with JsonValue', () => {
+    const load = <T extends JsonValue>(value: T): T => value;
+
+    const array = load<string[]>(['a', 'b', 'c']);
+    assertType<Equal<typeof array, string[]>>(true);
+    // @ts-expect-error array is writable
+    assertType<Equal<typeof array, readonly string[]>>(true);
+    void array;
+
+    const readonlyArray = load<readonly string[]>(['a', 'b', 'c']);
+    assertType<Equal<typeof readonlyArray, readonly string[]>>(true);
+    // @ts-expect-error readonlyArray is readonly
+    assertType<Equal<typeof readonlyArray, string[]>>(true);
+    void readonlyArray;
+
+    const object = load<{ foo: string }>({ foo: 'bar' });
+    assertType<Equal<typeof object, { foo: string }>>(true);
+    // @ts-expect-error object is writable
+    assertType<Equal<typeof object, { readonly foo: string }>>(true);
+    // @ts-expect-error object is required
+    assertType<Equal<typeof object, { foo?: string }>>(true);
+    void object;
+
+    const partialObject = load<{ foo?: string }>({ foo: 'bar' });
+    assertType<Equal<typeof partialObject, { foo?: string }>>(true);
+    // @ts-expect-error object is writable
+    assertType<Equal<typeof partialObject, { readonly foo: string }>>(true);
+    // @ts-expect-error partialObject is partial
+    assertType<Equal<typeof partialObject, { foo: string }>>(true);
+    void partialObject;
+
+    const readonlyObject = load<{ readonly foo: string }>({ foo: 'bar' });
+    assertType<Equal<typeof readonlyObject, { readonly foo: string }>>(true);
+    // @ts-expect-error readonlyObject is readonly
+    assertType<Equal<typeof readonlyObject, { foo: string }>>(true);
+    // @ts-expect-error object is required
+    assertType<Equal<typeof readonlyObject, { readonly foo?: string }>>(true);
+    void readonlyObject;
+
+    const readonlyPartialObject = load<{ readonly foo?: string }>({ foo: 'bar' });
+    assertType<Equal<typeof readonlyPartialObject, { readonly foo?: string }>>(true);
+    // @ts-expect-error readonlyPartialObject is readonly
+    assertType<Equal<typeof readonlyPartialObject, { foo?: string }>>(true);
+    // @ts-expect-error readonlyPartialObject is required
+    assertType<Equal<typeof readonlyPartialObject, { readonly foo: string }>>(true);
+    void readonlyPartialObject;
   });
 });
