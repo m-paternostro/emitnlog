@@ -172,6 +172,21 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           }
         }
 
+        /* eslint-disable no-undef */
+        if (
+          typeof Headers !== 'undefined' &&
+          val instanceof Headers &&
+          'forEach' in val &&
+          typeof val.forEach === 'function'
+        ) {
+          const record: Record<string, string> = {};
+          val.forEach((v, key) => {
+            record[key] = v;
+          });
+          return prepare(record, depth + 1, seen);
+        }
+        /* eslint-enable no-undef */
+
         if (!val) {
           return val;
         }

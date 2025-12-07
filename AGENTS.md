@@ -111,6 +111,19 @@ The user‑facing `README.md` and topic docs under `docs/` are the primary publi
 - Keep changes scoped and surgical; do not over‑refactor or change filenames/styles unnecessarily.
 - Update documentation as needed to keep it consistent and helpful.
 
+## Preparing For Merging Request
+
+The request to "prepare for merge" (or similar) involves performing the following steps.
+
+1. First carefully review the changes. Stop and discuss if something is not clear, not properly designed, or not properly implemented.
+2. When the code is OK, write the tests, following the guidelines described above.
+   - If the tests are not passing, review first the code, then tests. If needed, stop and discuss.
+3. Only it is known that the tests are passing
+   - If applicable, write the JSDoc on code, following the guidelines above.
+   - If applicable, update the README, following the guidelines above.
+
+Note: NEVER COMMIT OR STAGE CHANGES without an explicit request.
+
 ## Working With Agents
 
 - Edits:

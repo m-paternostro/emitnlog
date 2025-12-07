@@ -166,6 +166,16 @@ describe('emitnlog.utils.stringify', () => {
     expect(result).toBe('/test-pattern/gi');
   });
 
+  test('should handle Headers objects by converting them to plain records', () => {
+    const headers = new Headers([
+      ['Content-Type', 'application/json'],
+      ['X-Test', 'value1'],
+      ['X-Test', 'value2'],
+    ]);
+
+    expect(stringify(headers)).toBe('{"content-type":"application/json","x-test":"value1, value2"}');
+  });
+
   test('should never throw errors on problematic values', () => {
     // Create problematic Date
     const invalidDate = new Date('invalid date');
