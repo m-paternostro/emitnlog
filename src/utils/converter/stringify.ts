@@ -181,7 +181,9 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
         ) {
           const record: Record<string, string> = {};
           val.forEach((v, key) => {
-            record[key] = v;
+            if (typeof key === 'string' && typeof v === 'string') {
+              record[key] = v;
+            }
           });
           return prepare(record, depth + 1, seen);
         }
