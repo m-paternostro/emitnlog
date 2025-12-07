@@ -125,7 +125,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
         return val;
 
       case 'object': {
-        if (val instanceof Date) {
+        if (safeInstanceOf(val, Date)) {
           try {
             return useLocale ? val.toLocaleString() : val.toISOString();
           } catch {
@@ -133,7 +133,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           }
         }
 
-        if (val instanceof Error) {
+        if (safeInstanceOf(val, Error)) {
           try {
             const message = val.message || val.name || '[unknown error]';
             return includeStack && val.stack ? `${message}\n${val.stack}` : message;
@@ -142,7 +142,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           }
         }
 
-        if (val instanceof Map) {
+        if (safeInstanceOf(val, Map)) {
           if (maxDepth < 0 || depth < maxDepth) {
             try {
               return prepare(Object.fromEntries(val), depth + 1, seen);
@@ -153,7 +153,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           return `Map(${val.size})`;
         }
 
-        if (val instanceof Set) {
+        if (safeInstanceOf(val, Set)) {
           if (maxDepth < 0 || depth < maxDepth) {
             try {
               return prepare(Array.from(val), depth + 1, seen);
@@ -164,13 +164,30 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
           return `Set(${val.size})`;
         }
 
-        if (val instanceof RegExp) {
+        if (safeInstanceOf(val, RegExp)) {
           try {
             return val.toString();
           } catch {
             return '[RegExp]';
           }
         }
+
+        /* eslint-disable no-undef */
+        if (
+          typeof Headers !== 'undefined' &&
+          safeInstanceOf(val, Headers) &&
+          'forEach' in val &&
+          typeof val.forEach === 'function'
+        ) {
+          const record: Record<string, string> = {};
+          val.forEach((v, key) => {
+            if (typeof key === 'string' && typeof v === 'string') {
+              record[key] = v;
+            }
+          });
+          return prepare(record, depth + 1, seen);
+        }
+        /* eslint-enable no-undef */
 
         if (!val) {
           return val;
@@ -306,5 +323,17 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
     return convert(converted);
   } catch {
     return '[Stringify Error]';
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const safeInstanceOf = <C extends abstract new (...args: any) => any>(
+  value: unknown,
+  constructor: C,
+): value is InstanceType<C> => {
+  try {
+    return value instanceof constructor;
+  } catch {
+    return false;
   }
 };

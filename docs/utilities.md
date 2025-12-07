@@ -107,6 +107,13 @@ stringify(obj); // 'CustomObject(test)'
 const fn = () => 'hello';
 stringify(fn); // '() => "hello"'
 
+// Web Fetch Headers objects are converted into plain JSON-safe records
+const headers = new Headers([
+  ['X-Test', 'value1'],
+  ['X-Test', 'value2'],
+]);
+stringify(headers); // '{"x-test":"value1, value2"}'
+
 // Undefined and null handling
 stringify(undefined); // 'undefined'
 stringify(null); // 'null'
