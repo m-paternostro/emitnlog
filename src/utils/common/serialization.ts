@@ -150,4 +150,4 @@ type JsonSerializableValue<T> = Exclude<T, JsonNonSerializable>;
  * const parsed: JsonValue = JSON.parse(json); // safe
  * ```
  */
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue = string | number | boolean | null | readonly JsonValue[] | { [key: string]: JsonValue };
