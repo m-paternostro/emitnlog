@@ -176,6 +176,42 @@ describe('emitnlog.utils.stringify', () => {
     expect(stringify(headers)).toBe('{"content-type":"application/json","x-test":"value1, value2"}');
   });
 
+  test('should handle a global `Headers` is not defined', () => {
+    const headers = new Headers([
+      ['Content-Type', 'application/json'],
+      ['X-Test', 'value1'],
+      ['X-Test', 'value2'],
+    ]);
+
+    /* eslint-disable no-undef */
+    const OriginalHeaders = globalThis.Headers;
+    try {
+      (globalThis.Headers as unknown) = undefined;
+      expect(stringify(headers)).toBe('[object Headers]');
+    } finally {
+      globalThis.Headers = OriginalHeaders;
+    }
+    /* eslint-enable no-undef */
+  });
+
+  test('should handle a global `Headers` is not properly defined', () => {
+    const headers = new Headers([
+      ['Content-Type', 'application/json'],
+      ['X-Test', 'value1'],
+      ['X-Test', 'value2'],
+    ]);
+
+    /* eslint-disable no-undef */
+    const OriginalHeaders = globalThis.Headers;
+    try {
+      (globalThis.Headers as unknown) = true;
+      expect(stringify(headers)).toBe('[object Headers]');
+    } finally {
+      globalThis.Headers = OriginalHeaders;
+    }
+    /* eslint-enable no-undef */
+  });
+
   test('should never throw errors on problematic values', () => {
     // Create problematic Date
     const invalidDate = new Date('invalid date');
