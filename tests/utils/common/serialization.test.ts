@@ -41,7 +41,7 @@ describe('emitnlog.utils.serialization', () => {
       readonly level: LogEntry['level'];
       readonly timestamp: number;
       readonly message: string;
-      readonly args?: JsonValue[];
+      readonly args?: readonly JsonValue[];
     };
 
     const parsedLogEntry: JsonSafe<LogEntry> = parsed;
@@ -239,5 +239,23 @@ describe('emitnlog.utils.serialization', () => {
     // @ts-expect-error readonlyPartialObject is required
     assertType<Equal<typeof readonlyPartialObject, { readonly foo: string }>>(true);
     void readonlyPartialObject;
+  });
+
+  test('should handle jsonStringify and jsonParse with JsonValue', () => {
+    const data: Record<string, JsonValue> = {};
+    data.key = 'value1';
+
+    const content = jsonStringify(data);
+    const parsed = jsonParse<Record<string, JsonValue>>(content);
+    expect(parsed).not.toBe(data);
+    expect(parsed).toEqual(data);
+    assertType<Equal<typeof parsed, Record<string, JsonValue>>>(true);
+
+    assertType<Equal<JsonSafe<string[]>, string[]>>(true);
+  });
+
+  test('should yield the right type for JsonSafe<...>', () => {
+    assertType<Equal<JsonSafe<string[]>, string[]>>(true);
+    assertType<Equal<JsonSafe<readonly string[]>, readonly string[]>>(true);
   });
 });
