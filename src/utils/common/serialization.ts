@@ -110,19 +110,21 @@ export type JsonSafe<T = unknown> = T extends JsonPrimitive
   ? T
   : T extends Date
     ? string
-    : T extends readonly (infer U)[]
+    : T extends (infer U)[]
       ? JsonSafe<U>[]
-      : unknown extends T
-        ? JsonValue
-        : T extends JsonNonSerializable
-          ? never
-          : T extends object
-            ? {
-                [K in keyof T as JsonSerializableValue<T[K]> extends never ? never : K]: JsonSafe<
-                  JsonSerializableValue<T[K]>
-                >;
-              }
-            : never;
+      : T extends readonly (infer U)[]
+        ? readonly JsonSafe<U>[]
+        : unknown extends T
+          ? JsonValue
+          : T extends JsonNonSerializable
+            ? never
+            : T extends object
+              ? {
+                  [K in keyof T as JsonSerializableValue<T[K]> extends never ? never : K]: JsonSafe<
+                    JsonSerializableValue<T[K]>
+                  >;
+                }
+              : never;
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonNonSerializable = symbol | undefined | ((...args: never[]) => unknown);
