@@ -1,6 +1,9 @@
+import type { SetReturnType } from 'type-fest';
+
 import { emptyArray } from '../utils/common/singleton.ts';
 import type { Logger, LogLevel } from './definition.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
+import type { LogSink } from './emitter/sink.ts';
 import { shouldEmitEntry } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 import { handlePrefixWrapping } from './prefixed-logger.ts';
@@ -144,3 +147,131 @@ export const withMinimumLevel = (logger: Logger, level: LogLevel | 'off' | (() =
     }),
   );
 };
+
+/**
+ * Returns a logger that suppresses duplicate emissions (same `level` + formatted `message`) within a sliding buffer.
+ *
+ * This is handy when a noisy subsystem produces identical messages in rapid succession (for example, repeating “still
+ * waiting…” entries in a console logger). The decorator tracks recently emitted entries and only forwards the first
+ * occurrence, clearing the buffer automatically when the buffer maximum size is reached, or after a specified amount of
+ * time (determined by `flushInterval`). The buffer is also clearer on the returned logger `flush` or `close`.
+ *
+ * @example CLI-friendly logger
+ *
+ * ```ts
+ * import { createConsoleLogLogger, withDedup } from 'emitnlog/logger';
+ *
+ * const logger = withDedup(createConsoleLogLogger('info'), { emitOnArgs: true });
+ *
+ * logger.info('connecting'); // emitted
+ * logger.info('connecting'); // suppressed (duplicate)
+ * logger.info('connecting', { attempt: 2 }); // emitted due to args
+ * ```
+ *
+ * @example Manual buffer reset
+ *
+ * ```ts
+ * const deduped = withDedup(createConsoleLogLogger('info'));
+ * deduped.warning('pending');
+ * deduped.warning('pending'); // suppressed
+ *
+ * await deduped.flush?.(); // clears dedup buffer + forwards to wrapped logger
+ * deduped.warning('pending'); // emitted again
+ * ```
+ *
+ * @param logger The logger to decorate (prefixed loggers stay prefixed).
+ * @param options Additional options for the deduplication behavior.
+ * @returns A logger that prevents duplicate entries from being emitted.
+ */
+export const withDedup = (
+  logger: Logger,
+  options?: {
+    /**
+     * The maximum number of entries to buffer before flushing. `1` is used as the minimum value.
+     *
+     * @default 100
+     */
+    readonly flushSize?: number;
+
+    /**
+     * The interval in milliseconds to flush the buffer.
+     *
+     * Setting this to `0` disables the automatic flush based on time.
+     *
+     * @default 1s (1000)
+     */
+    readonly flushInterval?: number;
+
+    /**
+     * Whether to always emit entries that have arguments.
+     */
+    readonly emitOnArgs?: boolean;
+
+    /**
+     * Provides the key that is used to uniquely identify a log entry.
+     *
+     * @default `${level}-${message}`
+     * @param level
+     * @param message
+     * @param args
+     * @returns A string key used to identify the entry in the buffer.
+     */
+    readonly keyProvider?: SetReturnType<LogSink['sink'], string>;
+  },
+): Logger => {
+  if (logger === OFF_LOGGER) {
+    return OFF_LOGGER;
+  }
+
+  const {
+    flushSize = 100,
+    flushInterval = 1000,
+    emitOnArgs = false,
+    keyProvider = DEFAULT_KEY_PROVIDER,
+  } = options ?? {};
+  const bufferSize = Math.max(1, flushSize);
+  const interval = Math.max(0, flushInterval);
+  let lastFlushTime = Date.now();
+
+  const buffer = new Set<string>();
+  const refreshBuffer = (timestamp = Date.now()) => {
+    lastFlushTime = timestamp;
+    buffer.clear();
+  };
+
+  return handlePrefixWrapping(logger, (original: Logger) =>
+    createLogger(() => original.level, {
+      sink: (level, message, args) => {
+        if (emitOnArgs && args?.length) {
+          original.log(level, message, ...args);
+          return;
+        }
+
+        const now = Date.now();
+        if ((interval && now - lastFlushTime >= interval) || buffer.size >= bufferSize) {
+          refreshBuffer(now);
+        }
+
+        const key = keyProvider(level, message, args);
+        if (buffer.has(key)) {
+          return;
+        }
+
+        buffer.add(key);
+        original.log(level, message, ...(args ?? emptyArray()));
+      },
+
+      flush: () => {
+        refreshBuffer();
+        return original.flush?.();
+      },
+
+      close: () => {
+        refreshBuffer();
+        return original.close?.();
+      },
+    }),
+  );
+};
+
+const DEFAULT_KEY_PROVIDER: SetReturnType<LogSink['sink'], string> = (level, message, _args) => `${level}-${message}`;

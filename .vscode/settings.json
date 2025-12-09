@@ -11,6 +11,7 @@
     "closables",
     "cooldown",
     "cooldowns",
+    "Dedup",
     "emitnlog",
     "errorify",
     "Finalizable",
