@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import type { Logger, LogLevel } from '../../src/logger/index.ts';
-import { OFF_LOGGER, withFixedLevel, withMinimumLevel, withPrefix } from '../../src/logger/index.ts';
+import { OFF_LOGGER, withDedup, withFixedLevel, withMinimumLevel, withPrefix } from '../../src/logger/index.ts';
 import type { MemoryLogger } from '../test-kit.ts';
 import { createMemoryLogger, createTestLogger } from '../test-kit.ts';
 
@@ -852,6 +852,120 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'error', message: 'p1.p2: error message', timestamp: expect.any(Number) },
         ]);
       });
+    });
+  });
+
+  describe('withDedup', () => {
+    test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
+      const logger = withDedup(OFF_LOGGER);
+      expect(logger).toBe(OFF_LOGGER);
+    });
+
+    test('should suppress duplicate entries until flushed', async () => {
+      const baseLogger = createMemoryLogger('trace');
+      const dedupedLogger = withDedup(baseLogger, { flushInterval: Number.MAX_SAFE_INTEGER });
+
+      dedupedLogger.info('duplicate');
+      dedupedLogger.info('duplicate');
+      dedupedLogger.error('duplicate');
+      dedupedLogger.error('duplicate');
+
+      expect(baseLogger.entries).toHaveLength(2);
+      expect(baseLogger.entries[0]).toMatchObject({ level: 'info', message: 'duplicate' });
+      expect(baseLogger.entries[1]).toMatchObject({ level: 'error', message: 'duplicate' });
+
+      const flushResult = dedupedLogger.flush?.();
+      await flushResult;
+      expect(baseLogger.entries).toHaveLength(0);
+
+      dedupedLogger.info('duplicate');
+
+      expect(baseLogger.entries).toHaveLength(1);
+      expect(baseLogger.entries[0]).toMatchObject({ level: 'info', message: 'duplicate' });
+    });
+
+    test('should flush buffer when maxBufferSize is reached', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const dedupedLogger = withDedup(baseLogger, { flushSize: 2, flushInterval: Number.MAX_SAFE_INTEGER });
+
+      dedupedLogger.info('first');
+      dedupedLogger.info('second');
+      dedupedLogger.info('third');
+      dedupedLogger.info('first');
+
+      expect(baseLogger.entries.map((entry) => entry.message)).toEqual(['first', 'second', 'third', 'first']);
+    });
+
+    test('should forward flush and close operations', async () => {
+      const baseLogger = createMemoryLogger('trace');
+      const flushSpy = vi.spyOn(baseLogger, 'flush');
+      const closeSpy = vi.spyOn(baseLogger, 'close');
+      const dedupedLogger = withDedup(baseLogger, { flushInterval: Number.MAX_SAFE_INTEGER });
+
+      dedupedLogger.info('one');
+      dedupedLogger.info('one');
+      const flushResult = dedupedLogger.flush?.();
+      await flushResult;
+
+      expect(flushSpy).toHaveBeenCalledTimes(1);
+
+      dedupedLogger.info('one');
+      expect(baseLogger.entries).toHaveLength(1);
+      expect(baseLogger.entries[0]).toMatchObject({ level: 'info', message: 'one' });
+
+      const closeResult = dedupedLogger.close?.();
+      await closeResult;
+      expect(closeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('should always emit entries with args when emitOnArgs is enabled', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const dedupedLogger = withDedup(baseLogger, { emitOnArgs: true, flushInterval: Number.MAX_SAFE_INTEGER });
+
+      dedupedLogger.info('duplicate');
+      dedupedLogger.info('duplicate');
+      dedupedLogger.info('duplicate', { requestId: '1' });
+      dedupedLogger.info('duplicate', { requestId: '2' });
+
+      expect(baseLogger.entries).toHaveLength(3);
+      expect(baseLogger.entries[1]).toMatchObject({ message: 'duplicate', args: [{ requestId: '1' }] });
+      expect(baseLogger.entries[2]).toMatchObject({ message: 'duplicate', args: [{ requestId: '2' }] });
+    });
+
+    test('should honor flushInterval set to zero', () => {
+      vi.useFakeTimers();
+      try {
+        const baseLogger = createMemoryLogger('trace');
+        const dedupedLogger = withDedup(baseLogger, { flushInterval: 0 });
+
+        dedupedLogger.info('repeat');
+        vi.advanceTimersByTime(10_000);
+        dedupedLogger.info('repeat');
+
+        expect(baseLogger.entries).toHaveLength(1);
+        expect(baseLogger.entries[0]).toMatchObject({ level: 'info', message: 'repeat' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    test('should use custom key provider when provided', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const dedupedLogger = withDedup(baseLogger, {
+        flushInterval: Number.MAX_SAFE_INTEGER,
+        keyProvider: (level, message, args) => `${level}-${message}-${JSON.stringify(args ?? [])}`,
+      });
+
+      dedupedLogger.info('duplicate');
+      dedupedLogger.info('duplicate'); // suppressed (same key)
+      dedupedLogger.info('duplicate', 'first');
+      dedupedLogger.info('duplicate', 'first'); // suppressed due to matching key
+      dedupedLogger.info('duplicate', 'second');
+
+      expect(baseLogger.entries).toHaveLength(3);
+      expect(baseLogger.entries[0]).toMatchObject({ message: 'duplicate' });
+      expect(baseLogger.entries[1]).toMatchObject({ message: 'duplicate', args: ['first'] });
+      expect(baseLogger.entries[2]).toMatchObject({ message: 'duplicate', args: ['second'] });
     });
   });
 });

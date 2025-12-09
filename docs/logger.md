@@ -508,6 +508,36 @@ errorLogger.i`info`; // Emitted as an error
 errorLogger.c`error`; // Emitted as an error
 ```
 
+### withDedup
+
+Creates a logger that filters out duplicate entries (same level + formatted message) within a bounded buffer, helping keep noisy destinations like the console readable. Duplicates are tracked per decorated logger and cleared automatically when either the buffer reaches the configured size or the flush interval elapses.
+
+```ts
+import { createConsoleLogLogger, withDedup } from 'emitnlog/logger';
+
+const baseLogger = createConsoleLogLogger('info');
+const logger = withDedup(baseLogger, {
+  maxBufferSize: 200, // defaults to 100
+  flushInterval: 2_000, // defaults to 1_000ms
+  emitOnArgs: true, // default: false
+});
+
+logger.info('connecting'); // emitted
+logger.info('connecting'); // suppressed (duplicate)
+logger.info('connecting', { attempt: 2 }); // emitted because args are present
+
+// Manually reset the dedup buffer when needed (also forwards to the wrapped logger)
+await logger.flush?.();
+```
+
+#### Options
+
+- `maxBufferSize` – Maximum number of unique entries tracked before the buffer resets (minimum 1, default 100)
+- `flushInterval` – Time window (ms) after which the buffer resets automatically (default 1_000)
+- `emitOnArgs` – Always emit entries that carry arguments, even if the message duplicates a previous entry (default `false`)
+
+Calling `flush()` or `close()` on the decorated logger clears the deduplication buffer and forwards the call to the wrapped logger.
+
 ## Creating Custom Loggers
 
 ### Emitter Logger
