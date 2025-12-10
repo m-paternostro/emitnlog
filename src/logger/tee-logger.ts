@@ -1,5 +1,5 @@
 import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from './definition.ts';
-import type { ForgeFinalizer, MergeFinalizer } from './implementation/finalizer.ts';
+import type { MergeFinalizer } from './implementation/finalizer.ts';
 import { asSingleFinalizer } from './implementation/finalizer.ts';
 import { HIGHEST_SEVERITY_LOG_LEVEL, toLevelSeverity } from './implementation/level-utils.ts';
 import { OFF_LOGGER } from './off-logger.ts';
@@ -154,4 +154,4 @@ export const tee = <T extends readonly Logger[]>(...loggers: T): TeeLogger<T> =>
   return teeLogger as TeeLogger<T>;
 };
 
-type TeeLogger<Ls extends readonly Logger[]> = MergeFinalizer<Logger, ForgeFinalizer<Ls>>;
+type TeeLogger<TLoggers extends readonly Logger[]> = MergeFinalizer<Logger, TLoggers>;

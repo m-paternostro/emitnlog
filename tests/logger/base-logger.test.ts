@@ -202,7 +202,7 @@ describe('emitnlog.logger.BaseLogger', () => {
   });
 
   describe('Template literal logging', () => {
-    const fail = () => {
+    const throwError = () => {
       throw new Error('should not be called');
     };
 
@@ -219,7 +219,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to debug', () => {
         loggerLevel = 'debug';
-        logger.t`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.t`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -235,7 +235,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to info', () => {
         loggerLevel = 'info';
-        logger.d`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.d`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -251,7 +251,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to notice', () => {
         loggerLevel = 'notice';
-        logger.i`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.i`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -267,7 +267,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to warning', () => {
         loggerLevel = 'warning';
-        logger.n`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.n`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -283,7 +283,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to error', () => {
         loggerLevel = 'error';
-        logger.w`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.w`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -299,7 +299,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to critical', () => {
         loggerLevel = 'critical';
-        logger.e`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.e`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -315,7 +315,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to alert', () => {
         loggerLevel = 'alert';
-        logger.c`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.c`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -331,7 +331,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to emergency', () => {
         loggerLevel = 'emergency';
-        logger.a`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.a`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });
@@ -347,7 +347,7 @@ describe('emitnlog.logger.BaseLogger', () => {
 
       test('should not compute the log template if level is set to off', () => {
         loggerLevel = 'off';
-        logger.em`test message with a number ${42} and a delayed value ${() => fail()}`;
+        logger.em`test message with a number ${42} and a delayed value ${() => throwError()}`;
         expect(logger.emittedLogs).toHaveLength(0);
       });
     });

@@ -24,7 +24,7 @@ export type Finalizer = { readonly flush?: () => void | Promise<void>; readonly 
  * export type MemorySink = SyncFinalizer<LogSink> & MemoryStore;
  * ```
  */
-export type SyncFinalizer<T extends Finalizer> = Omit<T, 'close'> & {
+export type SyncFinalizer<T extends Finalizer> = Omit<T, 'close' | 'flush'> & {
   readonly flush: () => void;
   readonly close: () => void;
 };
@@ -43,7 +43,7 @@ export type SyncFinalizer<T extends Finalizer> = Omit<T, 'close'> & {
  * ```
  */
 export type AsyncFinalizer<T extends Finalizer> = Simplify<
-  MergeFinalizer<T, { readonly flush: () => Promise<void>; readonly close: () => Promise<void> }>
+  MergeFinalizer<T, [{ readonly flush: () => Promise<void>; readonly close: () => Promise<void> }]>
 >;
 
 /**
@@ -52,8 +52,8 @@ export type AsyncFinalizer<T extends Finalizer> = Simplify<
  * This utility type is used internally to properly compose finalizer behaviors when combining different resource
  * management patterns.
  */
-export type MergeFinalizer<TBase extends Finalizer, TFinalizer extends Finalizer> = Simplify<
-  Omit<TBase, 'flush' | 'close'> & ForgeFinalizer<[TBase, TFinalizer]>
+export type MergeFinalizer<TBase extends Finalizer, TFinalizer extends readonly Finalizer[]> = Simplify<
+  Omit<TBase, 'flush' | 'close'> & ForgeFinalizer<TFinalizer>
 >;
 
 /**

@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 
-import type { Logger, LogLevel, LogMessage } from '../../src/logger/index.ts';
-import { OFF_LOGGER, tee } from '../../src/logger/index.ts';
-import type { MemoryLogger } from '../test-kit.ts';
-import { createMemoryLogger } from '../test-kit.ts';
+import type { Logger, LogLevel, LogMessage, MemoryLogger } from '../../src/logger/index.ts';
+import { createMemoryLogger, OFF_LOGGER, tee } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.tee', () => {
   describe('tee creation', () => {
@@ -69,19 +67,18 @@ describe('emitnlog.logger.tee', () => {
   describe('log forwarding', () => {
     let logger1: MemoryLogger;
     let logger2: MemoryLogger;
-    let teeLogger: ReturnType<typeof tee>;
 
     beforeEach(() => {
       logger1 = createMemoryLogger('trace'); // Set to lowest level to catch all logs
       logger2 = createMemoryLogger('warning'); // Set to a higher level to test filtering
-      teeLogger = tee(logger1, logger2);
 
       // Clear any initialization logs
-      logger1.clear();
-      logger2.clear();
+      logger1.close();
+      logger2.close();
     });
 
     test('should forward standard log method calls to all loggers', () => {
+      const teeLogger = tee(logger1, logger2);
       teeLogger.info('Test info message');
 
       expect(logger1.entries).toHaveLength(1);
@@ -101,9 +98,15 @@ describe('emitnlog.logger.tee', () => {
       expect(logger2.entries).toHaveLength(1);
       expect(logger2.entries[0].level).toBe('warning');
       expect(logger2.entries[0].message).toBe('Test warning message');
+
+      teeLogger.flush();
+      expect(logger1.entries).toHaveLength(0);
+      expect(logger2.entries).toHaveLength(0);
     });
 
     test('should forward template literal log method calls to all loggers', () => {
+      const teeLogger = tee(logger1, logger2);
+
       const value = 'template value';
       teeLogger.w`Test warning with ${value}`;
 
@@ -117,6 +120,8 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should forward args method correctly', () => {
+      const teeLogger = tee(logger1, logger2);
+
       const context = { userId: '123' };
       teeLogger.args(context).error('Error with context');
 
@@ -132,6 +137,8 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should forward Error objects correctly', () => {
+      const teeLogger = tee(logger1, logger2);
+
       const error = new Error('Test error');
       teeLogger.error(error);
 
@@ -147,6 +154,8 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should forward lazy message functions correctly', () => {
+      const teeLogger = tee(logger1, logger2);
+
       let functionCalled = false;
       const lazyMessage: LogMessage = () => {
         functionCalled = true;
@@ -166,6 +175,8 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should handle log method correctly', () => {
+      const teeLogger = tee(logger1, logger2);
+
       teeLogger.log('emergency', 'System down');
 
       expect(logger1.entries).toHaveLength(1);
@@ -178,9 +189,11 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should properly forward all log levels (trace through emergency)', () => {
+      const teeLogger = tee(logger1, logger2);
+
       // Test all standard logging methods
-      logger1.clear();
-      logger2.clear();
+      logger1.flush();
+      logger2.flush();
 
       teeLogger.trace('Trace message');
       teeLogger.debug('Debug message');
@@ -223,8 +236,10 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should properly forward all template literal logging methods', () => {
-      logger1.clear();
-      logger2.clear();
+      const teeLogger = tee(logger1, logger2);
+
+      logger1.flush();
+      logger2.flush();
 
       const value = 'dynamic value';
 
@@ -263,8 +278,10 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should handle args with all logging methods', () => {
-      logger1.clear();
-      logger2.clear();
+      const teeLogger = tee(logger1, logger2);
+
+      logger1.flush();
+      logger2.flush();
 
       const context = { traceId: '123', timestamp: Date.now() };
 
@@ -286,8 +303,8 @@ describe('emitnlog.logger.tee', () => {
       });
 
       // Test with template methods
-      logger1.clear();
-      logger2.clear();
+      logger1.flush();
+      logger2.flush();
 
       teeLogger.args(context).t`Trace template`;
       teeLogger.args(context).d`Debug template`;
@@ -307,6 +324,8 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should handle objects with error property correctly', () => {
+      const teeLogger = tee(logger1, logger2);
+
       const errorObj = { error: new Error('Inner error message') };
       teeLogger.error(errorObj);
 
@@ -322,6 +341,8 @@ describe('emitnlog.logger.tee', () => {
     });
 
     test('should ensure args are not shared between loggers', () => {
+      const teeLogger = tee(logger1, logger2);
+
       // This test verifies that each logger gets a new args instance
       // and they don't affect each other
       const context = { id: 'test' };

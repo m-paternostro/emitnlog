@@ -59,13 +59,13 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
 
 ## Tests
 
+- On failures YOU MUST review real code in `src` first, then consider test issues.
 - Framework: Vitest with explicit imports from `vitest`.
 - All "Coding Conventions" apply to the test code.
 - Philosophy:
   - Focus on validating behavior over implementation details; it’s OK to test internals when flow/timing is complex.
   - Prefer real code; use Vitest's `vi` mocks only when absolutely necessary and keep them minimal.
   - Maintain high, useful coverage—do not add tests merely for coverage.
-  - On failures, review real code in `src` first, then consider test issues.
 - Utilities: See `tests/test-kit.ts` for useful helpers.
 
 ### Coverage
@@ -111,9 +111,9 @@ The user‑facing `README.md` and topic docs under `docs/` are the primary publi
 - Keep changes scoped and surgical; do not over‑refactor or change filenames/styles unnecessarily.
 - Update documentation as needed to keep it consistent and helpful.
 
-## Preparing For Merging Request
+## Preparing For Sharing
 
-The request to "prepare for merge" (or similar) involves performing the following steps.
+The request to "prepare for sharing" (or similar) involves performing the following steps.
 
 1. First carefully review the changes. Stop and discuss if something is not clear, not properly designed, or not properly implemented.
 2. When the code is OK, write the tests, following the guidelines described above.

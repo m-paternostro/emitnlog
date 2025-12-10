@@ -7,10 +7,10 @@ import {
   createConsoleByLevelLogger,
   createConsoleErrorLogger,
   createConsoleLogLogger,
+  createMemoryLogger,
   toLogFormatter,
   withPrefix,
 } from '../../src/logger/index.ts';
-import { createMemoryLogger } from '../test-kit.ts';
 
 describe('emitnlog.logger.factory', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;
@@ -355,9 +355,8 @@ describe('emitnlog.logger.factory', () => {
       extendedLogger.info('Test');
       expect(baseLogger.entries).toHaveLength(1);
 
-      if (extendedLogger.flush) {
-        void extendedLogger.flush();
-      }
+      extendedLogger.flush();
+
       expect(baseLogger.entries).toHaveLength(0);
     });
 

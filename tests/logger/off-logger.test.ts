@@ -1,8 +1,7 @@
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { OFF_LOGGER, withLogger } from '../../src/logger/index.ts';
-import { createMemoryLogger } from '../test-kit.ts';
+import { createMemoryLogger, OFF_LOGGER, withLogger } from '../../src/logger/index.ts';
 
 describe('emitnlog.logger.off-logger', () => {
   let consoleLogSpy: MockInstance<typeof console.log>;

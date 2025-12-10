@@ -3,8 +3,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-import { OFF_LOGGER, requestLogger } from '../../../src/logger/index-node.ts';
-import { createMemoryLogger } from '../../test-kit.ts';
+import { createMemoryLogger, OFF_LOGGER, requestLogger } from '../../../src/logger/index-node.ts';
 
 type RequestLike = IncomingMessage & { path?: string };
 

@@ -5,6 +5,7 @@ import type { IsEqual } from 'type-fest';
 import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
 import {
   appendPrefix,
+  createMemoryLogger,
   emitter,
   inspectPrefixedLogger,
   isPrefixedLogger,
@@ -13,7 +14,7 @@ import {
   withPrefix,
 } from '../../src/logger/index.ts';
 import { emptyArray } from '../../src/utils/index.ts';
-import { createMemoryLogger, createTestLogger } from '../test-kit.ts';
+import { createTestLogger } from '../test-kit.ts';
 
 describe('emitnlog.logger.prefixed-logger', () => {
   test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
