@@ -15,7 +15,7 @@ export type MemoryStore = {
   /**
    * Clears the log entries stored in memory.
    */
-  readonly clear: () => void;
+  readonly flush: () => void;
 };
 
 /**
@@ -59,7 +59,7 @@ export type MemorySink = SyncFinalizer<LogSink> & MemoryStore;
  * @returns A MemorySink that stores log entries in memory
  */
 export const memorySink = (entries: LogEntry[] = []): MemorySink => {
-  const clear = () => {
+  const flush = () => {
     entries.length = 0;
   };
 
@@ -68,8 +68,7 @@ export const memorySink = (entries: LogEntry[] = []): MemorySink => {
       entries.push(asLogEntry(level, message, args));
     },
     entries,
-    clear,
-    flush: clear,
-    close: clear,
+    flush,
+    close: flush,
   };
 };

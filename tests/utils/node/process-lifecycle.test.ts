@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EventEmitter } from 'node:events';
 
-import type { LogEntry } from '../../../src/logger/index.ts';
-import { OFF_LOGGER } from '../../../src/logger/index.ts';
+import type { LogEntry, MemoryLogger } from '../../../src/logger/index.ts';
+import { createMemoryLogger, OFF_LOGGER } from '../../../src/logger/index.ts';
 import type { Closer, ProcessExitEvent, ProcessNotifier } from '../../../src/utils/index-node.ts';
 import {
   asClosable,
@@ -13,8 +13,7 @@ import {
   runProcessMain,
 } from '../../../src/utils/index-node.ts';
 import inner from '../../../src/utils/node/process-lifecycle.ts';
-import type { MemoryLogger } from '../../test-kit.ts';
-import { createMemoryLogger, createTestLogger } from '../../test-kit.ts';
+import { createTestLogger } from '../../test-kit.ts';
 
 const moduleReference = import.meta.url;
 

@@ -3,6 +3,7 @@
 export * from './definition.ts';
 export * as implementation from './implementation/index.ts';
 export * from './log-entry.ts';
+export * from './memory-logger.ts';
 export * from './node/environment-logger.ts';
 export * as emitter from './node/index-emitter.ts';
 export * from './node/index-factory.ts';

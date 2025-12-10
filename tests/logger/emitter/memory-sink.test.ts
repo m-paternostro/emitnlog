@@ -10,7 +10,6 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
 
       expect(sink.entries).toEqual([]);
       expect(sink.sink).toBeDefined();
-      expect(sink.clear).toBeDefined();
       expect(sink.flush).toBeDefined();
       expect(sink.close).toBeDefined();
     });
@@ -46,7 +45,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
 
       expect(sink.entries).toHaveLength(2);
 
-      sink.clear();
+      sink.flush();
 
       expect(sink.entries).toHaveLength(0);
     });
@@ -115,7 +114,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
 
       expect(sink.entries).toHaveLength(2);
 
-      void sink.flush();
+      sink.flush();
 
       expect(sink.entries).toHaveLength(0);
     });
@@ -137,7 +136,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       const sink = emitter.memorySink();
 
       sink.sink('info', 'Message 1', []);
-      sink.clear();
+      sink.flush();
       sink.sink('error', 'Message 2', []);
       sink.sink('debug', 'Message 3', []);
 
@@ -229,7 +228,7 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       sink.sink('info', 'Message 1', []);
 
       // Both flush and close should clear the same array
-      void sink.flush();
+      sink.flush();
       expect(sink.entries).toHaveLength(0);
 
       sink.sink('info', 'Message 2', []);

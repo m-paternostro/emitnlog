@@ -1,9 +1,15 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import type { Logger, LogLevel } from '../../src/logger/index.ts';
-import { OFF_LOGGER, withDedup, withFixedLevel, withMinimumLevel, withPrefix } from '../../src/logger/index.ts';
-import type { MemoryLogger } from '../test-kit.ts';
-import { createMemoryLogger, createTestLogger } from '../test-kit.ts';
+import {
+  createMemoryLogger,
+  OFF_LOGGER,
+  withDedup,
+  withFixedLevel,
+  withMinimumLevel,
+  withPrefix,
+} from '../../src/logger/index.ts';
+import { createTestLogger } from '../test-kit.ts';
 
 describe('emitnlog.logger.with-utils', () => {
   describe('withFixedLevel', () => {
@@ -586,14 +592,14 @@ describe('emitnlog.logger.with-utils', () => {
       });
 
       test('should work with MemoryLogger type', () => {
-        const baseLogger: MemoryLogger = createMemoryLogger();
+        const baseLogger = createMemoryLogger();
         const errorLogger = withFixedLevel(baseLogger, 'error');
 
         errorLogger.info('test');
 
         // baseLogger should still have memory store methods
         expect(baseLogger.entries).toHaveLength(1);
-        baseLogger.clear();
+        baseLogger.flush();
         expect(baseLogger.entries).toHaveLength(0);
       });
 
@@ -652,7 +658,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'trace', message: 'main: error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         emitSomeLogs(mainLogger);
         expect(baseLogger.entries).toEqual([
@@ -661,7 +667,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'error', message: 'main: error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         const p1Logger = withPrefix(traceLogger, 'p1');
         emitSomeLogs(p1Logger);
@@ -671,7 +677,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'trace', message: 'main.p1: error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         const p2Logger = withPrefix(p1Logger, 'p2');
         emitSomeLogs(p2Logger);
@@ -681,7 +687,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'trace', message: 'main.p1.p2: error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         emitSomeLogs(mainLogger);
         expect(baseLogger.entries).toEqual([
@@ -823,7 +829,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'error', message: 'error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         emitSomeLogs(warningLogger);
         expect(baseLogger.entries).toEqual([
@@ -832,7 +838,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'error', message: 'error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         const p1Logger = withPrefix(warningLogger, 'p1');
         emitSomeLogs(p1Logger);
@@ -842,7 +848,7 @@ describe('emitnlog.logger.with-utils', () => {
           { level: 'error', message: 'p1: error message', timestamp: expect.any(Number) },
         ]);
 
-        baseLogger.clear();
+        baseLogger.flush();
 
         const p2Logger = withPrefix(p1Logger, 'p2');
         emitSomeLogs(p2Logger);
