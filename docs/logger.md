@@ -420,26 +420,26 @@ dbLogger.d`Query executed in ${queryTime}ms`;
 For more complex applications, you can build sophisticated prefix hierarchies:
 
 ```ts
-import { createConsoleLogLogger, appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+import { createConsoleLogLogger, resetPrefix, withPrefix } from 'emitnlog/logger';
 
 const logger = createConsoleLogLogger();
 
 // Start with a base logger
 const appLogger = withPrefix(logger, 'APP');
-const serviceLogger = appendPrefix(appLogger, 'UserService');
-const repoLogger = appendPrefix(serviceLogger, 'Repository');
+const serviceLogger = withPrefix(appLogger, 'UserService');
+const repoLogger = withPrefix(serviceLogger, 'Repository');
 
 repoLogger.i`User data saved`; // Logs: "APP.UserService.Repository: User data saved"
 
 // Switch contexts while preserving the root logger
 const apiLogger = resetPrefix(repoLogger, 'API');
-const v1Logger = appendPrefix(apiLogger, 'v1');
+const v1Logger = withPrefix(apiLogger, 'v1');
 
 v1Logger.i`Request processed`; // Logs: "API.v1: Request processed"
 
 // Custom separators for different naming conventions
 const moduleLogger = withPrefix(logger, 'Auth', { prefixSeparator: '/', messageSeparator: ' >> ' });
-const tokenLogger = appendPrefix(moduleLogger, 'Token');
+const tokenLogger = withPrefix(moduleLogger, 'Token');
 
 tokenLogger.i`Token validated`; // Logs: "Auth/Token >> Token validated"
 ```
@@ -447,7 +447,6 @@ tokenLogger.i`Token validated`; // Logs: "Auth/Token >> Token validated"
 ### Prefix Functions
 
 - **`withPrefix(logger, prefix)`** - Creates a new prefixed logger or extends an existing prefix chain
-- **`appendPrefix(prefixedLogger, suffix)`** - Utility to append a prefix to an existing prefixed logger
 - **`resetPrefix(logger, newPrefix)`** - Utility to replace any existing prefix with a completely new one
 
 ### Prefix Options

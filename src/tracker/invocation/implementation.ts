@@ -2,7 +2,7 @@ import type { Writable } from 'type-fest';
 
 import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
-import { appendPrefix, withPrefix } from '../../logger/prefixed-logger.ts';
+import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
 import { closeAll } from '../../utils/common/closable.ts';
 import { generateRandomString } from '../../utils/common/generate-random-string.ts';
@@ -118,7 +118,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
     },
 
     track: (operation, fn, opt) => {
-      const trackedLogger = appendPrefix(trackerLogger, `operation.${operation}`);
+      const trackedLogger = withPrefix(trackerLogger, `operation.${operation}`);
 
       if (closed) {
         trackedLogger.d`the tracker is closed`;
@@ -133,7 +133,7 @@ export const createInvocationTracker = <TOperation extends string = string>(
       const trackedFn = (...args: Parameters<typeof fn>) => {
         const argsLength = (args as unknown[]).length;
         const index = ++counter;
-        const invocationLogger = appendPrefix(trackedLogger, String(index));
+        const invocationLogger = withPrefix(trackedLogger, String(index));
 
         const parentKey = stack.peek();
 

@@ -2,9 +2,8 @@ import { describe, expect, test } from 'vitest';
 
 import type { IsEqual } from 'type-fest';
 
-import type { Logger, LogLevel, PrefixedLogger } from '../../src/logger/index.ts';
+import type { Logger, LogLevel, MemoryLogger, PrefixedLogger } from '../../src/logger/index.ts';
 import {
-  appendPrefix,
   createMemoryLogger,
   emitter,
   inspectPrefixedLogger,
@@ -33,18 +32,19 @@ describe('emitnlog.logger.prefixed-logger', () => {
         expect(expected).toBe(expected);
       };
 
-      const logger: Logger = createTestLogger();
+      const logger: MemoryLogger = createMemoryLogger();
 
       const emptyPrefix = withPrefix(logger, '');
-      expect(emptyPrefix).not.toBe(logger);
+      expect(emptyPrefix).toBe(logger);
+
+      //@ts-expect-error emptyPrefix is a 'Logger' not a 'PrefixedLogger'
       assertPrefix(emptyPrefix, '', true);
-      assertPrefix(emptyPrefix, 'test', false);
 
       const testPrefix = withPrefix(logger, 'test1');
       expect(testPrefix).not.toBe(logger);
       assertPrefix(testPrefix, 'test1', true);
       assertPrefix(testPrefix, '', false);
-      assertPrefix(testPrefix, 'test', false);
+      assertPrefix(testPrefix, 'test1.', false);
 
       const combinedPrefix = withPrefix(testPrefix, 'test2');
       expect(combinedPrefix).not.toBe(logger);
@@ -53,17 +53,44 @@ describe('emitnlog.logger.prefixed-logger', () => {
       assertPrefix(combinedPrefix, '', false);
       assertPrefix(combinedPrefix, 'test1', false);
       assertPrefix(combinedPrefix, 'test2', false);
+      assertPrefix(combinedPrefix, 'test1.test2.', false);
 
       const prefix1 = withPrefix(emptyPrefix, 'prefix1');
       expect(prefix1).not.toBe(emptyPrefix);
-      assertPrefix(prefix1, '.prefix1', true);
+      assertPrefix(prefix1, 'prefix1', true);
       assertPrefix(prefix1, '', false);
-      assertPrefix(prefix1, 'prefix1', false);
+      assertPrefix(prefix1, 'prefix1.', false);
 
       const prefix2 = withPrefix(OFF_LOGGER, 'off');
       expect(prefix2).toBe(OFF_LOGGER);
       assertPrefix(prefix2, 'off', true);
       assertPrefix(prefix2, '', false);
+      assertPrefix(prefix2, 'off.', false);
+
+      logger.i`logger`;
+      emptyPrefix.i`emptyPrefix`;
+      testPrefix.i`testPrefix`;
+      combinedPrefix.i`combinedPrefix`;
+      prefix1.i`prefix1`;
+      prefix2.i`prefix2`;
+
+      expect(logger.entries).toHaveLength(5);
+      expect(logger.entries[0].message).toBe('logger');
+      expect(logger.entries[1].message).toBe('emptyPrefix');
+      expect(logger.entries[2].message).toBe('test1: testPrefix');
+      expect(logger.entries[3].message).toBe('test1.test2: combinedPrefix');
+      expect(logger.entries[4].message).toBe('prefix1: prefix1');
+
+      const p1: PrefixedLogger = combinedPrefix;
+      expect(p1).toBe(combinedPrefix);
+      const p2: PrefixedLogger<'test1.test2'> = combinedPrefix;
+      expect(p2).toBe(combinedPrefix);
+      const p3: PrefixedLogger<'test1.test2'> = combinedPrefix;
+      expect(p3).toBe(combinedPrefix);
+
+      //@ts-expect-error nope is the right prefix
+      const pWrong: PrefixedLogger<'nope'> = combinedPrefix;
+      expect(pWrong).toBe(combinedPrefix);
     });
 
     test('withPrefix should handle custom separators in types', () => {
@@ -79,13 +106,36 @@ describe('emitnlog.logger.prefixed-logger', () => {
         expect(expectedSeparator).toBe(expectedSeparator);
       };
 
-      const logger: Logger = createTestLogger();
+      const logger: MemoryLogger = createMemoryLogger();
 
-      const slashLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
-      assertPrefixWithSeparator(slashLogger, 'API', '/', true, true);
+      const prefix1 = withPrefix(logger, 'p1', { prefixSeparator: '/' });
+      assertPrefixWithSeparator(prefix1, 'p1', '/', true, true);
 
-      const nestedSlashLogger = withPrefix(slashLogger, 'v1');
-      assertPrefixWithSeparator(nestedSlashLogger, 'API/v1', '/', true, true);
+      const prefix2 = withPrefix(prefix1, 'p2');
+      assertPrefixWithSeparator(prefix2, 'p1/p2', '/', true, true);
+
+      const prefix3 = withPrefix(prefix2, 'p3');
+      assertPrefixWithSeparator(prefix3, 'p1/p2/p3', '/', true, true);
+
+      const prefix4 = withPrefix(prefix3, 'p4', { prefixSeparator: '-' });
+      assertPrefixWithSeparator(prefix4, 'p1/p2/p3/p4', '-', true, true);
+
+      const prefix5 = withPrefix(prefix4, 'p5', { prefixSeparator: '' });
+      assertPrefixWithSeparator(prefix5, 'p1/p2/p3/p4-p5', '-', true, true);
+
+      logger.i`logger`;
+      prefix1.i`prefix1`;
+      prefix2.i`prefix2`;
+      prefix3.i`prefix3`;
+      prefix4.i`prefix4`;
+      prefix5.i`prefix5`;
+
+      expect(logger.entries[0].message).toBe('logger');
+      expect(logger.entries[1].message).toBe('p1: prefix1');
+      expect(logger.entries[2].message).toBe('p1/p2: prefix2');
+      expect(logger.entries[3].message).toBe('p1/p2/p3: prefix3');
+      expect(logger.entries[4].message).toBe('p1/p2/p3/p4: prefix4');
+      expect(logger.entries[5].message).toBe('p1/p2/p3/p4-p5: prefix5');
     });
 
     test('withPrefix should handle fallback prefix in types', () => {
@@ -98,7 +148,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         expect(expected).toBe(expected);
       };
 
-      const logger: Logger = createTestLogger();
+      const logger: MemoryLogger = createMemoryLogger();
 
       const fallbackLogger = withPrefix(logger, 'Service', { fallbackPrefix: 'APP' });
       assertFallbackPrefix(fallbackLogger, 'APP.Service', true);
@@ -107,11 +157,20 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const existingPrefixed = withPrefix(logger, 'DB');
       const noFallbackLogger = withPrefix(existingPrefixed, 'Users', { fallbackPrefix: 'IGNORED' });
       assertFallbackPrefix(noFallbackLogger, 'DB.Users', true);
+
+      logger.i`logger`;
+      fallbackLogger.i`fallbackLogger`;
+      noFallbackLogger.i`noFallbackLogger`;
+
+      expect(logger.entries).toHaveLength(3);
+      expect(logger.entries[0].message).toBe('logger');
+      expect(logger.entries[1].message).toBe('APP.Service: fallbackLogger');
+      expect(logger.entries[2].message).toBe('DB.Users: noFallbackLogger');
     });
 
-    test('appendPrefix should return the correct types', () => {
-      const assertAppendedPrefix = <A extends string, S extends string, E extends string>(
-        actual: PrefixedLogger<A, S>,
+    test('withPrefix should return the correct types', () => {
+      const assertAppendedPrefix = <A extends string, E extends string>(
+        actual: PrefixedLogger<A>,
         expected: E,
         _test: IsEqual<A, E>,
       ): void => {
@@ -119,19 +178,47 @@ describe('emitnlog.logger.prefixed-logger', () => {
         expect(expected).toBe(expected);
       };
 
-      const logger: Logger = createTestLogger();
+      const assertPrefixWithSeparator = <A extends string, S extends string, E extends string>(
+        actual: PrefixedLogger<A, S>,
+        expectedPrefix: E,
+        expectedSeparator: S,
+        _testPrefix: IsEqual<A, E>,
+        _testSeparator: IsEqual<S, S>,
+      ): void => {
+        expect(actual).toBeDefined();
+        expect(expectedPrefix).toBe(expectedPrefix);
+        expect(expectedSeparator).toBe(expectedSeparator);
+      };
+
+      const logger: MemoryLogger = createMemoryLogger();
       const dbLogger = withPrefix(logger, 'DB');
 
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
       assertAppendedPrefix(userLogger, 'DB.User', true);
 
-      const profileLogger = appendPrefix(userLogger, 'Profile');
+      const profileLogger = withPrefix(userLogger, 'Profile');
       assertAppendedPrefix(profileLogger, 'DB.User.Profile', true);
 
       // Test with custom separator
       const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
-      const v1Logger = appendPrefix(apiLogger, 'v1');
+      const v1Logger = withPrefix(apiLogger, 'v1');
       assertAppendedPrefix(v1Logger, 'API/v1', true);
+      assertPrefixWithSeparator(v1Logger, 'API/v1', '/', true, true);
+
+      logger.i`logger`;
+      dbLogger.i`dbLogger`;
+      userLogger.i`userLogger`;
+      profileLogger.i`profileLogger`;
+      apiLogger.i`apiLogger`;
+      v1Logger.i`v1Logger`;
+
+      expect(logger.entries).toHaveLength(6);
+      expect(logger.entries[0].message).toBe('logger');
+      expect(logger.entries[1].message).toBe('DB: dbLogger');
+      expect(logger.entries[2].message).toBe('DB.User: userLogger');
+      expect(logger.entries[3].message).toBe('DB.User.Profile: profileLogger');
+      expect(logger.entries[4].message).toBe('API: apiLogger');
+      expect(logger.entries[5].message).toBe('API/v1: v1Logger');
     });
 
     test('resetPrefix should return the correct types', () => {
@@ -144,9 +231,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
         expect(expected).toBe(expected);
       };
 
-      const logger: Logger = createTestLogger();
+      const logger: MemoryLogger = createMemoryLogger();
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
 
       // Reset should ignore existing prefix
       const apiLogger = resetPrefix(userLogger, 'API');
@@ -155,14 +242,27 @@ describe('emitnlog.logger.prefixed-logger', () => {
       // Reset with custom separator
       const customLogger = resetPrefix(userLogger, 'Custom', { prefixSeparator: '/' });
       assertResetPrefix(customLogger, 'Custom', true);
+
+      logger.i`logger`;
+      dbLogger.i`dbLogger`;
+      userLogger.i`userLogger`;
+      apiLogger.i`apiLogger`;
+      customLogger.i`customLogger`;
+
+      expect(logger.entries).toHaveLength(5);
+      expect(logger.entries[0].message).toBe('logger');
+      expect(logger.entries[1].message).toBe('DB: dbLogger');
+      expect(logger.entries[2].message).toBe('DB.User: userLogger');
+      expect(logger.entries[3].message).toBe('API: apiLogger');
+      expect(logger.entries[4].message).toBe('Custom: customLogger');
     });
   });
 
-  describe('appendPrefix', () => {
+  describe('withPrefix', () => {
     test('should append prefix to existing prefixed logger', () => {
       const logger = createTestLogger();
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
 
       userLogger.info('User operation');
       expect(logger).toHaveLoggedWith('info', 'DB.User: User operation');
@@ -171,8 +271,8 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should preserve custom separators when appending', () => {
       const logger = createTestLogger();
       const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
-      const v1Logger = appendPrefix(apiLogger, 'v1');
-      const usersLogger = appendPrefix(v1Logger, 'users');
+      const v1Logger = withPrefix(apiLogger, 'v1');
+      const usersLogger = withPrefix(v1Logger, 'users');
 
       usersLogger.info('Processing request');
       expect(logger).toHaveLoggedWith('info', 'API/v1/users: Processing request');
@@ -181,7 +281,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should preserve custom message separators when appending', () => {
       const logger = createTestLogger();
       const sysLogger = withPrefix(logger, 'SYS', { messageSeparator: ' | ' });
-      const authLogger = appendPrefix(sysLogger, 'Auth');
+      const authLogger = withPrefix(sysLogger, 'Auth');
 
       authLogger.info('Authentication successful');
       expect(logger).toHaveLoggedWith('info', 'SYS.Auth | Authentication successful');
@@ -190,8 +290,8 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should create multiple levels of nesting', () => {
       const logger = createTestLogger();
       const serviceLogger = withPrefix(logger, 'UserService');
-      const repositoryLogger = appendPrefix(serviceLogger, 'Repository');
-      const cacheLogger = appendPrefix(repositoryLogger, 'Cache');
+      const repositoryLogger = withPrefix(serviceLogger, 'Repository');
+      const cacheLogger = withPrefix(repositoryLogger, 'Cache');
 
       cacheLogger.debug('Cache hit');
       expect(logger).toHaveLoggedWith('debug', 'UserService.Repository.Cache: Cache hit');
@@ -201,7 +301,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       let level: LogLevel = 'info';
       const logger = createTestLogger(() => level);
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
 
       expect(userLogger.level).toBe(logger.level);
 
@@ -219,7 +319,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should reset prefix ignoring existing prefix', () => {
       const logger = createTestLogger();
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
 
       const apiLogger = resetPrefix(userLogger, 'API');
 
@@ -240,7 +340,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const dbLogger = withPrefix(logger, 'DB');
 
       const apiLogger = resetPrefix(dbLogger, 'API', { prefixSeparator: '/', messageSeparator: ' >> ' });
-      const v1Logger = appendPrefix(apiLogger, 'v1');
+      const v1Logger = withPrefix(apiLogger, 'v1');
 
       v1Logger.info('Request processed');
       expect(logger).toHaveLoggedWith('info', 'API/v1 >> Request processed');
@@ -262,7 +362,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should identify appended and reset loggers', () => {
       const logger = createTestLogger();
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
       const apiLogger = resetPrefix(userLogger, 'API');
 
       expect(isPrefixedLogger(dbLogger)).toBe(true);
@@ -273,8 +373,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should handle edge cases', () => {
       const logger = createTestLogger();
       const emptyPrefixLogger = withPrefix(logger, '');
-
-      expect(isPrefixedLogger(emptyPrefixLogger)).toBe(true);
+      expect(isPrefixedLogger(emptyPrefixLogger)).toBe(false);
     });
   });
 
@@ -289,32 +388,31 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should return correct data for prefixed loggers', () => {
       const logger = createTestLogger();
       const prefixedLogger = withPrefix(logger, 'test');
-
       const data = inspectPrefixedLogger(prefixedLogger);
       expect(data).toBeDefined();
       expect(data!.rootLogger).toBe(logger);
       expect(data!.prefix).toBe('test');
-      expect(data!.separator).toBe('.');
+      expect(data!.separator).toBeUndefined();
       expect(data!.messageSeparator).toBe(': ');
     });
 
     test('should return correct data for nested prefixed loggers', () => {
       const logger = createTestLogger();
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
 
       const data = inspectPrefixedLogger(userLogger);
       expect(data).toBeDefined();
       expect(data!.rootLogger).toBe(logger);
       expect(data!.prefix).toBe('DB.User');
-      expect(data!.separator).toBe('.');
+      expect(data!.separator).toBeUndefined();
       expect(data!.messageSeparator).toBe(': ');
     });
 
     test('should return correct data for custom separators', () => {
       const logger = createTestLogger();
       const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/', messageSeparator: ' >> ' });
-      const v1Logger = appendPrefix(apiLogger, 'v1');
+      const v1Logger = withPrefix(apiLogger, 'v1');
 
       const data = inspectPrefixedLogger(v1Logger);
       expect(data).toBeDefined();
@@ -327,14 +425,14 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should return correct data for reset loggers', () => {
       const logger = createTestLogger();
       const dbLogger = withPrefix(logger, 'DB');
-      const userLogger = appendPrefix(dbLogger, 'User');
+      const userLogger = withPrefix(dbLogger, 'User');
       const apiLogger = resetPrefix(userLogger, 'API', { messageSeparator: ' | ' });
 
       const data = inspectPrefixedLogger(apiLogger);
       expect(data).toBeDefined();
       expect(data!.rootLogger).toBe(logger);
       expect(data!.prefix).toBe('API');
-      expect(data!.separator).toBe('.');
+      expect(data!.separator).toBeUndefined();
       expect(data!.messageSeparator).toBe(' | ');
     });
   });
@@ -735,7 +833,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       // Verify inspection data
       const data = inspectPrefixedLogger(emptyPrefixLogger);
       expect(data!.prefix).toBe('DB');
-      expect(data!.separator).toBe('.');
+      expect(data!.separator).toBeUndefined();
     });
 
     test('should not append separator when empty prefix is used with fallback prefix', () => {
@@ -809,12 +907,12 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(empty3Data!.prefix).toBe('DB');
     });
 
-    test('should handle appendPrefix with empty string', () => {
+    test('should handle withPrefix with empty string', () => {
       const logger = createTestLogger();
       const dbLogger = withPrefix(logger, 'DB');
 
-      // appendPrefix with empty string should not change prefix
-      const emptyAppendLogger = appendPrefix(dbLogger, '');
+      // withPrefix with empty string should not change prefix
+      const emptyAppendLogger = withPrefix(dbLogger, '');
 
       emptyAppendLogger.info('Test message');
       expect(logger).toHaveLoggedWith('info', 'DB: Test message');
@@ -827,18 +925,17 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should handle resetPrefix with empty string', () => {
       const logger = createTestLogger();
       const complexLogger = withPrefix(logger, 'Complex');
-      const nestedLogger = appendPrefix(complexLogger, 'Nested');
+      const nestedLogger = withPrefix(complexLogger, 'Nested');
 
       // resetPrefix with empty string should create logger with empty prefix
       const resetEmptyLogger = resetPrefix(nestedLogger, '');
 
       resetEmptyLogger.info('Test message');
-      expect(logger).toHaveLoggedWith('info', ': Test message');
+      expect(logger).toHaveLoggedWith('info', 'Test message');
 
       // Verify inspection data
       const data = inspectPrefixedLogger(resetEmptyLogger);
-      expect(data!.prefix).toBe('');
-      expect(data!.rootLogger).toBe(logger);
+      expect(data).toBeUndefined();
     });
 
     test('should handle empty prefix with fallback prefix and custom separators', () => {
@@ -855,7 +952,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(logger).toHaveLoggedWith('info', 'APP | Test message');
 
       // Adding non-empty prefix should use custom separator
-      const serviceLogger = appendPrefix(fallbackLogger, 'Service');
+      const serviceLogger = withPrefix(fallbackLogger, 'Service');
       serviceLogger.info('Service message');
       expect(logger).toHaveLoggedWith('info', 'APP/Service | Service message');
     });
@@ -866,7 +963,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
         expect(expectedType).toBe(expectedType);
       };
 
-      const logger: Logger = createTestLogger();
+      const logger: MemoryLogger = createMemoryLogger();
 
       // Empty prefix on fresh logger
       const emptyLogger = withPrefix(logger, '');
@@ -881,13 +978,26 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const fallbackLogger = withPrefix(logger, '', { fallbackPrefix: 'FALLBACK' });
       assertType(fallbackLogger, 'FALLBACK');
 
-      // Empty appendPrefix
-      const emptyAppend = appendPrefix(dbLogger, '');
+      // Empty withPrefix
+      const emptyAppend = withPrefix(dbLogger, '');
       assertType(emptyAppend, 'DB');
 
       // Empty resetPrefix
       const emptyReset = resetPrefix(dbLogger, '');
-      assertType(emptyReset, '');
+      //assertType(emptyReset, '');
+
+      logger.i`logger`;
+      dbLogger.i`dbLogger`;
+      fallbackLogger.i`fallbackLogger`;
+      emptyAppend.i`emptyAppend`;
+      emptyReset.i`emptyReset`;
+
+      expect(logger.entries).toHaveLength(5);
+      expect(logger.entries[0].message).toBe('logger');
+      expect(logger.entries[1].message).toBe('DB: dbLogger');
+      expect(logger.entries[2].message).toBe('FALLBACK: fallbackLogger');
+      expect(logger.entries[3].message).toBe('DB: emptyAppend');
+      expect(logger.entries[4].message).toBe('emptyReset');
     });
   });
 
@@ -897,14 +1007,14 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       // Create a complex hierarchy
       const appLogger = withPrefix(logger, 'APP');
-      const serviceLogger = appendPrefix(appLogger, 'UserService');
-      const repoLogger = appendPrefix(serviceLogger, 'Repository');
-      const cacheLogger = appendPrefix(repoLogger, 'Cache');
+      const serviceLogger = withPrefix(appLogger, 'UserService');
+      const repoLogger = withPrefix(serviceLogger, 'Repository');
+      const cacheLogger = withPrefix(repoLogger, 'Cache');
 
       // Reset to a different context
       const apiLogger = resetPrefix(cacheLogger, 'API');
-      const v1Logger = appendPrefix(apiLogger, 'v1');
-      const authLogger = appendPrefix(v1Logger, 'auth');
+      const v1Logger = withPrefix(apiLogger, 'v1');
+      const authLogger = withPrefix(v1Logger, 'auth');
 
       // Test logging
       cacheLogger.info('Cache operation');
@@ -946,47 +1056,47 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const level0 = withPrefix(logger, 'L0');
       validateType(level0, 'L0');
 
-      // Build a chain using appendPrefix
-      const level1 = appendPrefix(level0, 'L1');
+      // Build a chain using withPrefix
+      const level1 = withPrefix(level0, 'L1');
       validateType(level1, 'L0.L1');
 
-      const level2 = appendPrefix(level1, 'L2');
+      const level2 = withPrefix(level1, 'L2');
       validateType(level2, 'L0.L1.L2');
 
-      const level3 = appendPrefix(level2, 'L3');
+      const level3 = withPrefix(level2, 'L3');
       validateType(level3, 'L0.L1.L2.L3');
 
-      const level4 = appendPrefix(level3, 'L4');
+      const level4 = withPrefix(level3, 'L4');
       validateType(level4, 'L0.L1.L2.L3.L4');
 
-      const level5 = appendPrefix(level4, 'L5');
+      const level5 = withPrefix(level4, 'L5');
       validateType(level5, 'L0.L1.L2.L3.L4.L5');
 
-      const level6 = appendPrefix(level5, 'L6');
+      const level6 = withPrefix(level5, 'L6');
       validateType(level6, 'L0.L1.L2.L3.L4.L5.L6');
 
-      const level7 = appendPrefix(level6, 'L7');
+      const level7 = withPrefix(level6, 'L7');
       validateType(level7, 'L0.L1.L2.L3.L4.L5.L6.L7');
 
-      const level8 = appendPrefix(level7, 'L8');
+      const level8 = withPrefix(level7, 'L8');
       validateType(level8, 'L0.L1.L2.L3.L4.L5.L6.L7.L8');
 
-      const level9 = appendPrefix(level8, 'L9');
+      const level9 = withPrefix(level8, 'L9');
       validateType(level9, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9');
 
-      const level10 = appendPrefix(level9, 'L10');
+      const level10 = withPrefix(level9, 'L10');
       validateType(level10, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10');
 
-      const level11 = appendPrefix(level10, 'L11');
+      const level11 = withPrefix(level10, 'L11');
       validateType(level11, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11');
 
-      const level12 = appendPrefix(level11, 'L12');
+      const level12 = withPrefix(level11, 'L12');
       validateType(level12, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12');
 
-      const level13 = appendPrefix(level12, 'L13');
+      const level13 = withPrefix(level12, 'L13');
       validateType(level13, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13');
 
-      const level14 = appendPrefix(level13, 'L14');
+      const level14 = withPrefix(level13, 'L14');
       validateType(level14, 'L0.L1.L2.L3.L4.L5.L6.L7.L8.L9.L10.L11.L12.L13.L14');
 
       // Test that all loggers share the same level
@@ -1033,7 +1143,7 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const expectedPrefixes = ['ROOT'];
 
       for (let i = 1; i <= 10; i++) {
-        current = appendPrefix(current, `LEVEL${i}`);
+        current = withPrefix(current, `LEVEL${i}`);
         expectedPrefixes.push(`LEVEL${i}`);
 
         const expectedPrefix = expectedPrefixes.join('/');
@@ -1057,15 +1167,15 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       // Build initial chain
       let current: PrefixedLogger = withPrefix(logger, 'INITIAL');
-      current = appendPrefix(current, 'CHAIN');
-      current = appendPrefix(current, 'DEEP');
+      current = withPrefix(current, 'CHAIN');
+      current = withPrefix(current, 'DEEP');
 
       // Reset and build new chain
       current = resetPrefix(current, 'RESET');
 
       // Continue building
       for (let i = 1; i <= 8; i++) {
-        current = appendPrefix(current, `R${i}`);
+        current = withPrefix(current, `R${i}`);
 
         const data = inspectPrefixedLogger(current);
         expect(data!.rootLogger).toBe(logger);
@@ -1090,11 +1200,11 @@ describe('emitnlog.logger.prefixed-logger', () => {
 
       // Start with slash separators
       const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/', messageSeparator: ' -> ' });
-      const v1Logger = appendPrefix(apiLogger, 'v1');
+      const v1Logger = withPrefix(apiLogger, 'v1');
 
       // Reset with dot separators
       const serviceLogger = resetPrefix(v1Logger, 'Service', { prefixSeparator: '.', messageSeparator: ': ' });
-      const userLogger = appendPrefix(serviceLogger, 'User');
+      const userLogger = withPrefix(serviceLogger, 'User');
 
       v1Logger.info('API call');
       userLogger.info('User operation');
@@ -1114,23 +1224,23 @@ describe('emitnlog.logger.prefixed-logger', () => {
       const app = withPrefix(logger, 'APP');
       assertType(app, 'APP');
 
-      const service = appendPrefix(app, 'Service');
+      const service = withPrefix(app, 'Service');
       assertType(service, 'APP.Service');
 
-      const user = appendPrefix(service, 'User');
+      const user = withPrefix(service, 'User');
       assertType(user, 'APP.Service.User');
 
       const api = resetPrefix(user, 'API');
       assertType(api, 'API');
 
-      const v1 = appendPrefix(api, 'v1');
+      const v1 = withPrefix(api, 'v1');
       assertType(v1, 'API.v1');
 
       // Test with custom separators
       const custom = withPrefix(logger, 'Custom', { prefixSeparator: '/' });
       assertType(custom, 'Custom');
 
-      const nested = appendPrefix(custom, 'Nested');
+      const nested = withPrefix(custom, 'Nested');
       assertType(nested, 'Custom/Nested');
     });
   });
@@ -1160,6 +1270,9 @@ describe('emitnlog.logger.prefixed-logger', () => {
       expect(memoryLogger.entries).toHaveLength(2);
       expect(memoryLogger.entries[0].args).toEqual(['first']);
       expect(memoryLogger.entries[1]).not.toHaveProperty('args');
+
+      prefixedLogger.flush();
+      expect(memoryLogger.entries).toHaveLength(0);
     });
 
     test('should accumulate multiple args calls', () => {
@@ -1214,8 +1327,8 @@ describe('emitnlog.logger.prefixed-logger', () => {
     test('should handle pendingArgs with nested prefixes', () => {
       const memoryLogger = createMemoryLogger();
       const level1 = withPrefix(memoryLogger, 'L1');
-      const level2 = appendPrefix(level1, 'L2');
-      const level3 = appendPrefix(level2, 'L3');
+      const level2 = withPrefix(level1, 'L2');
+      const level3 = withPrefix(level2, 'L3');
 
       level3.args('nested', 'args').info('Deeply nested');
 
