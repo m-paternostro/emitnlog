@@ -1,36 +1,34 @@
+import type { Writable } from 'type-fest';
+
 import { isNotNullable } from '../utils/common/is-not-nullable.ts';
 import type { Logger, LogMessage, LogTemplateStringsArray } from './definition.ts';
 import { BaseLogger } from './implementation/base-logger.ts';
 import { OFF_LOGGER } from './off-logger.ts';
 
-const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
-const separatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/separator');
-const messageSeparatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/messageSeparator');
-const rootLoggerSymbol: unique symbol = Symbol.for('@emitnlog/logger/rootLogger');
-
-/**
- * A specialized logger that prepends a fixed prefix to all log messages.
- *
- * The PrefixedLogger maintains all the functionality of a standard Logger while ensuring every log message is
- * automatically prefixed, making it easier to:
- *
- * - Categorize logs by component, module, or subsystem
- * - Distinguish logs from different parts of your application
- * - Create hierarchical logging structures with nested prefixes
- *
- * The prefix is strongly typed and, in some development environments, is visible on the logger's tooltip.
- */
-export interface PrefixedLogger<TPrefix extends string = string, TSeparator extends string = string> extends Logger {
-  /*
-   * The prefix or undefined.
-   */
-  readonly [prefixSymbol]: TPrefix | undefined;
-
-  /*
-   * The value used to separate different parts of the prefix, or undefined
-   */
-  readonly [separatorSymbol]: TSeparator | undefined;
-}
+export type PrefixedLogger<
+  TPrefix extends string = string,
+  TSeparator extends string | undefined = undefined,
+  TLogger extends Logger = Logger,
+> =
+  TLogger extends PrefixedWithSeparator<infer TBaseLogger, infer TPrevPrefix, infer TPrevSeparator>
+    ? PrefixedWithSeparator<
+        TBaseLogger,
+        `${TPrevPrefix}${TPrevSeparator}${TPrefix}`,
+        TSeparator extends undefined | '' ? TPrevSeparator : TSeparator
+      >
+    : TLogger extends Prefixed<infer TBaseLogger, string>
+      ? TSeparator extends undefined | ''
+        ? Prefixed<TBaseLogger, ResolvePrefix<TLogger, TPrefix, TSeparator>>
+        : PrefixedWithSeparator<
+            TBaseLogger,
+            ResolvePrefix<TLogger, TPrefix, TSeparator>,
+            TSeparator extends undefined ? '.' : TSeparator
+          >
+      : TPrefix extends '' | undefined
+        ? TLogger
+        : TSeparator extends undefined | ''
+          ? Prefixed<TLogger, TPrefix>
+          : PrefixedWithSeparator<TLogger, TPrefix, TSeparator extends undefined ? '.' : TSeparator>;
 
 /**
  * Creates a new logger that prepends a specified prefix to all log messages.
@@ -156,9 +154,9 @@ export interface PrefixedLogger<TPrefix extends string = string, TSeparator exte
  * @returns A new logger with the specified prefix, or the OFF_LOGGER if the input logger is OFF_LOGGER
  */
 export const withPrefix = <
-  TLogger extends Logger,
+  const TLogger extends Logger,
   const TPrefix extends string,
-  const TSeparator extends string = '.',
+  const TSeparator extends string | undefined = undefined,
   const TFallbackPrefix extends string | undefined = undefined,
 >(
   logger: TLogger,
@@ -179,9 +177,13 @@ export const withPrefix = <
      */
     readonly fallbackPrefix?: TFallbackPrefix;
   },
-): WithPrefixResult<TLogger, TPrefix, TSeparator, TFallbackPrefix> => {
+): PrefixedLogger<ResolvePrefixWithFallback<TLogger, TPrefix, TSeparator, TFallbackPrefix>, TSeparator, TLogger> => {
   if (logger === OFF_LOGGER) {
-    return OFF_LOGGER as unknown as WithPrefixResult<TLogger, TPrefix, TSeparator, TFallbackPrefix>;
+    return OFF_LOGGER as unknown as PrefixedLogger<
+      ResolvePrefixWithFallback<TLogger, TPrefix, TSeparator, TFallbackPrefix>,
+      TSeparator,
+      TLogger
+    >;
   }
 
   let prefixSeparator: TSeparator;
@@ -190,32 +192,41 @@ export const withPrefix = <
   const data = inspectPrefixedLogger(logger);
   if (data) {
     logger = data.rootLogger as TLogger;
-    prefixSeparator = data.separator as TSeparator;
+    prefixSeparator = (options?.prefixSeparator || data.separator) as TSeparator;
     messageSeparator = data.messageSeparator;
-    prefix = (prefix ? `${data.prefix}${prefixSeparator}${prefix}` : data.prefix) as TPrefix;
+    prefix = (prefix ? `${data.prefix}${data.separator || '.'}${prefix}` : data.prefix) as TPrefix;
   } else {
-    prefixSeparator = (options?.prefixSeparator ?? '.') as TSeparator;
-    messageSeparator = options?.messageSeparator ?? ': ';
+    prefixSeparator = options?.prefixSeparator as TSeparator;
+    messageSeparator = options?.messageSeparator || ': ';
     if (options?.fallbackPrefix) {
-      prefix = (prefix ? `${options.fallbackPrefix}${prefixSeparator}${prefix}` : options.fallbackPrefix) as TPrefix;
+      prefix = (
+        prefix ? `${options.fallbackPrefix}${prefixSeparator || '.'}${prefix}` : options.fallbackPrefix
+      ) as TPrefix;
     }
   }
 
+  if (!prefix) {
+    return logger as unknown as PrefixedLogger<
+      ResolvePrefixWithFallback<TLogger, TPrefix, TSeparator, TFallbackPrefix>,
+      TSeparator,
+      TLogger
+    >;
+  }
+
   const prefixedLogger = createPrefixedLogger(logger, prefix, prefixSeparator, messageSeparator);
-  return prefixedLogger as unknown as WithPrefixResult<TLogger, TPrefix, TSeparator, TFallbackPrefix>;
+  return prefixedLogger as unknown as PrefixedLogger<
+    ResolvePrefixWithFallback<TLogger, TPrefix, TSeparator, TFallbackPrefix>,
+    TSeparator,
+    TLogger
+  >;
 };
 
-type InternalPrefixedLogger<TPrefix extends string = string, TSeparator extends string = string> = PrefixedLogger<
-  TPrefix,
-  TSeparator
-> & { readonly [messageSeparatorSymbol]: string; readonly [rootLoggerSymbol]: Logger };
-
-const createPrefixedLogger = <TPrefix extends string = string, TSeparator extends string = string>(
+const createPrefixedLogger = <TPrefix extends string = string, TSeparator extends string | undefined = undefined>(
   rootLogger: Logger,
   prefix: TPrefix,
   prefixSeparator: TSeparator,
   messageSeparator: string,
-): PrefixedLogger<TPrefix, TSeparator> => {
+): Logger => {
   let pendingArgs: unknown[] = [];
 
   const consumePendingArgs = (): readonly unknown[] | undefined => {
@@ -237,7 +248,7 @@ const createPrefixedLogger = <TPrefix extends string = string, TSeparator extend
     operation(logger);
   };
 
-  const internalLogger: InternalPrefixedLogger<TPrefix, TSeparator> = {
+  const internalLogger: InternalPrefixedLogger = {
     [prefixSymbol]: prefix,
     [separatorSymbol]: prefixSeparator,
     [messageSeparatorSymbol]: messageSeparator,
@@ -376,81 +387,6 @@ const toTemplateProvider =
   };
 
 /**
- * Appends a prefix to an existing prefixed logger, creating a hierarchical prefix structure.
- *
- * This utility function is specifically designed for use with already prefixed loggers. It extends the existing prefix
- * chain by appending a new prefix segment, using the same separator that was used in the original logger.
- *
- * Unlike `withPrefix`, this function has a simplified API that doesn't expose configuration options since it inherits
- * all settings (separators, etc.) from the existing prefixed logger.
- *
- * @example Basic Appending
- *
- * ```ts
- * import { createConsoleLogLogger, appendPrefix, withPrefix } from 'emitnlog/logger';
- *
- * const logger = createConsoleLogLogger('info');
- * const dbLogger = withPrefix(logger, 'DB');
- * const userDbLogger = appendPrefix(dbLogger, 'users');
- *
- * userDbLogger.i`User created successfully`;
- * // Output: "DB.users: User created successfully"
- * ```
- *
- * @example Multiple Levels of Nesting
- *
- * ```ts
- * import { appendPrefix, withPrefix } from 'emitnlog/logger';
- *
- * const serviceLogger = withPrefix(logger, 'UserService');
- * const repositoryLogger = appendPrefix(serviceLogger, 'Repository');
- * const cacheLogger = appendPrefix(repositoryLogger, 'Cache');
- *
- * cacheLogger.d`Cache hit for key: user_123`;
- * // Output: "UserService.Repository.Cache: Cache hit for key: user_123"
- * ```
- *
- * @example Preserving Custom Separators
- *
- * ```ts
- * // Original logger with custom separator
- * const apiLogger = withPrefix(logger, 'API', { prefixSeparator: '/' });
- * const v1Logger = appendPrefix(apiLogger, 'v1');
- * const usersLogger = appendPrefix(v1Logger, 'users');
- *
- * usersLogger.i`Processing user request`;
- * // Output: "API/v1/users: Processing user request"
- * ```
- *
- * @example Type Safety
- *
- * ```ts
- * import { appendPrefix, withPrefix } from 'emitnlog/logger';
- *
- * const dbLogger = withPrefix(logger, 'DB');
- * const userLogger = appendPrefix(dbLogger, 'User');
- * // Type of userLogger is PrefixedLogger<'DB.User', '.'>
- *
- * // TypeScript knows the exact prefix structure
- * const profileLogger = appendPrefix(userLogger, 'Profile');
- * // Type of profileLogger is PrefixedLogger<'DB.User.Profile', '.'>
- * ```
- *
- * @param logger The prefixed logger to append the prefix to
- * @param prefix The prefix segment to append to the existing prefix chain
- * @returns A new logger with the appended prefix, maintaining all original configuration
- */
-export const appendPrefix = <
-  const TCurrentPrefix extends string,
-  const TSeparator extends string,
-  const TLogger extends PrefixedLogger<TCurrentPrefix, TSeparator>,
-  const TPrefix extends string,
->(
-  logger: TLogger,
-  prefix: TPrefix,
-): WithPrefixResult<TLogger, TPrefix, TSeparator> => withPrefix(logger, prefix);
-
-/**
  * Creates a prefixed logger with a completely new prefix, ignoring any existing prefix on the input logger.
  *
  * This utility function extracts the root (non-prefixed) logger from the input and applies a fresh prefix to it,
@@ -478,16 +414,16 @@ export const appendPrefix = <
  * @example Switching Context
  *
  * ```ts
- * import { appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+ * import { resetPrefix, withPrefix } from 'emitnlog/logger';
  *
  * // Start with a deeply nested logger
  * const serviceLogger = withPrefix(logger, 'UserService');
- * const repoLogger = appendPrefix(serviceLogger, 'Repository');
- * const cacheLogger = appendPrefix(repoLogger, 'Cache'); // Prefix: "UserService.Repository.Cache"
+ * const repoLogger = withPrefix(serviceLogger, 'Repository');
+ * const cacheLogger = withPrefix(repoLogger, 'Cache'); // Prefix: "UserService.Repository.Cache"
  *
  * // Switch to a completely different context
  * const authLogger = resetPrefix(cacheLogger, 'Auth'); // Prefix: "Auth"
- * const tokenLogger = appendPrefix(authLogger, 'Token'); // Prefix: "Auth.Token"
+ * const tokenLogger = withPrefix(authLogger, 'Token'); // Prefix: "Auth.Token"
  *
  * tokenLogger.d`Token validated successfully`;
  * // Output: "Auth.Token: Token validated successfully"
@@ -496,14 +432,14 @@ export const appendPrefix = <
  * @example Custom Configuration
  *
  * ```ts
- * import { appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+ * import { resetPrefix, withPrefix } from 'emitnlog/logger';
  *
  * const existingLogger = withPrefix(logger, 'OldPrefix');
  *
  * // Reset with custom separators
  * const newLogger = resetPrefix(existingLogger, 'NewPrefix', { prefixSeparator: '/', messageSeparator: ' >> ' });
  *
- * const subLogger = appendPrefix(newLogger, 'SubModule');
+ * const subLogger = withPrefix(newLogger, 'SubModule');
  * subLogger.i`Module initialized`;
  * // Output: "NewPrefix/SubModule >> Module initialized"
  * ```
@@ -511,11 +447,11 @@ export const appendPrefix = <
  * @example Reusing Root Logger
  *
  * ```ts
- * import { appendPrefix, resetPrefix, withPrefix } from 'emitnlog/logger';
+ * import { resetPrefix, withPrefix } from 'emitnlog/logger';
  *
  * // Multiple loggers sharing the same root but with different prefixes
  * const dbLogger = withPrefix(logger, 'DB');
- * const complexDbLogger = appendPrefix(dbLogger, 'Complex'); // Prefix: "DB.Complex"
+ * const complexDbLogger = withPrefix(dbLogger, 'Complex'); // Prefix: "DB.Complex"
  *
  * // Create parallel hierarchies from the same root
  * const cacheLogger = resetPrefix(complexDbLogger, 'Cache'); // Uses same root as dbLogger
@@ -530,8 +466,12 @@ export const appendPrefix = <
  * @param options Optional configuration for the new prefixed logger
  * @returns A new logger with the specified prefix, using the root logger from the input
  */
-export const resetPrefix = <const TPrefix extends string, const TSeparator extends string = '.'>(
-  logger: Logger,
+export const resetPrefix = <
+  const TPrefix extends string,
+  const TSeparator extends string = '.',
+  const TLogger extends Logger = Logger,
+>(
+  logger: TLogger,
   prefix: TPrefix,
   options?: {
     /**
@@ -544,12 +484,12 @@ export const resetPrefix = <const TPrefix extends string, const TSeparator exten
      */
     readonly messageSeparator?: string;
   },
-): WithPrefixResult<Logger, TPrefix, TSeparator> => {
+) => {
   const data = inspectPrefixedLogger(logger);
   if (data) {
-    logger = data.rootLogger;
+    logger = data.rootLogger as TLogger;
   }
-  return withPrefix(logger, prefix, options);
+  return withPrefix(logger as Logger, prefix, options);
 };
 
 /**
@@ -559,20 +499,12 @@ export const resetPrefix = <const TPrefix extends string, const TSeparator exten
  * @returns True if the logger is a prefixed logger, false otherwise.
  */
 export const isPrefixedLogger = (logger: Logger | undefined | null): logger is PrefixedLogger =>
-  isNotNullable(logger) &&
-  prefixSymbol in logger &&
-  typeof logger[prefixSymbol] === 'string' &&
-  separatorSymbol in logger &&
-  typeof logger[separatorSymbol] === 'string' &&
-  rootLoggerSymbol in logger &&
-  logger[rootLoggerSymbol] !== undefined &&
-  messageSeparatorSymbol in logger &&
-  typeof logger[messageSeparatorSymbol] === 'string';
+  isInternalPrefixedLogger(logger);
 
 export type PrefixInformation = {
   readonly rootLogger: Logger;
   readonly prefix: string;
-  readonly separator: string;
+  readonly separator: string | undefined;
   readonly messageSeparator: string;
 };
 
@@ -583,12 +515,12 @@ export type PrefixInformation = {
  * @returns The prefix information, or undefined if the logger is not a prefixed logger.
  */
 export const inspectPrefixedLogger = (logger: Logger): PrefixInformation | undefined =>
-  isPrefixedLogger(logger)
+  isInternalPrefixedLogger(logger)
     ? {
-        rootLogger: (logger as InternalPrefixedLogger)[rootLoggerSymbol],
-        prefix: logger[prefixSymbol]!,
-        separator: logger[separatorSymbol]!,
-        messageSeparator: (logger as InternalPrefixedLogger)[messageSeparatorSymbol],
+        rootLogger: logger[rootLoggerSymbol],
+        prefix: logger[prefixSymbol],
+        separator: logger[separatorSymbol],
+        messageSeparator: logger[messageSeparatorSymbol],
       }
     : undefined;
 
@@ -610,10 +542,11 @@ export const inspectPrefixedLogger = (logger: Logger): PrefixInformation | undef
 export const injectPrefixInformation = <P extends PrefixedLogger>(source: P, target: Logger): P => {
   const prefixInformation = inspectPrefixedLogger(source);
   if (prefixInformation) {
-    (target as unknown as Record<symbol, unknown>)[rootLoggerSymbol] = prefixInformation.rootLogger;
-    (target as unknown as Record<symbol, unknown>)[prefixSymbol] = prefixInformation.prefix;
-    (target as unknown as Record<symbol, unknown>)[separatorSymbol] = prefixInformation.separator;
-    (target as unknown as Record<symbol, unknown>)[messageSeparatorSymbol] = prefixInformation.messageSeparator;
+    (target as unknown as Writable<InternalPrefixedLogger>)[rootLoggerSymbol] = prefixInformation.rootLogger;
+    (target as unknown as Writable<InternalPrefixedLogger>)[prefixSymbol] = prefixInformation.prefix;
+    (target as unknown as Writable<InternalPrefixedLogger>)[separatorSymbol] = prefixInformation.separator;
+    (target as unknown as Writable<InternalPrefixedLogger>)[messageSeparatorSymbol] =
+      prefixInformation.messageSeparator;
   }
 
   return target as unknown as P;
@@ -646,16 +579,71 @@ export const handlePrefixWrapping = (logger: Logger, wrapper: (logger: Logger) =
   return logger;
 };
 
-type WithPrefixResult<
+declare const tag: unique symbol;
+type PrefixContainer<Token> = { readonly [tag]: Token };
+
+type ResolvePrefixWithFallback<
   TLogger extends Logger,
   TNewPrefix extends string,
-  TSeparator extends string = '.',
+  TSeparator extends string | undefined = undefined,
   TFallbackPrefix extends string | undefined = undefined,
 > =
-  TLogger extends PrefixedLogger<infer TPrevPrefix, infer TPrevSeparator>
-    ? PrefixedLogger<`${TPrevPrefix}${TPrevSeparator}${TNewPrefix}`, TPrevSeparator>
-    : TFallbackPrefix extends string
-      ? TNewPrefix extends ''
-        ? PrefixedLogger<`${TFallbackPrefix}`, TSeparator>
-        : PrefixedLogger<`${TFallbackPrefix}${TSeparator}${TNewPrefix}`, TSeparator>
-      : PrefixedLogger<TNewPrefix, TSeparator>;
+  TLogger extends Prefixed<Logger, string>
+    ? TNewPrefix
+    : TFallbackPrefix extends '' | undefined
+      ? TNewPrefix
+      : TNewPrefix extends ''
+        ? `${TFallbackPrefix}`
+        : `${TFallbackPrefix}${UseSeparator<TSeparator>}${TNewPrefix}`;
+
+type ResolvePrefix<
+  TLogger extends Logger,
+  TNewPrefix extends string,
+  TSeparator extends string | undefined = undefined,
+  TFallbackPrefix extends string | undefined = undefined,
+> =
+  TLogger extends Prefixed<Logger, infer TPrevPrefix>
+    ? TNewPrefix extends ''
+      ? `${TPrevPrefix}`
+      : `${TPrevPrefix}${UseSeparator<TSeparator>}${TNewPrefix}`
+    : TFallbackPrefix extends '' | undefined
+      ? TNewPrefix
+      : TNewPrefix extends ''
+        ? `${TFallbackPrefix}`
+        : `${TFallbackPrefix}${UseSeparator<TSeparator>}${TNewPrefix}`;
+
+type Prefix<TValue extends string> = PrefixContainer<{ 'emitnlog.prefix': TValue }>;
+type Separator<TValue extends string> = PrefixContainer<{ 'emitnlog.separator': TValue }>;
+
+type Prefixed<TLogger extends Logger, TPrefix extends string> = TLogger & Prefix<TPrefix>;
+
+type PrefixedWithSeparator<TLogger extends Logger, TPrefix extends string, TSeparator extends string> = TLogger &
+  Prefix<TPrefix> &
+  Separator<TSeparator>;
+
+type UseSeparator<TValue extends string | undefined, TDefault extends string = '.'> = TValue extends undefined | ''
+  ? TDefault
+  : TValue;
+
+const prefixSymbol: unique symbol = Symbol.for('@emitnlog/logger/prefix');
+const separatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/separator');
+const messageSeparatorSymbol: unique symbol = Symbol.for('@emitnlog/logger/messageSeparator');
+const rootLoggerSymbol: unique symbol = Symbol.for('@emitnlog/logger/rootLogger');
+
+type InternalPrefixedLogger = Logger & {
+  readonly [prefixSymbol]: string;
+  readonly [separatorSymbol]: string | undefined;
+  readonly [messageSeparatorSymbol]: string;
+  readonly [rootLoggerSymbol]: Logger;
+};
+
+const isInternalPrefixedLogger = (logger: Logger | undefined | null): logger is InternalPrefixedLogger =>
+  isNotNullable(logger) &&
+  prefixSymbol in logger &&
+  typeof logger[prefixSymbol] === 'string' &&
+  separatorSymbol in logger &&
+  (typeof logger[separatorSymbol] === 'string' || logger[separatorSymbol] === undefined) &&
+  rootLoggerSymbol in logger &&
+  logger[rootLoggerSymbol] !== undefined &&
+  messageSeparatorSymbol in logger &&
+  typeof logger[messageSeparatorSymbol] === 'string';

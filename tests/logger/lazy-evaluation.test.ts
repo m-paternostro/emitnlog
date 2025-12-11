@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel, LogMessage } from '../../src/logger/index.ts';
 import {
-  appendPrefix,
   createConsoleByLevelLogger,
   createConsoleErrorLogger,
   createConsoleLogLogger,
@@ -36,7 +35,7 @@ describe('emitnlog.logger.lazy-evaluation', () => {
       /* 02 */ createConsoleByLevelLogger(level),
       /* 03 */ emitter.createLogger(level, emitter.memorySink()),
       /* 04 */ withPrefix(createConsoleLogLogger(level), 'test'),
-      /* 05 */ appendPrefix(withPrefix(createConsoleLogLogger(level), 'test'), '2'),
+      /* 05 */ withPrefix(withPrefix(createConsoleLogLogger(level), 'test'), '2'),
       /* 06 */ tee(emitter.createLogger(level, emitter.memorySink()), createConsoleLogLogger(level)),
     ];
 
