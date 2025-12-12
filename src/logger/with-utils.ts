@@ -1,6 +1,6 @@
 import type { SetReturnType } from 'type-fest';
 
-import { emptyArray } from '../utils/common/singleton.ts';
+import { emptyArray, emptyRecord } from '../utils/common/empty.ts';
 import type { Logger, LogLevel } from './definition.ts';
 import { createLogger } from './emitter/emitter-logger.ts';
 import type { LogSink } from './emitter/sink.ts';
@@ -228,7 +228,7 @@ export const withDedup = (
     flushInterval = 1000,
     emitOnArgs = false,
     keyProvider = DEFAULT_KEY_PROVIDER,
-  } = options ?? {};
+  } = options ?? emptyRecord<string, undefined>();
   const bufferSize = Math.max(1, flushSize);
   const interval = Math.max(0, flushInterval);
   let lastFlushTime = Date.now();

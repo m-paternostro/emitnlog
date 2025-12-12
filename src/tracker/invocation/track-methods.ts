@@ -1,3 +1,4 @@
+import { emptySet } from '../../utils/common/empty.ts';
 import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type { InvocationTracker, Tags } from './definition.ts';
 
@@ -96,7 +97,7 @@ export const trackMethods = <TOperation extends string = string>(
   },
 ): ReadonlySet<string> => {
   if (!isNotNullable(target) || (!options?.trackBuiltIn && isBuiltIn(target))) {
-    return new Set();
+    return emptySet();
   }
 
   const selected = (
