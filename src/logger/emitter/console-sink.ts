@@ -1,4 +1,4 @@
-import { emptyArray } from '../../utils/common/singleton.ts';
+import { emptyArray } from '../../utils/common/empty.ts';
 import { shouldEmitEntry } from '../implementation/level-utils.ts';
 import type { LogFormatter } from './formatter.ts';
 import { plainFormatter } from './formatter.ts';

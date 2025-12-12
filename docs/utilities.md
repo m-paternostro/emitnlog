@@ -29,7 +29,7 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [onProcessExit](#onprocessexit)
 - [QoL](#qol)
   - [Terminal Formatting](#terminal-formatting)
-  - [Empty Array](#empty-array)
+  - [Empty Collections](#empty-collections)
 
 ## Data Utilities
 
@@ -1195,14 +1195,17 @@ console.log(terminalFormatter.cyan('INFO: ready'));
 console.log(terminalFormatter.indent('Indented', 2));
 ```
 
-### Empty Array
+### Empty Collections
 
-Helper for reusing empty arrays without extra allocations.
+Helpers for reusing empty arrays, sets, and maps without extra allocations.
 
 ```ts
-import { emptyArray } from 'emitnlog/utils';
+import { emptyArray, emptySet, emptyMap, emptyRecord } from 'emitnlog/utils';
 
-const items = emptyArray<number>(); // readonly number[]
+const array: readonly number[] = emptyArray();
+const set: ReadonlySet<string> = emptySet();
+const map: ReadonlyMap<number, Date> = emptyMap();
+const record: Readonly<Record<string, number>> = emptyRecord();
 ```
 
 ---

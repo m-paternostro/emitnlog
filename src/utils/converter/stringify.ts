@@ -1,3 +1,4 @@
+import { emptyRecord } from '../common/empty.ts';
 import { exhaustiveCheck } from '../common/exhaustive-check.ts';
 
 /**
@@ -110,7 +111,7 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
     useLocale = false,
     maxArrayElements = 100,
     maxProperties = 50,
-  } = options || {};
+  } = options ?? emptyRecord<string, undefined>();
 
   const prepare = (val: unknown, depth = 0, seen = new WeakSet()): unknown => {
     const type = typeof val;

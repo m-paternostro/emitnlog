@@ -1,4 +1,4 @@
-import { emptyArray } from '../../utils/common/singleton.ts';
+import { emptyArray } from '../../utils/common/empty.ts';
 import type { StringifyOptions } from '../../utils/converter/stringify.ts';
 import { stringify } from '../../utils/converter/stringify.ts';
 import type { Logger, LogLevel, LogMessage, LogTemplateStringsArray } from '../definition.ts';
