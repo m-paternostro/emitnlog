@@ -1,5 +1,22 @@
 # emitnlog
 
+## 0.14.0
+
+### Minor Changes
+
+- 1e0ef87: Review `PrefixedLogger` types, empty values, and remove `applyPrefix` (`withPrefix` can be used instead)
+- 3b263f4: Add `emptyRecord`, `emptySet`, and `emptyMap` immutable singletons
+- 407cb4b: Add 'MemoryLogger' and 'createMemoryLogger'
+- d9d953e: Add `withDedup` to avoid emitting duplicated log entries
+
+### Patch Changes
+
+- be951fb: Ensure `JsonSafe` respects the readonly flag for arrays
+- 2d76ed9: Expose ProcessMainInput used in runProcessMain
+- e2750c5: Add `Headers` support to `stringify`
+- b036b77: Make the JsonValue array readonly so it can be used with any array
+- 874f1c6: Include CHANGELOG.md on released package
+
 ## 0.13.0
 
 ### Minor Changes
