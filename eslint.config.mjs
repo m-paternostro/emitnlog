@@ -82,6 +82,7 @@ export default ts.config([
           patterns: [
             { group: ['**/tests/**'], message: 'Do not import from tests' },
             { group: ['src/**'], message: 'Do not import from src root' },
+            { regex: '^\\..+(?<!\\.ts)$', message: 'Do not import files without a .ts extension' },
           ],
         },
       ],

@@ -83,6 +83,28 @@ const toPath = (value: string | URL | undefined): string | undefined => {
 };
 
 /**
+ * The input object passed to the `main` function of {@link runProcessMain}.
+ */
+export type ProcessMainInput = {
+  /**
+   * The start of the process.
+   */
+  readonly start: Date;
+
+  /**
+   * A `Closer` instance that can be used to register cleanup operations.
+   */
+  readonly closer: Closer;
+
+  /**
+   * A logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
+   *
+   * This logger is closed when the process ends.
+   */
+  readonly logger: Logger;
+};
+
+/**
  * Wraps the main entry point of a NodeJS process with automatic lifecycle management.
  *
  * This helper checks if the current module is the process entry point (via {@link isProcessMain}), and if so, executes
@@ -165,22 +187,7 @@ const toPath = (value: string | URL | undefined): string | undefined => {
  */
 export const runProcessMain = (
   moduleReference: string | URL | undefined,
-  main: (input: {
-    /**
-     * The start of the process.
-     */
-    readonly start: Date;
-
-    /**
-     * A `Closer` instance that can be used to register cleanup operations.
-     */
-    readonly closer: Closer;
-
-    /**
-     * A logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
-     */
-    readonly logger: Logger;
-  }) => Promise<void>,
+  main: (input: ProcessMainInput) => Promise<void>,
   options?: {
     /**
      * A logger or a factory function that creates one. If a factory is provided, it receives the same start `Date`
