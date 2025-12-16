@@ -4,16 +4,14 @@ import type { SyncClosable } from '../utils/common/closable.ts';
  * A type-safe event notifier that manages event listeners and notifications.
  *
  * @template T The type of events this notifier will handle
- * @template E The type of error that can be handled (defaults to Error)
  *
  *   EventNotifier provides:
  *
  *   - Type-safe event subscriptions via `onEvent`
  *   - Synchronized event notifications via `notify`
  *   - Automatic cleanup of resources via `close`
- *   - Error handling via optional error callback
  */
-export type EventNotifier<T = void, E = Error> = {
+export type EventNotifier<T = void> = {
   /**
    * Registers a listener function to be called when events are notified. Listeners are notified in the order they were
    * registered.
@@ -112,22 +110,6 @@ export type EventNotifier<T = void, E = Error> = {
    * @param event The event to send to all listeners or a function that returns such event.
    */
   readonly notify: Notify<T>;
-
-  /**
-   * Sets the error handler for the notifier, to be called whenever a listener throws an error. Pass `undefined` to
-   * clear the current error handler.
-   *
-   * @param handler A function that will be called with any errors thrown by listeners, or `undefined` to clear it.
-   */
-  readonly onError: (handler: ((error: E) => void) | undefined) => void;
-
-  /**
-   * Returns true if the notifier has been closed.
-   *
-   * More precisely, this value is false after `close` is invoked and while no other listener is added or `waitForEvent`
-   * is invoked.
-   */
-  readonly closed: boolean;
 
   /**
    * Closes the notifier and removes all listeners.

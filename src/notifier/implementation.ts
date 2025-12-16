@@ -15,6 +15,7 @@ import type { EventNotifier } from './definition.ts';
  * - Expose a public `onEvent` method so clients can register listeners
  * - Use notify to emit events when something happens and listeners are registered.
  * - Optionally handle listener errors using `onError`
+ * - Optionally observe lifecycle changes (listener/waiter activity or closure) using `onChange`
  *
  * All listeners are automatically cleaned up via the returned `close()` methods.
  *
@@ -95,16 +96,52 @@ import type { EventNotifier } from './definition.ts';
  * ```
  *
  * @template T The shape of the event data.
- * @template E Optional error type (defaults to Error).
  * @param options Optional configuration including debounce delay.
  * @returns An EventNotifier that supports listener registration, notification, and error handling.
  */
-export const createEventNotifier = <T = void, E = Error>(options?: {
+export const createEventNotifier = <T = void>(options?: {
+  /**
+   * The debounce delay for notifications in milliseconds.
+   */
   readonly debounceDelay?: number;
-}): EventNotifier<T, E> => {
+
+  /**
+   * Sets an error handler for the notifier, to be called whenever a listener throws an error.
+   *
+   * Errors throw by the handler are ignored.
+   */
+  readonly onError?: (error: unknown) => void;
+
+  /**
+   * Sets a handler for the notifier, to be called whenever the notifier state changes.
+   *
+   * Errors throw by the handler are ignored.
+   */
+  readonly onChange?: (event: {
+    /**
+     * Whether the notifier is active, i.e., if there is at least one listener or one wait event.
+     */
+    readonly active?: boolean;
+
+    /**
+     * The reason for the state change.
+     */
+    readonly reason: ChangeReason;
+  }) => void;
+}): EventNotifier<T> => {
   const listeners = new Set<(event: T) => unknown>();
-  let errorHandler: ((error: E) => void) | undefined;
   let deferredEvent: DeferredValue<T> | undefined;
+
+  const onChange = options?.onChange;
+  const notifyOnChange = onChange
+    ? (reason: ChangeReason) => {
+        try {
+          onChange({ active: Boolean(listeners.size || deferredEvent), reason });
+        } catch {
+          // ignore
+        }
+      }
+    : undefined;
 
   const basicNotify = (event?: T | (() => T)) => {
     if (!listeners.size && !deferredEvent) {
@@ -115,11 +152,22 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
 
     for (const listener of listeners) {
       try {
-        void listener(value);
+        const result = listener(value);
+        if (result instanceof Promise) {
+          void result.catch((error: unknown) => {
+            if (options?.onError) {
+              try {
+                options.onError(error);
+              } catch {
+                // ignore
+              }
+            }
+          });
+        }
       } catch (error) {
-        if (errorHandler) {
+        if (options?.onError) {
           try {
-            errorHandler(error as E);
+            options.onError(error);
           } catch {
             // ignore
           }
@@ -130,6 +178,7 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
     if (deferredEvent) {
       deferredEvent.resolve(value);
       deferredEvent = undefined;
+      notifyOnChange?.('waiter-resolved');
     }
   };
 
@@ -140,14 +189,8 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
       }
     : basicNotify;
 
-  let closed = false;
   return {
-    get closed() {
-      return closed;
-    },
-
     close: () => {
-      closed = true;
       debounced?.cancel(true);
       listeners.clear();
 
@@ -156,31 +199,36 @@ export const createEventNotifier = <T = void, E = Error>(options?: {
         deferredEvent = undefined;
       }
 
-      errorHandler = undefined;
+      notifyOnChange?.('closed');
     },
 
     onEvent: (listener) => {
-      closed = false;
+      const beforeAddSize = listeners.size;
       listeners.add(listener);
+      if (beforeAddSize !== listeners.size) {
+        notifyOnChange?.('listener-added');
+      }
       return {
         close: () => {
+          const beforeDeleteSize = listeners.size;
           listeners.delete(listener);
+          if (beforeDeleteSize !== listeners.size) {
+            notifyOnChange?.('listener-removed');
+          }
         },
       };
     },
 
     waitForEvent: () => {
       if (!deferredEvent) {
-        closed = false;
         deferredEvent = createDeferredValue<T>();
+        notifyOnChange?.('waiter-added');
       }
       return deferredEvent.promise;
     },
 
     notify,
-
-    onError: (handler) => {
-      errorHandler = handler;
-    },
   };
 };
+
+type ChangeReason = 'listener-added' | 'listener-removed' | 'waiter-added' | 'waiter-resolved' | 'closed';

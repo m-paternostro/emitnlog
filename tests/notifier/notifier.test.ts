@@ -60,31 +60,13 @@ describe('emitnlog.notifier', () => {
     expect(events).toEqual(['dynamic event']);
   });
 
-  test('should handle errors through error handler', () => {
-    const errors: Error[] = [];
-    notifier.onError((error) => errors.push(error));
-
-    notifier.onEvent(() => {
-      throw new Error('test error');
-    });
-
-    notifier.notify('test event');
-
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toBeInstanceOf(Error);
-    expect(errors[0].message).toBe('test error');
-  });
-
   test('should not notify after close', () => {
     const events: string[] = [];
     notifier.onEvent((event) => events.push(event));
 
     notifier.notify('first event');
-    expect(notifier.closed).toBe(false);
     notifier.close();
-    expect(notifier.closed).toBe(true);
     notifier.notify('second event');
-    expect(notifier.closed).toBe(true);
 
     expect(events).toEqual(['first event']);
   });
@@ -103,56 +85,16 @@ describe('emitnlog.notifier', () => {
     expect(events).toEqual(['1: first event', '2: first event', '2: second event']);
   });
 
-  test('should not report error after close', () => {
-    const errors: Error[] = [];
-    notifier.onError((error) => errors.push(error));
-    notifier.close();
-
-    notifier.onEvent(() => {
-      throw new Error('test error');
-    });
-
-    notifier.notify('test event');
-
-    expect(errors).toHaveLength(0);
-  });
-
-  test('should use the last set error handler', () => {
-    const errors1: Error[] = [];
-    const errors2: Error[] = [];
-
-    notifier.onError((error) => errors1.push(error));
-
-    notifier.onError((error) => errors2.push(error));
-
-    notifier.onEvent(() => {
-      throw new Error('test error');
-    });
-
-    notifier.notify('test event');
-
-    expect(errors1).toHaveLength(0);
-    expect(errors2).toHaveLength(1);
-    expect(errors2[0].message).toBe('test error');
-  });
-
   test('should still work after the notifier has been closed and reopened', async () => {
-    expect(notifier.closed).toBe(false);
     notifier.close();
-    expect(notifier.closed).toBe(true);
 
     const events: string[] = [];
     notifier.onEvent((event) => {
       events.push(event);
     });
 
-    expect(notifier.closed).toBe(false);
     notifier.notify('after close');
     expect(events).toEqual(['after close']);
-    expect(notifier.closed).toBe(false);
-
-    notifier.close();
-    expect(notifier.closed).toBe(true);
   });
 
   test('should validate the Car example from JSDoc', () => {
@@ -275,20 +217,21 @@ describe('emitnlog.notifier', () => {
     });
 
     test('should not be affected by listener errors', async () => {
-      const errors: Error[] = [];
-      notifier.onError((error) => errors.push(error));
+      const errors: unknown[] = [];
+      const notifierWithHandler = createEventNotifier<string>({ onError: (error) => errors.push(error) });
 
-      notifier.onEvent(() => {
+      notifierWithHandler.onEvent(() => {
         throw new Error('listener error');
       });
 
-      const eventPromise = notifier.waitForEvent();
-      notifier.notify('test event');
+      const eventPromise = notifierWithHandler.waitForEvent();
+      notifierWithHandler.notify('test event');
 
       const result = await eventPromise;
       expect(result).toBe('test event');
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toBe('listener error');
+      expect(errors[0]).toBeInstanceOf(Error);
+      expect((errors[0] as Error).message).toBe('listener error');
     });
 
     test('should not create new promise for each waitForEvent call between event notifications', async () => {
@@ -317,18 +260,11 @@ describe('emitnlog.notifier', () => {
     });
 
     test('should still work after the notifier has been closed and reopened', async () => {
-      expect(notifier.closed).toBe(false);
       notifier.close();
-      expect(notifier.closed).toBe(true);
       const eventPromise = notifier.waitForEvent();
-      expect(notifier.closed).toBe(false);
       notifier.notify('after close');
       const result = await eventPromise;
       expect(result).toBe('after close');
-      expect(notifier.closed).toBe(false);
-
-      notifier.close();
-      expect(notifier.closed).toBe(true);
     });
 
     test('should work in a loop as shown in the example', async () => {
@@ -359,11 +295,91 @@ describe('emitnlog.notifier', () => {
     test('should reject if notifier is closed before the next event', async () => {
       const n = createEventNotifier<string>();
       const p = n.waitForEvent();
-      expect(n.closed).toBe(false);
       n.close();
-      expect(n.closed).toBe(true);
       await expect(p).rejects.toBeInstanceOf(ClosedError);
-      expect(n.closed).toBe(true);
+    });
+  });
+
+  describe('options', () => {
+    test('onError handles synchronous listener errors and ignores handler failures', () => {
+      const errors: unknown[] = [];
+      const received: string[] = [];
+      const notifierWithHandler = createEventNotifier<string>({
+        onError: (error) => {
+          errors.push(error);
+          throw new Error('handler-error');
+        },
+      });
+
+      notifierWithHandler.onEvent(() => {
+        throw new Error('sync boom');
+      });
+
+      notifierWithHandler.onEvent((value) => received.push(value));
+
+      expect(() => notifierWithHandler.notify('value')).not.toThrow();
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toBeInstanceOf(Error);
+      expect((errors[0] as Error).message).toBe('sync boom');
+      expect(received).toEqual(['value']);
+    });
+
+    test('onError remains active after close', () => {
+      const errors: unknown[] = [];
+      const notifierWithHandler = createEventNotifier<string>({ onError: (error) => errors.push(error) });
+
+      notifierWithHandler.close();
+
+      notifierWithHandler.onEvent(() => {
+        throw new Error('after close');
+      });
+
+      notifierWithHandler.notify('value');
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toBeInstanceOf(Error);
+      expect((errors[0] as Error).message).toBe('after close');
+    });
+
+    test('onError captures asynchronous listener rejections', async () => {
+      const errors: unknown[] = [];
+      const notifierWithHandler = createEventNotifier<string>({ onError: (error) => errors.push(error) });
+
+      notifierWithHandler.onEvent(async () => {
+        await delay(1);
+        throw new Error('async boom');
+      });
+
+      notifierWithHandler.notify('value');
+      await delay(5);
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toBeInstanceOf(Error);
+      expect((errors[0] as Error).message).toBe('async boom');
+    });
+
+    test('onChange reports lifecycle transitions with accurate active state', async () => {
+      const changes: { reason: string; active?: boolean }[] = [];
+      const notifierWithChange = createEventNotifier<string>({ onChange: (event) => changes.push(event) });
+
+      const listener = notifierWithChange.onEvent(() => undefined);
+      listener.close();
+
+      const waiterPromise = notifierWithChange.waitForEvent();
+      notifierWithChange.notify('value');
+      await waiterPromise;
+
+      notifierWithChange.onEvent(() => undefined);
+      notifierWithChange.close();
+
+      expect(changes).toEqual([
+        { reason: 'listener-added', active: true },
+        { reason: 'listener-removed', active: false },
+        { reason: 'waiter-added', active: true },
+        { reason: 'waiter-resolved', active: false },
+        { reason: 'listener-added', active: true },
+        { reason: 'closed', active: false },
+      ]);
     });
   });
 
@@ -486,37 +502,6 @@ describe('emitnlog.notifier', () => {
       vi.advanceTimersByTime(100);
       await expect(p).rejects.toBeInstanceOf(ClosedError);
       vi.useRealTimers();
-    });
-
-    test('onError accepts undefined to clear handler and does not throw if handler throws', () => {
-      const n = createEventNotifier<string>();
-      const errors: unknown[] = [];
-      n.onError((e) => errors.push(e));
-
-      // listener throws -> captured by error handler
-      n.onEvent(() => {
-        throw new Error('boom');
-      });
-      n.notify('a');
-      expect(errors).toHaveLength(1);
-
-      // error handler itself throws; it must not break flow
-      n.onError(() => {
-        throw new Error('handler-error');
-      });
-      // second listener should still be notified despite handler throwing
-      const received: string[] = [];
-      n.onEvent((e) => received.push(e));
-      n.notify('b');
-      expect(received).toEqual(['b']);
-
-      // Clear handler
-      n.onError(undefined);
-      // Throwing listener now should not be captured anywhere (no throws from notify)
-      n.onEvent(() => {
-        throw new Error('ignored');
-      });
-      expect(() => n.notify('c')).not.toThrow();
     });
   });
 });

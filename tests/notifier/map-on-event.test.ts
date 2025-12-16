@@ -90,8 +90,9 @@ describe('emitnlog.notifier.mapOnEvent', () => {
   });
 
   test('should handle mapper function errors gracefully', () => {
-    const errors: Error[] = [];
-    sourceNotifier.onError((error) => errors.push(error));
+    const errors: unknown[] = [];
+    sourceNotifier = createEventNotifier<string>({ onError: (error) => errors.push(error) });
+    sourceOnEvent = sourceNotifier.onEvent;
 
     const faultyMapper = mapOnEvent(sourceOnEvent, (str) => {
       if (str === 'error') {
@@ -109,7 +110,7 @@ describe('emitnlog.notifier.mapOnEvent', () => {
 
     expect(results).toEqual([5, 5]); // Only successful transformations
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toBe('Mapper error');
+    expect((errors[0] as Error).message).toBe('Mapper error');
   });
 
   test('should work with function events', () => {
