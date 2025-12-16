@@ -69,6 +69,8 @@ notifier.notify(() => {
 const nextEvent = await notifier.waitForEvent();
 ```
 
+Need lifecycle hooks or centralized error tracking? See the notifier docs for optional `onError`/`onChange` hooks and other configuration details.
+
 **[→ Full Notifier Documentation](docs/notifier.md)**
 
 ### Function & Promise Tracking

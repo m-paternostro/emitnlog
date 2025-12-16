@@ -238,66 +238,35 @@ searchNotifier.notify(() => {
 
 ## Event Notifier Options
 
-When creating an event notifier, you can provide options:
+Configure behavior when creating the notifier:
 
 ```ts
 import { createEventNotifier } from 'emitnlog/notifier';
 
-interface EventNotifierOptions {
-  debounceDelay?: number; // Debounce delay in milliseconds
-}
-
-const notifier = createEventNotifier<string>({ debounceDelay: 100 });
+const notifier = createEventNotifier<string>({
+  debounceDelay: 100,
+  onError: (error) => {
+    errorTracker.captureException(error);
+  },
+  onChange: ({ active, reason }) => {
+    console.log(`notifier is ${active ? 'active' : 'idle'} because of ${reason}`);
+  },
+});
 ```
 
-### Error Handling
+### Option Reference
 
-You can register an error handler to catch errors that occur in listeners:
+- `debounceDelay?: number` — Debounces notifications so rapid calls collapse into the last event after the specified delay (milliseconds). Both listeners and `waitForEvent()` receive the debounced value.
+- `onError?: (error: unknown) => void` — Called whenever a listener throws synchronously or returns a promise that later rejects. Errors thrown by the handler are ignored so notification flow continues uninterrupted.
+- `onChange?: (event: { active?: boolean; reason: ChangeReason }) => void` — Notifies you whenever the notifier state changes. `reason` is one of `listener-added`, `listener-removed`, `waiter-added`, `waiter-resolved`, or `closed`. `active` tells you whether at least one listener or waiter exists after the transition.
 
-```ts
-import { createEventNotifier } from 'emitnlog/notifier';
-
-const notifier = createEventNotifier<string>();
-
-// Register error handler
-notifier.onError((error) => {
-  console.error('Listener error:', error);
-  // Send to error tracking service
-  errorTracker.captureException(error);
-});
-
-// Add a listener that might throw
-notifier.onEvent((msg) => {
-  if (msg === 'bad') {
-    throw new Error('Bad message received');
-  }
-  console.log(msg);
-});
-
-notifier.notify('hello'); // Works fine
-notifier.notify('bad'); // Error caught by error handler
-```
-
-You can clear the error handler by passing `undefined`. If an error handler itself throws, it is safely ignored and does not interrupt the notifier flow:
-
-```ts
-// Clear handler
-notifier.onError(undefined);
-
-// Set a handler that throws — its error is ignored internally
-notifier.onError(() => {
-  throw new Error('handler-error');
-});
-
-// This still notifies listeners without breaking
-notifier.notify('event');
-```
+Both callbacks are optional; omit them if you do not need centralized hooks. They remain in effect even if the notifier is closed and re-used later.
 
 ## Event Mapping and Filtering
 
 The `mapOnEvent` function allows you to transform and filter events from existing notifiers, creating new event streams with different types or conditional logic.
 
-Note: If a mapper throws, the error is reported via the source notifier's `onError` handler (if set). Mappers run inside the source listener context.
+Note: If a mapper throws, the error is reported via the source notifier's `onError` option (if provided). Mappers run inside the source listener context.
 
 ### Basic Event Mapping
 
