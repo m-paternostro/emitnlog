@@ -751,3 +751,7 @@ currentLevel = 'warning';
 logger.d`This won't appear (debug < warning)`;
 logger.w`This will appear (warning >= warning)`;
 ```
+
+---
+
+[← Back to main README](../../README.md)
