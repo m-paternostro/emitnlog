@@ -1,4 +1,4 @@
-# Logger Documentation
+# Emit n' Log: Logger
 
 A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rfc5424), supporting both template-literal and traditional logging approaches.
 

@@ -148,12 +148,12 @@ function handleStatus(status: 'pending' | 'success' | 'error') {
 
 ## Documentation
 
-| Component     | Description                                                    | Documentation                      |
-| ------------- | -------------------------------------------------------------- | ---------------------------------- |
-| **Logger**    | Structured logging with template literals and multiple outputs | [logger](src/logger/README.md)     |
-| **Notifier**  | Type-safe event notifications with lazy evaluation             | [notifier](src/notifier/README.md) |
-| **Tracker**   | Function call tracking, promise coordination, and caching      | [tracker](src/tracker/README.md)   |
-| **Utilities** | Async helpers, type guards, and data utilities                 | [utils](src/utils/README.md)       |
+| Component                          | Description                                                    |
+| ---------------------------------- | -------------------------------------------------------------- |
+| [Logger](src/logger/README.md)     | Structured logging with template literals and multiple outputs |
+| [Notifier](src/notifier/README.md) | Type-safe event notifications with lazy evaluation             |
+| [Tracker](src/tracker/README.md)   | Function call tracking, promise coordination, and caching      |
+| [Utilities](src/utils/README.md)   | Async helpers, type guards, and data utilities                 |
 
 ## Logger + Notifier Example
 
