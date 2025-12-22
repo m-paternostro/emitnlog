@@ -44,7 +44,7 @@ const data = { id: 123, items: ['a', 'b', 'c'] };
 logger.d`Request data: ${data}`;
 ```
 
-**[→ Full Logger Documentation](docs/logger.md)**
+**[→ Full Logger Documentation](src/logger/README.md)**
 
 ### Event Notifier
 
@@ -69,9 +69,9 @@ notifier.notify(() => {
 const nextEvent = await notifier.waitForEvent();
 ```
 
-Need lifecycle hooks or centralized error tracking? See the notifier docs for optional `onError`/`onChange` hooks and other configuration details.
+Need lifecycle hooks or centralized error tracking? See the notifier documentation for optional `onError`/`onChange` hooks and other configuration details.
 
-**[→ Full Notifier Documentation](docs/notifier.md)**
+**[→ Full Notifier Documentation](src/notifier/README.md)**
 
 ### Function & Promise Tracking
 
@@ -101,7 +101,7 @@ const [user1, user2] = await Promise.all([
 ]);
 ```
 
-**[→ Full Tracker Documentation](docs/tracker.md)**
+**[→ Full Tracker Documentation](src/tracker/README.md)**
 
 ### Utilities
 
@@ -135,7 +135,7 @@ function handleStatus(status: 'pending' | 'success' | 'error') {
 }
 ```
 
-**[→ Full Utilities Documentation](docs/utilities.md)**
+**[→ Full Utilities Documentation](src/utils/README.md)**
 
 ## Features
 
@@ -148,12 +148,12 @@ function handleStatus(status: 'pending' | 'success' | 'error') {
 
 ## Documentation
 
-| Component     | Description                                                    | Documentation                          |
-| ------------- | -------------------------------------------------------------- | -------------------------------------- |
-| **Logger**    | Structured logging with template literals and multiple outputs | [docs/logger.md](docs/logger.md)       |
-| **Notifier**  | Type-safe event notifications with lazy evaluation             | [docs/notifier.md](docs/notifier.md)   |
-| **Tracker**   | Function call tracking, promise coordination, and caching      | [docs/tracker.md](docs/tracker.md)     |
-| **Utilities** | Async helpers, type guards, and data utilities                 | [docs/utilities.md](docs/utilities.md) |
+| Component     | Description                                                    | Documentation                      |
+| ------------- | -------------------------------------------------------------- | ---------------------------------- |
+| **Logger**    | Structured logging with template literals and multiple outputs | [logger](src/logger/README.md)     |
+| **Notifier**  | Type-safe event notifications with lazy evaluation             | [notifier](src/notifier/README.md) |
+| **Tracker**   | Function call tracking, promise coordination, and caching      | [tracker](src/tracker/README.md)   |
+| **Utilities** | Async helpers, type guards, and data utilities                 | [utils](src/utils/README.md)       |
 
 ## Logger + Notifier Example
 

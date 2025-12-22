@@ -50,7 +50,7 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
 - Style and design:
   - Follow the project’s logging, testing, and naming conventions.
   - Keep duplication very low (both within and cross files); adhere to established design patterns in adjacent code.
-- Comments and docs:
+- Comments and documentation:
   - Line comments are only for non‑obvious design decisions; avoid restating the method name or obvious behavior.
   - Exported APIs should have JSDoc unless trivially self‑explanatory.
     - Include parameters, return type details (e.g., read‑only arrays, undefined cases), errors thrown/rejected, and gotchas.
@@ -91,11 +91,11 @@ Tip: During an active iteration, run `npm run typecheck` and `npm run test` freq
 
 ## Documentation
 
-The user‑facing `README.md` and topic docs under `docs/` are the primary public documentation. As such it is important to always keep it consistent and accurate. Moreover:
+The user‑facing `README.md` and module documentation under `src/<module>/README.md` are the primary public documentation. As such it is important to always keep it consistent and accurate. Moreover:
 
-- Always review docs whenever behavior, exports, or usage changes. If anything is outdated, update the documents within the same change set.
-- For any new API or feature, ask if the docs should be updated to mention it.
-- Keep the `README.md` simple and direct, adding usage details to the files in `docs/`
+- Always review the documentation whenever behavior, exports, or usage changes. If anything is outdated, update the documents within the same change set.
+- For any new API or feature, ask if the documentation should be updated to mention it.
+- Keep the `README.md` simple and direct, adding usage details to the README of the module.
 - Describe "how to use", not internals.
   - Include: what/why/when, quick start, API surface summary, at least one runnable example, and gotchas.
   - Skip implementation details or information that is not widely applicable
@@ -128,7 +128,7 @@ Note: NEVER COMMIT OR STAGE CHANGES without an explicit request.
 
 - Edits:
   - Use targeted patches; keep diffs minimal and focused on the task at hand.
-  - Adhere to existing code style and docs patterns; do not add external dependencies (project policy is zero dependencies) unless explicitly requested.
+  - Adhere to existing code style and documentation patterns; do not add external dependencies (project policy is zero dependencies) unless explicitly requested.
 - Validation:
   - For iteration: run `npm run typecheck` and `npm run test` as needed; optionally run `npm run test:smoke` when relevant.
   - Before handoff: run `npm run validate` to ensure build and all tests pass.
@@ -137,7 +137,7 @@ Note: NEVER COMMIT OR STAGE CHANGES without an explicit request.
 
 ## Where to Look
 
-- Project README: `README.md` and linked files — overview, examples, and links to component docs.
+- Project README: `README.md` and linked files — overview, examples, and links to component documentation.
 - Bundling config: `tsup.config.ts` — how ESM/CJS/node bundles are produced.
 - Package exports and entry points: `package.json` → `exports`.
 - Utilities: `src/utils/` — prefer reuse over re‑implementation.

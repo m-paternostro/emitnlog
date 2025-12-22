@@ -89,7 +89,7 @@
     - `createFileLogger`
   - BaseLogger must now be imported using the `implementation` namespace (`import { implementation } from 'emitnlog/logger';`)
 
-  See the [logger.md](docs/logger.md) file for more details.
+  See the [logger.md](src/logger/README.md) file for more details.
 
 - da019f3: This change includes some significant improvements to the packing of the project and a breaking change for users.
 
@@ -102,7 +102,7 @@
 - 350928d: `stringify` now ignores object keys that throw error when accessed
 - 593e547: `errorify` now uses `stringify` to compute the error message.
 - 8073a17: Add `requestLogger`, a drop-in Express-compatible middleware that logs request lifecycle events.
-- 987c35e: Tracker small improvements: clarify invocation index, export promise option types, and fix docs
+- 987c35e: Tracker small improvements: clarify invocation index, export promise option types, and fix documentation
 - 19c4d53: Adds "closable" utilities: `closeAll`, `asClosable`, `asSafeClosable`, `createCloser`
 
 ## 0.8.0
