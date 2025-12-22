@@ -132,7 +132,7 @@
   "files": [
     "CHANGELOG.md",
     "dist",
-    "docs"
+    "src/**/README.md"
   ],
   "scripts": {
     "build": "tsup",

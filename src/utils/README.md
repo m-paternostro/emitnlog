@@ -1,4 +1,4 @@
-# Utilities Documentation
+# Emit n' Log: Utilities
 
 A set of helpful utilities for async operations, type safety, and data handling. These utilities are used internally by the library but are also available for direct use in your applications.
 
@@ -1210,4 +1210,4 @@ const record: Readonly<Record<string, number>> = emptyRecord();
 
 ---
 
-[← Back to main README](../README.md)
+[← Back to main README](../../README.md)

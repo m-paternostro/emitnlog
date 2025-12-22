@@ -1,4 +1,4 @@
-# Tracker Documentation
+# Emit n' Log: Tracker
 
 The tracker module provides utilities for monitoring function calls, coordinating async operations, and caching expensive computations. It offers structured observability without requiring external tracing systems or heavy instrumentation.
 
@@ -691,4 +691,4 @@ tracker.onErrored((invocation) => {
 
 ---
 
-[← Back to main README](../README.md)
+[← Back to main README](../../README.md)

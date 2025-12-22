@@ -1,4 +1,4 @@
-# Event Notifier Documentation
+# Emit n' Log: Notifier
 
 A simple way to implement observable patterns. Listeners only get notified when something happens — and only if they're subscribed.
 
@@ -593,4 +593,4 @@ rawEvents.onEvent((event) => {
 
 ---
 
-[← Back to main README](../README.md)
+[← Back to main README](../../README.md)

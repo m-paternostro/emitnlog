@@ -21,7 +21,7 @@ on:
     paths-ignore:
       - '.vscode/**'
       - 'coverage/**'
-      - 'docs/**'
+      - 'src/**/README.md'
       - '**.md'
   workflow_dispatch:
 

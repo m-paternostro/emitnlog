@@ -1,4 +1,4 @@
-# Logger Documentation
+# Emit n' Log: Logger
 
 A powerful logger inspired by [RFC5424](https://datatracker.ietf.org/doc/html/rfc5424), supporting both template-literal and traditional logging approaches.
 
@@ -751,3 +751,7 @@ currentLevel = 'warning';
 logger.d`This won't appear (debug < warning)`;
 logger.w`This will appear (warning >= warning)`;
 ```
+
+---
+
+[← Back to main README](../../README.md)
