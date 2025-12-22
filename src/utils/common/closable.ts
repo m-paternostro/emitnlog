@@ -420,7 +420,7 @@ export const safeClose = <C extends ClosableLike>(closable: C, onError?: (error:
  *
  * Useful for ensuring cleanup logic is always executed, even in complex control flows with multiple return points.
  */
-export type Closer = Closable & {
+export type Closer = AsyncClosable & {
   /**
    * Adds a closable to be handled when the closer is closed.
    *
@@ -522,10 +522,23 @@ export type SyncCloser = SyncClosable & {
  * @param input - Optional initial set of closables
  * @returns A `Closer` that can register and close closables as a group
  */
-export const createCloser = (...input: readonly ClosableLike[]): Closer => {
+export const createCloser = (...input: readonly ClosableLike[]): Closer => createBasicCloser(true, ...input) as Closer;
+
+/**
+ * A version of {@link createCloser} to be used with synchronous closables.
+ *
+ * @param input - Optional initial set of closables
+ * @returns A `SyncCloser` that can register and close closables as a group
+ * @returns
+ */
+export const createSyncCloser = (...input: readonly SyncClosable[]): SyncCloser =>
+  createBasicCloser(false, ...input) as SyncCloser;
+
+type BasicCloser = Omit<Closer, 'close'> & Closable;
+const createBasicCloser = (forceAsync: boolean, ...input: readonly ClosableLike[]): BasicCloser => {
   const closables = new Set<ClosableLike>(input);
 
-  const closer: Closer = {
+  const closer: BasicCloser = {
     add: (closable) => {
       closables.add(closable);
       return closable;
@@ -541,27 +554,31 @@ export const createCloser = (...input: readonly ClosableLike[]): Closer => {
 
     close: () => {
       if (!closables.size) {
-        return undefined;
+        return forceAsync ? Promise.resolve() : undefined;
       }
 
       const array = Array.from(closables).reverse();
       closables.clear();
 
-      return closeAll(...array);
+      try {
+        const result = closeAll(...array);
+        if (result instanceof Promise) {
+          return result;
+        }
+
+        if (forceAsync) {
+          return Promise.resolve();
+        }
+
+        return undefined;
+      } catch (error) {
+        return forceAsync ? Promise.reject(errorify(error)) : errorify(error);
+      }
     },
   };
 
   return closer;
 };
-
-/**
- * A version of {@link createCloser} to be used with synchronous closables.
- *
- * @param input - Optional initial set of closables
- * @returns A `SyncCloser` that can register and close closables as a group
- * @returns
- */
-export const createSyncCloser = (...input: readonly SyncClosable[]): SyncCloser => createCloser(...input) as SyncCloser;
 
 type PartialSyncClosable = Partial<SyncClosable>;
 type PartialAsyncClosable = Partial<AsyncClosable>;

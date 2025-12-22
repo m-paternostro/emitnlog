@@ -1295,8 +1295,7 @@ describe('emitnlog.utils.closable', () => {
       closer.add(closable2);
       closer.add(closable3);
 
-      const result = closer.close();
-      expect(result).toBeUndefined();
+      expect(closer.close()).toBeInstanceOf(Promise);
       expect(callOrder).toEqual([3, 2, 1]);
     });
 
@@ -1319,8 +1318,7 @@ describe('emitnlog.utils.closable', () => {
       };
 
       const closer = createCloser(closable1, closable2, closable3);
-      const result = closer.close();
-      expect(result).toBeUndefined();
+      expect(closer.close()).toBeInstanceOf(Promise);
       expect(callOrder).toEqual([3, 2, 1]);
     });
 
@@ -1353,17 +1351,17 @@ describe('emitnlog.utils.closable', () => {
       expect(closer.add(NOT_CLOSABLE)).toBe(NOT_CLOSABLE);
       expect(closer.add(NOT_CLOSABLE)).toBe(NOT_CLOSABLE);
 
-      const result = closer.close();
-      expect(result).toBeUndefined();
+      expect(closer.close()).toBeInstanceOf(Promise);
       expect(callOrder).toEqual([4, 3, 2, 1]);
     });
 
-    test('should handle empty closer', () => {
+    test('should handle empty closer', async () => {
       const closer = createCloser();
       expect(closer.size).toBe(0);
       const result = closer.close();
       expect(closer.size).toBe(0);
-      expect(result).toBeUndefined();
+      expect(result).toBeInstanceOf(Promise);
+      await expect(result).resolves.toBeUndefined();
     });
 
     test('should handle closer with single closable', () => {
@@ -1374,7 +1372,7 @@ describe('emitnlog.utils.closable', () => {
       expect(closer.size).toBe(1);
       const result = closer.close();
       expect(closer.size).toBe(0);
-      expect(result).toBeUndefined();
+      expect(result).toBeInstanceOf(Promise);
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
@@ -1435,13 +1433,13 @@ describe('emitnlog.utils.closable', () => {
 
       // First close
       const result1 = closer.close();
-      expect(result1).toBeUndefined();
+      expect(result1).toBeInstanceOf(Promise);
       expect(spy1).toHaveBeenCalledTimes(1);
       expect(spy2).toHaveBeenCalledTimes(1);
 
       // Second close should not call the same closables
       const result2 = closer.close();
-      expect(result2).toBeUndefined();
+      expect(result2).toBeInstanceOf(Promise);
       expect(spy1).toHaveBeenCalledTimes(1);
       expect(spy2).toHaveBeenCalledTimes(1);
     });
@@ -1458,7 +1456,7 @@ describe('emitnlog.utils.closable', () => {
       expect(closer.size).toBe(1);
       const result1 = closer.close();
       expect(closer.size).toBe(0);
-      expect(result1).toBeUndefined();
+      expect(result1).toBeInstanceOf(Promise);
 
       // Add new closable after close
       closer.add(closable2);
@@ -1468,13 +1466,13 @@ describe('emitnlog.utils.closable', () => {
       // Close again should only call the new closables
       const result2 = closer.close();
       expect(closer.size).toBe(0);
-      expect(result2).toBeUndefined();
+      expect(result2).toBeInstanceOf(Promise);
       expect(spy1).toHaveBeenCalledTimes(1); // Only called once
       expect(spy2).toHaveBeenCalledTimes(1);
       expect(spy3).toHaveBeenCalledTimes(1);
     });
 
-    test('should accumulate errors and throw after closing all', () => {
+    test('should accumulate errors and throw after closing all', async () => {
       const err1 = new Error('err1');
       const err2 = new Error('err2');
 
@@ -1498,7 +1496,7 @@ describe('emitnlog.utils.closable', () => {
       expect(closer.size).toBe(3);
 
       try {
-        void closer.close();
+        await closer.close();
         expect.fail('close should throw');
       } catch (error) {
         expect(closer.size).toBe(0);
@@ -1518,7 +1516,7 @@ describe('emitnlog.utils.closable', () => {
       }
     });
 
-    test('should throw single error if only one closable fails', () => {
+    test('should throw single error if only one closable fails', async () => {
       const err = new Error('boom');
       const closable1: SyncClosable = {
         close: () => {
@@ -1533,7 +1531,7 @@ describe('emitnlog.utils.closable', () => {
       const closer = createCloser(closable1, closable2);
 
       try {
-        void closer.close();
+        await closer.close();
         expect.fail('close should throw');
       } catch (error) {
         expect(spy1).toHaveBeenCalledTimes(1);
@@ -1685,7 +1683,7 @@ describe('emitnlog.utils.closable', () => {
       expect(closableSpy).toHaveBeenCalledTimes(0);
 
       const result = closer.close();
-      expect(result).toBeUndefined();
+      expect(result).toBeInstanceOf(Promise);
       expect(closeCalled).toBe(true);
       expect(closableSpy).toHaveBeenCalledTimes(1);
     });
@@ -1730,7 +1728,8 @@ describe('emitnlog.utils.closable', () => {
       expect(spy1).toHaveBeenCalledTimes(0);
       expect(spy2).toHaveBeenCalledTimes(0);
 
-      closer.close();
+      const result = closer.close();
+      expect(result).toBeUndefined();
 
       expect(closer.size).toBe(0);
       expect(spy1).toHaveBeenCalledTimes(1);
