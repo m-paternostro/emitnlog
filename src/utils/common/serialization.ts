@@ -35,6 +35,7 @@
  *
  * @param value A JSON string to parse.
  * @returns The parsed JSON content typed as `JsonSafe<T>`.
+ * @throw Error if value cannot be parsed.
  */
 export const jsonParse = <T = unknown>(value: string): JsonSafe<T> => JSON.parse(value) as JsonSafe<T>;
 
