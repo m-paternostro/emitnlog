@@ -1687,6 +1687,117 @@ describe('emitnlog.utils.closable', () => {
       expect(closeCalled).toBe(true);
       expect(closableSpy).toHaveBeenCalledTimes(1);
     });
+
+    test('should return the in-flight close promise when called again with no new closables', async () => {
+      let resolveFirst: (() => void) | undefined;
+      const firstClosable: AsyncClosable = {
+        close: () =>
+          new Promise<void>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      };
+
+      const closer = createCloser(firstClosable);
+
+      const firstPromise = closer.close();
+      expect(firstPromise).toBeInstanceOf(Promise);
+      expect(closer.closing).toBe(true);
+
+      const cached = closer.close();
+      expect(cached).toBe(firstPromise);
+      expect(closer.closing).toBe(true);
+
+      resolveFirst?.();
+      await cached;
+      expect(closer.closing).toBe(false);
+      expect(closer.size).toBe(0);
+    });
+
+    test('should chain closes and run newly added closables after the current batch completes', async () => {
+      const steps: string[] = [];
+      let resolveFirst: (() => void) | undefined;
+      const slowClosable: AsyncClosable = {
+        close: () =>
+          new Promise<void>((resolve) => {
+            steps.push('first-start');
+            resolveFirst = () => {
+              steps.push('first-end');
+              expect(closer.closing).toBe(true);
+              resolve();
+            };
+          }),
+      };
+
+      const closer = createCloser(slowClosable);
+
+      const firstPromise = closer.close();
+      expect(firstPromise).toBeInstanceOf(Promise);
+      expect(closer.closing).toBe(true);
+      expect(steps).toEqual(['first-start']);
+
+      const lateClosable: SyncClosable = {
+        close: () => {
+          steps.push('second');
+        },
+      };
+
+      closer.add(lateClosable);
+      const chainedPromise = closer.close();
+      expect(chainedPromise).toBeInstanceOf(Promise);
+      expect(chainedPromise).not.toBe(firstPromise);
+      expect(steps).toEqual(['first-start']);
+      expect(closer.closing).toBe(true);
+
+      resolveFirst?.();
+      await chainedPromise;
+
+      expect(steps).toEqual(['first-start', 'first-end', 'second']);
+      expect(closer.closing).toBe(false);
+      expect(closer.size).toBe(0);
+    });
+
+    test('should propagate earlier errors while still closing newly added closables', async () => {
+      const steps: string[] = [];
+      const failure = new Error('first-fail');
+      const failingClosable: AsyncClosable = {
+        close: async () => {
+          steps.push('first-start');
+          await delay(1);
+          steps.push('first-fail');
+          expect(closer.closing).toBe(true);
+          throw failure;
+        },
+      };
+
+      const closer = createCloser(failingClosable);
+      const firstPromise = closer.close();
+      expect(firstPromise).toBeInstanceOf(Promise);
+
+      const lateClosable1: SyncClosable = {
+        close: () => {
+          steps.push('late-1');
+          expect(closer.closing).toBe(true);
+        },
+      };
+      const lateClosable2: SyncClosable = {
+        close: () => {
+          steps.push('late-2');
+          expect(closer.closing).toBe(true);
+        },
+      };
+
+      closer.add(lateClosable1);
+      closer.add(lateClosable2);
+
+      const chainedPromise = closer.close();
+      expect(chainedPromise).not.toBe(firstPromise);
+
+      await expect(chainedPromise).rejects.toBe(failure);
+
+      expect(steps).toEqual(['first-start', 'first-fail', 'late-2', 'late-1']);
+      expect(closer.closing).toBe(false);
+      expect(closer.size).toBe(0);
+    });
   });
 
   describe('createSyncCloser', () => {
@@ -1762,6 +1873,24 @@ describe('emitnlog.utils.closable', () => {
       const result = closer.close();
       expect(result).toBeUndefined();
       expect(callOrder).toEqual([3, 2, 1]);
+    });
+
+    test('should expose closing flag during synchronous close', () => {
+      const closer = createSyncCloser();
+      expect(closer.closing).toBe(false);
+
+      const closable: SyncClosable = {
+        close: () => {
+          expect(closer.closing).toBe(true);
+        },
+      };
+
+      closer.add(closable);
+      const result = closer.close();
+
+      expect(result).toBeUndefined();
+      expect(closer.closing).toBe(false);
+      expect(closer.size).toBe(0);
     });
   });
 });
