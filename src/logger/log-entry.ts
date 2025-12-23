@@ -1,5 +1,6 @@
 import type { Writable } from 'type-fest';
 
+import { stringify } from '../utils/converter/stringify.ts';
 import type { LogLevel } from './definition.ts';
 
 /**
@@ -18,6 +19,11 @@ export type LogEntry = {
    * Timestamp when the entry was created (milliseconds since epoch).
    */
   readonly timestamp: number;
+
+  /**
+   * The formatted timestamp as date-time ISO string.
+   */
+  readonly iso: string;
 
   /**
    * The formatted message content.
@@ -51,7 +57,8 @@ export type LogEntry = {
  * @returns A LogEntry object with current timestamp
  */
 export const asLogEntry = (level: LogLevel, message: string, args?: readonly unknown[]): LogEntry => {
-  const entry: Writable<LogEntry> = { level, timestamp: Date.now(), message };
+  const now = new Date();
+  const entry: Writable<LogEntry> = { level, timestamp: Date.now(), iso: stringify(now), message };
   if (args?.length) {
     entry.args = args;
   }

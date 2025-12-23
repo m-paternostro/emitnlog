@@ -22,18 +22,25 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       sink.sink('debug', 'Message 3', [42, { key: 'value' }]);
 
       expect(sink.entries).toHaveLength(3);
-      expect(sink.entries[0]).toEqual({ level: 'info', message: 'Message 1', timestamp: expect.any(Number) });
+      expect(sink.entries[0]).toEqual({
+        level: 'info',
+        message: 'Message 1',
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
       expect(sink.entries[1]).toEqual({
         level: 'error',
         message: 'Message 2',
         args: ['arg1'],
         timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
       });
       expect(sink.entries[2]).toEqual({
         level: 'debug',
         message: 'Message 3',
         args: [42, { key: 'value' }],
         timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
       });
     });
 
@@ -57,7 +64,12 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       sink.sink('info', 'Message', []);
 
       expect(customArray).toHaveLength(1);
-      expect(customArray[0]).toEqual({ level: 'info', message: 'Message', timestamp: expect.any(Number) });
+      expect(customArray[0]).toEqual({
+        level: 'info',
+        message: 'Message',
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
       expect(sink.entries).toBe(customArray);
     });
 
@@ -103,7 +115,12 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
       sink.sink('info', '', []);
 
       expect(sink.entries).toHaveLength(1);
-      expect(sink.entries[0]).toEqual({ level: 'info', message: '', timestamp: expect.any(Number) });
+      expect(sink.entries[0]).toEqual({
+        level: 'info',
+        message: '',
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
     });
 
     test('flush should clear entries', () => {
@@ -158,12 +175,14 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
         message: 'Message 0',
         args: [0],
         timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
       });
       expect(sink.entries[999]).toEqual({
         level: 'info',
         message: 'Message 999',
         args: [999],
         timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
       });
     });
 
@@ -250,8 +269,14 @@ describe('emitnlog.logger.emitter.memory-sink', () => {
         message: 'Test message',
         args: ['arg1', 42],
         timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
       });
-      expect(sink.entries[1]).toEqual({ level: 'error', message: 'Error message', timestamp: expect.any(Number) });
+      expect(sink.entries[1]).toEqual({
+        level: 'error',
+        message: 'Error message',
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
 
       void logger.flush();
       expect(sink.entries).toHaveLength(0);

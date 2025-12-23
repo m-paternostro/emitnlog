@@ -653,18 +653,48 @@ describe('emitnlog.logger.with-utils', () => {
 
         emitSomeLogs(traceLogger);
         expect(baseLogger.entries).toEqual([
-          { level: 'trace', message: 'main: info message', timestamp: expect.any(Number) },
-          { level: 'trace', message: 'main: warning message', timestamp: expect.any(Number) },
-          { level: 'trace', message: 'main: error message', timestamp: expect.any(Number) },
+          {
+            level: 'trace',
+            message: 'main: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'trace',
+            message: 'main: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'trace',
+            message: 'main: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
 
         emitSomeLogs(mainLogger);
         expect(baseLogger.entries).toEqual([
-          { level: 'info', message: 'main: info message', timestamp: expect.any(Number) },
-          { level: 'warning', message: 'main: warning message', timestamp: expect.any(Number) },
-          { level: 'error', message: 'main: error message', timestamp: expect.any(Number) },
+          {
+            level: 'info',
+            message: 'main: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'warning',
+            message: 'main: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'error',
+            message: 'main: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
@@ -672,9 +702,24 @@ describe('emitnlog.logger.with-utils', () => {
         const p1Logger = withPrefix(traceLogger, 'p1');
         emitSomeLogs(p1Logger);
         expect(baseLogger.entries).toEqual([
-          { level: 'trace', message: 'main.p1: info message', timestamp: expect.any(Number) },
-          { level: 'trace', message: 'main.p1: warning message', timestamp: expect.any(Number) },
-          { level: 'trace', message: 'main.p1: error message', timestamp: expect.any(Number) },
+          {
+            level: 'trace',
+            message: 'main.p1: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'trace',
+            message: 'main.p1: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'trace',
+            message: 'main.p1: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
@@ -682,18 +727,48 @@ describe('emitnlog.logger.with-utils', () => {
         const p2Logger = withPrefix(p1Logger, 'p2');
         emitSomeLogs(p2Logger);
         expect(baseLogger.entries).toEqual([
-          { level: 'trace', message: 'main.p1.p2: info message', timestamp: expect.any(Number) },
-          { level: 'trace', message: 'main.p1.p2: warning message', timestamp: expect.any(Number) },
-          { level: 'trace', message: 'main.p1.p2: error message', timestamp: expect.any(Number) },
+          {
+            level: 'trace',
+            message: 'main.p1.p2: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'trace',
+            message: 'main.p1.p2: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'trace',
+            message: 'main.p1.p2: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
 
         emitSomeLogs(mainLogger);
         expect(baseLogger.entries).toEqual([
-          { level: 'info', message: 'main: info message', timestamp: expect.any(Number) },
-          { level: 'warning', message: 'main: warning message', timestamp: expect.any(Number) },
-          { level: 'error', message: 'main: error message', timestamp: expect.any(Number) },
+          {
+            level: 'info',
+            message: 'main: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'warning',
+            message: 'main: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'error',
+            message: 'main: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
       });
     });
@@ -825,17 +900,42 @@ describe('emitnlog.logger.with-utils', () => {
 
         emitSomeLogs(baseLogger);
         expect(baseLogger.entries).toEqual([
-          { level: 'warning', message: 'warning message', timestamp: expect.any(Number) },
-          { level: 'error', message: 'error message', timestamp: expect.any(Number) },
+          {
+            level: 'warning',
+            message: 'warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'error',
+            message: 'error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
 
         emitSomeLogs(warningLogger);
         expect(baseLogger.entries).toEqual([
-          { level: 'warning', message: 'info message', timestamp: expect.any(Number) },
-          { level: 'warning', message: 'warning message', timestamp: expect.any(Number) },
-          { level: 'error', message: 'error message', timestamp: expect.any(Number) },
+          {
+            level: 'warning',
+            message: 'info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'warning',
+            message: 'warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'error',
+            message: 'error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
@@ -843,9 +943,24 @@ describe('emitnlog.logger.with-utils', () => {
         const p1Logger = withPrefix(warningLogger, 'p1');
         emitSomeLogs(p1Logger);
         expect(baseLogger.entries).toEqual([
-          { level: 'warning', message: 'p1: info message', timestamp: expect.any(Number) },
-          { level: 'warning', message: 'p1: warning message', timestamp: expect.any(Number) },
-          { level: 'error', message: 'p1: error message', timestamp: expect.any(Number) },
+          {
+            level: 'warning',
+            message: 'p1: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'warning',
+            message: 'p1: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'error',
+            message: 'p1: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
 
         baseLogger.flush();
@@ -853,9 +968,24 @@ describe('emitnlog.logger.with-utils', () => {
         const p2Logger = withPrefix(p1Logger, 'p2');
         emitSomeLogs(p2Logger);
         expect(baseLogger.entries).toEqual([
-          { level: 'warning', message: 'p1.p2: info message', timestamp: expect.any(Number) },
-          { level: 'warning', message: 'p1.p2: warning message', timestamp: expect.any(Number) },
-          { level: 'error', message: 'p1.p2: error message', timestamp: expect.any(Number) },
+          {
+            level: 'warning',
+            message: 'p1.p2: info message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'warning',
+            message: 'p1.p2: warning message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
+          {
+            level: 'error',
+            message: 'p1.p2: error message',
+            timestamp: expect.any(Number),
+            iso: expect.stringContaining('T'),
+          },
         ]);
       });
     });

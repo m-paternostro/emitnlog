@@ -209,9 +209,20 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
           level: 'info',
           message: expect.stringContaining('starting the process main operation at'),
           timestamp: expect.any(Number),
+          iso: expect.stringContaining('T'),
         },
-        { level: 'info', message: 'custom lifecycle log', timestamp: expect.any(Number) },
-        { level: 'info', message: expect.stringContaining('the process has closed at'), timestamp: expect.any(Number) },
+        {
+          level: 'info',
+          message: 'custom lifecycle log',
+          timestamp: expect.any(Number),
+          iso: expect.stringContaining('T'),
+        },
+        {
+          level: 'info',
+          message: expect.stringContaining('the process has closed at'),
+          timestamp: expect.any(Number),
+          iso: expect.stringContaining('T'),
+        },
       ]);
     });
 
