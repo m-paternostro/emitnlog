@@ -441,6 +441,11 @@ export type Closer = AsyncClosable & {
    */
   readonly size: number;
 
+  /**
+   * Whether the closer is currently closing.
+   */
+  readonly closing: boolean;
+
   // Review SyncClosable after changing Closer.
 };
 
@@ -475,6 +480,11 @@ export type SyncCloser = SyncClosable & {
    * The number of closables that have not been closed.
    */
   readonly size: number;
+
+  /**
+   * Whether the closer is currently closing.
+   */
+  readonly closing: boolean;
 };
 
 /**
@@ -538,6 +548,9 @@ type BasicCloser = Omit<Closer, 'close'> & Closable;
 const createBasicCloser = (forceAsync: boolean, ...input: readonly ClosableLike[]): BasicCloser => {
   const closables = new Set<ClosableLike>(input);
 
+  let closePromise: Promise<void> | undefined;
+  let closing = false;
+
   const closer: BasicCloser = {
     add: (closable) => {
       closables.add(closable);
@@ -552,26 +565,70 @@ const createBasicCloser = (forceAsync: boolean, ...input: readonly ClosableLike[
       return closables.size;
     },
 
+    get closing() {
+      return closing;
+    },
+
     close: () => {
       if (!closables.size) {
+        if (closePromise) {
+          return closePromise;
+        }
+
+        closing = false;
         return forceAsync ? Promise.resolve() : undefined;
       }
 
+      closing = true;
       const array = Array.from(closables).reverse();
       closables.clear();
+
+      if (closePromise) {
+        let chainError: unknown;
+        const tracked = closePromise
+          .catch((e: unknown) => {
+            chainError = e;
+          })
+          .then(() => closeAll(...array))
+          .then(() => {
+            if (chainError) {
+              // eslint-disable-next-line @typescript-eslint/only-throw-error
+              throw chainError;
+            }
+            return undefined;
+          })
+          .finally(() => {
+            if (tracked === closePromise) {
+              closing = false;
+              closePromise = undefined;
+            }
+          });
+
+        closePromise = tracked;
+        return closePromise;
+      }
 
       try {
         const result = closeAll(...array);
         if (result instanceof Promise) {
-          return result;
+          const tracked = result.finally(() => {
+            if (tracked === closePromise) {
+              closing = false;
+              closePromise = undefined;
+            }
+          });
+
+          closePromise = tracked;
+          return closePromise;
         }
 
+        closing = false;
         if (forceAsync) {
           return Promise.resolve();
         }
-
         return undefined;
       } catch (error) {
+        closing = false;
         return forceAsync ? Promise.reject(errorify(error)) : errorify(error);
       }
     },
