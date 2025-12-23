@@ -23,6 +23,7 @@ describe('emitnlog.utils.serialization', () => {
     const entry: LogEntry = {
       level: 'info',
       timestamp: 1700000000000,
+      iso: '2024-01-01T00:00:00.000Z',
       message: 'Operation completed',
       args: [{ foo: 'bar' }, 42, ['nested']] as const,
     };
@@ -30,16 +31,12 @@ describe('emitnlog.utils.serialization', () => {
     const serialized = JSON.stringify(entry);
     const parsed = jsonParse<LogEntry>(serialized);
 
-    expect(parsed).toStrictEqual({
-      level: 'info',
-      timestamp: 1700000000000,
-      message: 'Operation completed',
-      args: [{ foo: 'bar' }, 42, ['nested']],
-    });
+    expect(parsed).toStrictEqual(entry);
 
     type Expected = {
       readonly level: LogEntry['level'];
       readonly timestamp: number;
+      readonly iso: string;
       readonly message: string;
       readonly args?: readonly JsonValue[];
     };

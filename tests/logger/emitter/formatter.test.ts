@@ -140,7 +140,12 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const formatted = emitter.ndjsonFormatter('info', 'Test message', []);
       const parsed = jsonParse<Record<string, unknown>>(formatted);
 
-      expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
+      expect(parsed).toEqual({
+        level: 'info',
+        message: 'Test message',
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
     });
 
     test('should include args in JSON', () => {
@@ -148,7 +153,13 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const formatted = emitter.ndjsonFormatter('error', 'Error occurred', args);
       const parsed = jsonParse<Record<string, unknown>>(formatted);
 
-      expect(parsed).toEqual({ level: 'error', message: 'Error occurred', args: args, timestamp: expect.any(Number) });
+      expect(parsed).toEqual({
+        level: 'error',
+        message: 'Error occurred',
+        args: args,
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
     });
 
     test('should produce single-line JSON', () => {
@@ -188,7 +199,12 @@ describe('emitnlog.logger.emitter.formatter', () => {
       const formatted = emitter.jsonPrettyFormatter('info', 'Test message', []);
       const parsed = jsonParse<Record<string, unknown>>(formatted);
 
-      expect(parsed).toEqual({ level: 'info', message: 'Test message', timestamp: expect.any(Number) });
+      expect(parsed).toEqual({
+        level: 'info',
+        message: 'Test message',
+        timestamp: expect.any(Number),
+        iso: expect.stringContaining('T'),
+      });
 
       // Should contain newlines for pretty printing
       expect(formatted).toContain('\n');
