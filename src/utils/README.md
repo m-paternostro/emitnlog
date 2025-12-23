@@ -9,6 +9,7 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [errorify](#errorify)
   - [jsonParse](#jsonparse)
   - [jsonStringify](#jsonstringify)
+  - [parseLines](#parselines)
 - [Type Utilities](#type-utilities)
   - [exhaustiveCheck](#exhaustivecheck)
   - [isNotNullable](#isnotnullable)
@@ -253,6 +254,20 @@ import type { JsonValue } from 'emitnlog/utils';
 const payload: JsonValue = { ok: true, items: ['a', 'b', 'c'], info: { count: 3, seenAt: '2024-04-02T04:05:06.789Z' } };
 
 await fs.writeFile('payload.json', JSON.stringify(payload));
+```
+
+### parseLines
+
+A utility to parse text in which each line is a JSON value. This is useful when handling log content written using the [NDJSON](https://en.wikipedia.org/wiki/JSON_streaming#Newline-delimited_JSON) format.
+
+```ts
+import { parseLines } from 'emitnlog/logger';
+const value = [
+  '{"level":"info","timestamp":1705312245123,"message":"Application started"}',
+  '{"level":"error","timestamp":1705312246456,"message":"Connection failed","args":[{"host":"db.example.com"}]}',
+].join('\n');
+// Parses 2 objects
+const objects = parseLines(value);
 ```
 
 ## Type Utilities

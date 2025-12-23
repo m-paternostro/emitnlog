@@ -11,6 +11,7 @@ export * from './common/empty.ts';
 export * from './common/exhaustive-check.ts';
 export * from './common/generate-random-string.ts';
 export * from './common/is-not-nullable.ts';
+export * from './common/parse-lines.ts';
 export * from './common/serialization.ts';
 export * from './common/terminal-formatter.ts';
 export * from './converter/errorify.ts';

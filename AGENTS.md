@@ -116,11 +116,11 @@ The user‑facing `README.md` and module documentation under `src/<module>/READM
 The request to "prepare for sharing" (or similar) involves performing the following steps.
 
 1. First carefully review the changes. Stop and discuss if something is not clear, not properly designed, or not properly implemented.
-2. When the code is OK, write the tests, following the guidelines described above.
+2. When the code is OK, write the tests, following the guidelines described on the [Tests](#tests) section.
    - If the tests are not passing, review first the code, then tests. If needed, stop and discuss.
-3. Only it is known that the tests are passing
-   - If applicable, write the JSDoc on code, following the guidelines above.
-   - If applicable, update the README, following the guidelines above.
+3. After the tests:
+   - If applicable, write the JSDoc on the code, following the guidelines described on the [Documentation](#documentation) section.
+   - If applicable, update the appropriate `src/*/README.md`, following the guidelines described on the [Documentation](#documentation) section.
 
 Note: NEVER COMMIT OR STAGE CHANGES without an explicit request.
 
