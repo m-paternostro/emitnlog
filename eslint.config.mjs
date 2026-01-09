@@ -1,19 +1,18 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 import importPlugin from 'eslint-plugin-import';
 import stylistic from '@stylistic/eslint-plugin';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import noOnlyTests from 'eslint-plugin-no-only-tests';
 import ts from 'typescript-eslint';
 import * as nodeImportPrefix from 'eslint-plugin-require-node-import-prefix';
 
-export default ts.config([
-  {
-    name: 'ignore',
-    ignores: ['coverage/**', 'dist/**', '**/*.js', '**/*.cjs', '**/*.mjs', 'tsup.config.ts', 'vitest.config.ts'],
-  },
+export default defineConfig([
+  globalIgnores(['coverage/**', 'dist/**', '**/*.js', '**/*.cjs', '**/*.mjs', 'tsup.config.ts', 'vitest.config.ts']),
   {
     name: 'default',
 
@@ -27,6 +26,7 @@ export default ts.config([
       '@stylistic': stylistic,
       'simple-import-sort': simpleImportSort,
       'require-node-import-prefix': nodeImportPrefix,
+      'no-only-tests': noOnlyTests,
     },
 
     rules: {
@@ -242,6 +242,10 @@ export default ts.config([
     name: 'tests',
     files: ['tests/**/*'],
     languageOptions: { globals: { ...globals.node } },
-    rules: { '@typescript-eslint/no-unsafe-assignment': 'off', '@typescript-eslint/unbound-method': 'off' },
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+      'no-only-tests/no-only-tests': 'error',
+    },
   },
 ]);
