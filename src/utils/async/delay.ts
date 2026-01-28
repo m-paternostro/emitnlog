@@ -1,3 +1,5 @@
+import { toNonNegativeInteger } from '../common/duration.ts';
+
 /**
  * Delays the execution of the code for the specified amount of milliseconds.
  *
@@ -25,5 +27,5 @@
  */
 export const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => {
-    setTimeout(() => resolve(), Math.max(0, Math.ceil(milliseconds)));
+    setTimeout(() => resolve(), toNonNegativeInteger(milliseconds));
   });

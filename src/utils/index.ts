@@ -7,6 +7,7 @@ export * from './async/with-timeout.ts';
 export * from './common/canceled-error.ts';
 export * from './common/closable.ts';
 export * from './common/closed-error.ts';
+export * from './common/duration.ts';
 export * from './common/empty.ts';
 export * from './common/exhaustive-check.ts';
 export * from './common/generate-random-string.ts';

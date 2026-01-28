@@ -1,6 +1,7 @@
 import type { Logger } from '../../logger/definition.ts';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
+import { stringifyDuration, toNonNegativeInteger } from '../common/duration.ts';
 import { createDeferredValue } from './deferred-value.ts';
 import { delay } from './delay.ts';
 
@@ -145,7 +146,7 @@ export const startPolling = <T, const V = undefined>(
   options?: PollingOptions<T, V>,
 ): { readonly wait: Promise<T | V | undefined>; readonly close: () => Promise<void> } => {
   const deferred = createDeferredValue<T | V | undefined>();
-  interval = Math.max(0, Math.ceil(interval));
+  interval = toNonNegativeInteger(interval);
 
   let resolving = false;
   let invocationIndex = -1;
@@ -226,14 +227,15 @@ export const startPolling = <T, const V = undefined>(
 
   const intervalId = setInterval(polledOperation, interval);
 
-  if (options?.timeout && options.timeout >= 0) {
-    void delay(options.timeout).then(() => {
+  const timeout = options?.timeout;
+  if (timeout !== undefined && timeout >= 0) {
+    void delay(timeout).then(() => {
       if (active) {
-        if ('timeoutValue' in options) {
+        if ('timeoutValue' in options!) {
           lastResult = options.timeoutValue;
         }
 
-        logger.d`timeout for the operation reached after ${options.timeout}ms`;
+        logger.d`timeout for the operation reached after ${stringifyDuration(timeout)}`;
         void close();
       }
     });

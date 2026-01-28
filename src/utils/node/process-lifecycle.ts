@@ -6,6 +6,7 @@ import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import type { Closer, SyncClosable } from '../common/closable.ts';
 import { asClosable, createCloser, safeClose } from '../common/closable.ts';
+import { stringifyDuration } from '../common/duration.ts';
 import { exhaustiveCheck } from '../common/exhaustive-check.ts';
 
 /**
@@ -207,13 +208,13 @@ export const runProcessMain = (
       .then(() => main({ start, closer, logger }))
       .then(async () => {
         const end = new Date();
-        logger.i`the process has closed at ${end} after ${end.valueOf() - start.valueOf()}ms`;
+        logger.i`the process has closed at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
         await safeClose(closer);
       })
       .catch(async (error: unknown) => {
         const end = new Date();
         logger.args(error)
-          .e`an error occurred and the process has closed at ${end} after ${end.valueOf() - start.valueOf()}ms`;
+          .e`an error occurred and the process has closed at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
         await safeClose(closer);
         process.exit(1);
       });

@@ -10,6 +10,10 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [jsonParse](#jsonparse)
   - [jsonStringify](#jsonstringify)
   - [parseLines](#parselines)
+- [Duration Utilities](#duration-utilities)
+  - [stringifyDuration](#stringifyduration)
+  - [stringifyElapsed](#stringifyelapsed)
+  - [toNonNegativeInteger](#tonnonnegativeinteger)
 - [Type Utilities](#type-utilities)
   - [exhaustiveCheck](#exhaustivecheck)
   - [isNotNullable](#isnotnullable)
@@ -269,6 +273,92 @@ const value = [
 // Parses 2 objects
 const objects = parseLines(value);
 ```
+
+## Duration Utilities
+
+Utilities for formatting durations and elapsed times with configurable precision.
+
+### stringifyDuration
+
+Formats a duration value (in milliseconds) as a human-readable string with configurable decimal precision.
+
+```ts
+import { stringifyDuration } from 'emitnlog/utils';
+
+const start = performance.now();
+
+// ... do some work ...
+
+const duration = performance.now() - start;
+stringifyDuration(duration); // "12.34ms" or "123.4ms" or "1234ms"
+stringifyDuration(duration, { precision: 0 }); // "12ms" or "123ms" or "1234ms"
+stringifyDuration(duration, { suppressUnit: true }); // "12.34" or "123.4" or "1234"
+```
+
+#### Options
+
+```ts
+interface DurationOptions {
+  precision?: number; // Number of decimal places (default: 2 or 1 or 0 depending on the duration)
+  suppressUnit?: boolean; // Omit "ms" suffix (default: false)
+}
+```
+
+The function ensures the result is non-negative, making it safe for use with any numeric input.
+
+### stringifyElapsed
+
+Calculates and formats the elapsed time since a performance timestamp. This is a convenience wrapper around `stringifyDuration` that automatically computes the duration from the current time.
+
+```ts
+import { stringifyElapsed } from 'emitnlog/utils';
+
+const start = performance.now();
+
+// ... do some work ...
+
+stringifyElapsed(start); // "12.34ms"
+stringifyElapsed(start, { precision: 0 }); // "12ms"
+stringifyElapsed(start, { suppressUnit: true }); // "12.34"
+```
+
+Perfect for logging or displaying how long an operation has been running without manually calculating the difference.
+
+### toNonNegativeInteger
+
+Converts a value to a non-negative integer, with support for default values when the input is undefined.
+
+```ts
+import { toNonNegativeInteger } from 'emitnlog/utils';
+
+toNonNegativeInteger(undefined); // 0
+toNonNegativeInteger(undefined, 2); // 2
+toNonNegativeInteger(undefined, -2); // 0 (negative defaults become 0)
+toNonNegativeInteger(1.5); // 1 (floors decimal values)
+toNonNegativeInteger(-1, 2); // 0 (negative values become 0)
+toNonNegativeInteger(10); // 10
+```
+
+This utility is particularly useful for configuration options where you need to ensure valid numeric parameters:
+
+```ts
+import { toNonNegativeInteger } from 'emitnlog/utils';
+
+interface FormatterOptions {
+  precision?: number;
+  maxLength?: number;
+}
+
+function formatValue(value: string, options?: FormatterOptions) {
+  const precision = toNonNegativeInteger(options?.precision, 2);
+  const maxLength = toNonNegativeInteger(options?.maxLength, 100);
+
+  // Both precision and maxLength are guaranteed to be non-negative integers
+  return value.substring(0, maxLength).padEnd(precision, '0');
+}
+```
+
+The function always returns an integer greater than or equal to zero, regardless of the input values.
 
 ## Type Utilities
 
