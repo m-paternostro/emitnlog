@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import { stringifyElapsed } from '../../utils/common/duration.ts';
 import type { Logger, LogLevel } from '../definition.ts';
 import { OFF_LOGGER } from '../off-logger.ts';
 import { withPrefix } from '../prefixed-logger.ts';
@@ -129,24 +130,22 @@ export const requestLogger = (logger: Logger, options?: RequestLoggerOptions): R
     const start = performance.now();
 
     res.on('close', () => {
-      const duration = performance.now() - start;
-      logger.log(config.closeLevel, () => `closed ${label} after ${duration}ms`);
+      logger.log(config.closeLevel, () => `closed ${label} after ${stringifyElapsed(start)}`);
     });
 
     res.on('finish', () => {
-      const duration = performance.now() - start;
-      logger.log(config.finishLevel, () => `finished ${label} in ${duration}ms`);
+      logger.log(config.finishLevel, () => `finished ${label} in ${stringifyElapsed(start)}`);
     });
 
     res.on('end', () => {
-      const duration = performance.now() - start;
-      logger.log(config.endLevel, () => `ended ${label} in ${duration}ms`);
+      logger.log(config.endLevel, () => `ended ${label} in ${stringifyElapsed(start)}`);
     });
 
     // May occur at any time during the event lifecycle and is emitted when there's an error writing the response.
     res.on('error', (error) => {
-      const duration = performance.now() - start;
-      logger.args(error).log(config.errorLevel, () => `errored on ${label} after ${duration}ms (${error})`);
+      logger
+        .args(error)
+        .log(config.errorLevel, () => `errored on ${label} after ${stringifyElapsed(start)} (${error})`);
     });
 
     next();

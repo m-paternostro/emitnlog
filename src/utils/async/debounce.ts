@@ -1,4 +1,5 @@
 import { CanceledError } from '../common/canceled-error.ts';
+import { toNonNegativeInteger } from '../common/duration.ts';
 import type { DeferredValue } from './deferred-value.ts';
 import { createDeferredValue } from './deferred-value.ts';
 import type { Timeout } from './types.ts';
@@ -187,8 +188,8 @@ export const debounce = <TArgs extends unknown[], TReturn>(
 
   options =
     typeof options === 'number'
-      ? { delay: Math.max(0, Math.ceil(options)), waitForPrevious: false }
-      : { waitForPrevious: false, ...options, delay: Math.max(0, Math.ceil(options.delay)) };
+      ? { delay: toNonNegativeInteger(options), waitForPrevious: false }
+      : { waitForPrevious: false, ...options, delay: toNonNegativeInteger(options.delay) };
 
   const executeFunction = async (args: TArgs): Promise<TReturn> => {
     if (isExecuting && options.waitForPrevious) {

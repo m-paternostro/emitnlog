@@ -3,6 +3,7 @@ import type { Writable } from 'type-fest';
 import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { createEventNotifier } from '../../notifier/implementation.ts';
+import { stringifyDuration } from '../../utils/common/duration.ts';
 import { isNotNullable } from '../../utils/common/is-not-nullable.ts';
 import type {
   PromiseHolder,
@@ -172,7 +173,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
           }
 
           const duration = performance.now() - start;
-          logger.d`promise${label ? ` with label '${label}'` : ''} resolved in ${duration}ms`;
+          logger.d`promise${label ? ` with label '${label}'` : ''} resolved in ${stringifyDuration(duration)}`;
 
           const event: Writable<PromiseSettledEvent> = { duration };
           if (label !== undefined) {
@@ -192,7 +193,7 @@ export const trackPromises = (options?: PromiseTrackerOptions): PromiseTracker =
           }
 
           const duration = performance.now() - start;
-          logger.d`promise${label ? ` with label '${label}'` : ''} rejected in ${duration}ms`;
+          logger.d`promise${label ? ` with label '${label}'` : ''} rejected in ${stringifyDuration(duration)}`;
 
           const event: Writable<PromiseSettledEvent> = { duration, rejected: true };
           if (label !== undefined) {
