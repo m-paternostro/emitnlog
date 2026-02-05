@@ -61,6 +61,7 @@ describe('emitnlog.utils.serialization', () => {
       readonly token?: symbol;
       readonly nested: { readonly values: readonly [Date, { readonly when?: Date | undefined }] };
       array: string[];
+      readonly notHere?: undefined;
       readonly readonlyArray: readonly string[];
     };
 
@@ -103,6 +104,7 @@ describe('emitnlog.utils.serialization', () => {
     assertType<Equal<ParsedComplexType['createdAt'], string>>(true);
     assertType<Equal<ParsedComplexType['note'], string | undefined>>(true);
     assertType<Equal<ParsedComplexType['nested']['values'][number] extends JsonValue ? true : false, true>>(true);
+    assertType<Equal<ParsedComplexType['skip'], undefined>>(true);
 
     // @ts-expect-error onInit is omitted because functions are not preserved by JSON.parse
     expect(parsed.onInit).toBeUndefined();
@@ -112,7 +114,6 @@ describe('emitnlog.utils.serialization', () => {
     expect(parsed.token).toBeUndefined();
     expect(parsed).not.toHaveProperty('token');
 
-    // @ts-expect-error skip is omitted because undefined-only properties are dropped
     expect(parsed.skip).toBeUndefined();
     expect(parsed).not.toHaveProperty('skip');
   });

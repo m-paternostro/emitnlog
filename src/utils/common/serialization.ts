@@ -79,6 +79,7 @@ export const jsonStringify = (
  * - Converts `Date` instances to their ISO string representation.
  * - Expands arrays (including readonly arrays and tuples) to arrays of parsed elements.
  * - Removes properties that are undefined or never, since such properties are omitted during JSON serialization.
+ * - Preserves optional `undefined`-only properties as `undefined` for discriminated unions.
  * - Converts `unknown` fields into {@link JsonValue}.
  * - Removes functions and symbols.
  *
@@ -121,15 +122,32 @@ export type JsonSafe<T = unknown> = T extends JsonPrimitive
             ? never
             : T extends object
               ? {
-                  [K in keyof T as JsonSerializableValue<T[K]> extends never ? never : K]: JsonSafe<
-                    JsonSerializableValue<T[K]>
-                  >;
+                  [K in keyof T as JsonSerializableValue<T[K]> extends never
+                    ? never
+                    : HasNonSerializable<T[K]> extends true
+                      ? IsUndefinedOnly<JsonSerializableValue<T[K]>> extends true
+                        ? never
+                        : K
+                      : IsUndefinedOnly<JsonSerializableValue<T[K]>> extends true
+                        ? IsOptionalKey<T, K> extends true
+                          ? K
+                          : never
+                        : K]: IsOptionalKey<T, K> extends true
+                    ? IsIndexSignatureKey<K> extends true
+                      ? JsonSafe<JsonSerializableValue<T[K]>>
+                      : JsonSafe<JsonSerializableValue<T[K]>> | undefined
+                    : JsonSafe<JsonSerializableValue<T[K]>>;
                 }
               : never;
 
 type JsonPrimitive = string | number | boolean | null;
-type JsonNonSerializable = symbol | undefined | ((...args: never[]) => unknown);
+type JsonNonSerializable = symbol | ((...args: never[]) => unknown);
 type JsonSerializableValue<T> = Exclude<T, JsonNonSerializable>;
+type HasNonSerializable<T> = [Extract<T, JsonNonSerializable>] extends [never] ? false : true;
+type IsUndefinedOnly<T> = [Exclude<T, undefined>] extends [never] ? true : false;
+type EmptyObject = Record<string, never>;
+type IsOptionalKey<T, K extends keyof T> = EmptyObject extends Pick<T, K> ? true : false;
+type IsIndexSignatureKey<K> = string extends K ? true : number extends K ? true : symbol extends K ? true : false;
 
 /**
  * Represents any valid JSON value that can result from `JSON.parse()` or be safely passed to `JSON.stringify()`.
