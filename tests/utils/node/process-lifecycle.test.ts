@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, assertType, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { EventEmitter } from 'node:events';
 
@@ -182,10 +182,17 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
     test('exposes lifecycle logger to main input', async () => {
       const deferredClose = createDeferredValue();
 
+      let processStart: Date | undefined;
+
       let entries: readonly LogEntry[] | undefined;
       runProcessMain(
         moduleReference,
-        async ({ logger, closer }) => {
+        async ({ start, logger, closer, setup }) => {
+          expect(start).toBe(processStart);
+
+          assertType<undefined>(setup);
+          expect(setup).toBeUndefined();
+
           logger.i`custom lifecycle log`;
 
           closer.addAll(
@@ -198,7 +205,15 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
             }),
           );
         },
-        { logger: () => createMemoryLogger() },
+        {
+          logger: (start, setup) => {
+            assertType<undefined>(setup);
+            expect(setup).toBeUndefined();
+
+            processStart = start;
+            return createMemoryLogger();
+          },
+        },
       );
 
       await deferredClose.promise;
@@ -336,6 +351,63 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       });
 
       expect(closeSpy).toHaveBeenCalled();
+    });
+
+    test('exposes setup to main input', async () => {
+      const deferredClose = createDeferredValue();
+
+      let processStart: Date | undefined;
+      const processLogger = createMemoryLogger();
+
+      let entries: readonly LogEntry[] | undefined;
+      runProcessMain(
+        moduleReference,
+        async ({ start, logger, closer, setup }) => {
+          expect(start).toBe(processStart);
+          expect(logger).toBe(processLogger);
+
+          expect(setup).toEqual({ a: 1 });
+          assertType<{ a: number }>(setup);
+
+          closer.addAll(
+            asClosable(() => {
+              deferredClose.resolve();
+            }),
+
+            asClosable(() => {
+              entries = [...(logger as MemoryLogger).entries];
+            }),
+          );
+        },
+        {
+          setup: () => ({ a: 1 }),
+          logger: (date, setup) => {
+            expect(setup).toEqual({ a: 1 });
+            assertType<{ a: number }>(setup);
+
+            processStart = date;
+            return processLogger;
+          },
+        },
+      );
+
+      await deferredClose.promise;
+
+      expect(entries).toBeDefined();
+      expect(entries).toEqual([
+        {
+          level: 'info',
+          message: expect.stringContaining('starting the process main operation at'),
+          timestamp: expect.any(Number),
+          iso: expect.stringContaining('T'),
+        },
+        {
+          level: 'info',
+          message: expect.stringContaining('the process has closed at'),
+          timestamp: expect.any(Number),
+          iso: expect.stringContaining('T'),
+        },
+      ]);
     });
   });
 

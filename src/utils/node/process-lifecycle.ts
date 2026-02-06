@@ -85,8 +85,10 @@ const toPath = (value: string | URL | undefined): string | undefined => {
 
 /**
  * The input object passed to the `main` function of {@link runProcessMain}.
+ *
+ * @typeParam TSetup The setup data type. Defaults to `undefined` when no setup is provided.
  */
-export type ProcessMainInput = {
+export type ProcessMainInput<TSetup = undefined> = {
   /**
    * The start of the process.
    */
@@ -103,6 +105,13 @@ export type ProcessMainInput = {
    * This logger is closed when the process ends.
    */
   readonly logger: Logger;
+
+  /**
+   * Setup data provided by the caller.
+   *
+   * @default `undefined`
+   */
+  readonly setup: TSetup;
 };
 
 /**
@@ -123,6 +132,7 @@ export type ProcessMainInput = {
  * - `start`: The start `Date` of the process.
  * - `closer`: A `Closer` instance that can be used to register cleanup operations, immediately before the process exits.
  * - `logger`: A logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
+ * - `setup`: Setup data produced by `options.setup` when provided, otherwise `undefined`.
  *
  * The first argument `moduleReference` is used to detect if the module invoking this method is the entry point of the
  * process. The possible values are:
@@ -181,31 +191,91 @@ export type ProcessMainInput = {
  * );
  * ```
  *
+ * @example With setup data and a logger factory that uses it:
+ *
+ * ```ts
+ * import { createConsoleErrorLogger, withPrefix } from 'emitnlog/logger';
+ * import { runProcessMain } from 'emitnlog/utils';
+ *
+ * runProcessMain(
+ *   undefined,
+ *   async ({ setup, logger }) => {
+ *     logger.i`starting ${setup.name}...`;
+ *     // ... your application logic
+ *   },
+ *   {
+ *     setup: () => ({ name: 'backend' }),
+ *     logger: (start, setup) => withPrefix(createConsoleErrorLogger(), `${setup.name}-${start.valueOf()}`),
+ *   },
+ * );
+ * ```
+ *
  * @param moduleReference `import.meta.url`, `__filename`, `module.filename`, or `undefined` as described above.
  * @param main The async function to execute as the process entry point. Receives an input object as argument as
  *   described above.
  * @param options Optional configuration.
  */
-export const runProcessMain = (
+
+export function runProcessMain(
   moduleReference: string | URL | undefined,
   main: (input: ProcessMainInput) => Promise<void>,
   options?: {
+    readonly setup?: undefined;
+
     /**
      * A logger or a factory function that creates one. If a factory is provided, it receives the same start `Date`
      * passed to the `main` method, to enable timestamp-based logger configuration.
      */
-    readonly logger?: Logger | ((start: Date) => Logger);
+    readonly logger?: Logger | ((start: Date, setup: undefined) => Logger);
   },
-): void => {
+): void;
+export function runProcessMain<TSetup>(
+  moduleReference: string | URL | undefined,
+  main: (input: ProcessMainInput<TSetup>) => Promise<void>,
+  options?: {
+    /**
+     * A setup data that is then passed to `options.logger` and `main`.
+     *
+     * @param start The start `Date` of the process.
+     * @returns The setup data
+     */
+    readonly setup: (start: Date) => TSetup;
+
+    /**
+     * A logger or a factory function that creates one. If a factory is provided, it receives the same start `Date`
+     * passed to the `main` method, to enable timestamp-based logger configuration.
+     */
+    readonly logger?: Logger | ((start: Date, setup: TSetup) => Logger);
+  },
+): void;
+export function runProcessMain<TSetup>(
+  moduleReference: string | URL | undefined,
+  main: (input: ProcessMainInput<TSetup>) => Promise<void>,
+  options?: {
+    /**
+     * A setup data that is then passed to `options.logger` and `main`.
+     *
+     * @param start The start `Date` of the process.
+     * @returns The setup data
+     */
+    readonly setup?: (start: Date) => TSetup;
+
+    /**
+     * A logger or a factory function that creates one. If a factory is provided, it receives the same start `Date`
+     * passed to the `main` method, to enable timestamp-based logger configuration.
+     */
+    readonly logger?: Logger | ((start: Date, setup: TSetup) => Logger);
+  },
+): void {
   if (isProcessMain(moduleReference)) {
     const start = new Date();
-    const logger = withLogger(typeof options?.logger === 'function' ? options.logger(start) : options?.logger);
-
+    const setup = (options?.setup ? options.setup(start) : undefined) as TSetup;
+    const logger = withLogger(typeof options?.logger === 'function' ? options.logger(start, setup) : options?.logger);
     const closer = createCloser(logger);
 
     logger.i`starting the process main operation at ${start}`;
     void Promise.resolve()
-      .then(() => main({ start, closer, logger }))
+      .then(() => main({ start, closer, logger, setup }))
       .then(async () => {
         const end = new Date();
         logger.i`the process has closed at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
@@ -219,7 +289,7 @@ export const runProcessMain = (
         process.exit(1);
       });
   }
-};
+}
 
 // Do not add 'exit':
 // - Fires on every normal shutdown
