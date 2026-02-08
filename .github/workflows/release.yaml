@@ -33,6 +33,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org/'
+          cache: npm
+
+      - name: Use supported npm version (OIDC)
+        # npm Trusted Publishing requires npm >= 11.5.1
+        run: npm i -g npm@^11.5.1
 
       - name: Install dependencies
         run: npm ci
@@ -42,5 +47,3 @@ jobs:
 
       - name: Publish
         run: npx changeset publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
