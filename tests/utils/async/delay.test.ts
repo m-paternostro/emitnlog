@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { delay } from '../../../src/utils/index.ts';
+import { cancelableDelay, CanceledError, delay } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.delay', () => {
   beforeEach(() => {
@@ -50,5 +50,17 @@ describe('emitnlog.utils.delay', () => {
     vi.advanceTimersByTime(1);
     await promise;
     expect(resolved).toBe(true);
+  });
+
+  test('cancelableDelay should resolve after the specified delay', async () => {
+    const { promise } = cancelableDelay(1000);
+    vi.advanceTimersByTime(1000);
+    await expect(promise).resolves.toBeUndefined();
+  });
+
+  test('cancelableDelay should reject with CanceledError when canceled', async () => {
+    const { promise, cancel } = cancelableDelay(1000);
+    cancel();
+    await expect(promise).rejects.toBeInstanceOf(CanceledError);
   });
 });

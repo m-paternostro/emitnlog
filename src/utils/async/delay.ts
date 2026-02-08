@@ -1,4 +1,6 @@
+import { CanceledError } from '../common/canceled-error.ts';
 import { toNonNegativeInteger } from '../common/duration.ts';
+import type { Timeout } from './types.ts';
 
 /**
  * Delays the execution of the code for the specified amount of milliseconds.
@@ -25,7 +27,70 @@ import { toNonNegativeInteger } from '../common/duration.ts';
  * @param milliseconds The amount of milliseconds to wait (0 if negatived, and ceil if decimal).
  * @returns A promise that resolves after the specified amount of milliseconds.
  */
-export const delay = (milliseconds: number): Promise<void> =>
-  new Promise((resolve) => {
-    setTimeout(() => resolve(), toNonNegativeInteger(milliseconds));
+export const delay = (milliseconds: number): Promise<void> => cancelableDelay(milliseconds).promise;
+
+export type CancelableDelay = Readonly<{ promise: Promise<void>; cancel: () => void }>;
+
+/**
+ * Delays the execution of the code for the specified amount of milliseconds, with cancellation support.
+ *
+ * Invoking the returned `cancel` function causes the promise to reject with a `CanceledError`. This is the only
+ * expected case in which the promise can reject.
+ *
+ * @example
+ *
+ * ```ts
+ * import { CanceledError, cancelableDelay } from 'emitnlog/utils';
+ *
+ * const { promise, cancel } = cancelableDelay(500);
+ * setTimeout(() => cancel(), 250);
+ *
+ * try {
+ *   await promise;
+ * } catch (error) {
+ *   if (error instanceof CanceledError) {
+ *     console.log('Canceled');
+ *   }
+ * }
+ * ```
+ *
+ * @param milliseconds The amount of milliseconds to wait (0 if negatived, and ceil if decimal).
+ * @returns A promise that resolves after the specified amount of milliseconds, and a cancel function that rejects the
+ *   promise with `CanceledError` when invoked.
+ */
+export const cancelableDelay = (milliseconds: number): CancelableDelay => {
+  const duration = toNonNegativeInteger(milliseconds);
+  let timeoutId: Timeout | undefined;
+  let settled = false;
+  let rejectDelay: ((error: CanceledError) => void) | undefined;
+
+  const promise = new Promise<void>((resolve, reject) => {
+    rejectDelay = reject as (error: CanceledError) => void;
+    timeoutId = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      timeoutId = undefined;
+      resolve();
+    }, duration);
   });
+
+  const cancel = (): void => {
+    if (settled) {
+      return;
+    }
+
+    settled = true;
+
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+    }
+
+    rejectDelay?.(new CanceledError());
+  };
+
+  return { promise, cancel };
+};

@@ -1,4 +1,5 @@
-import { delay } from './delay.ts';
+import { CanceledError } from '../common/canceled-error.ts';
+import { cancelableDelay } from './delay.ts';
 
 /**
  * Wraps a given promise and resolves with its value if it completes within the specified timeout. If the timeout
@@ -38,4 +39,18 @@ export const withTimeout = <T, const R = undefined>(
   promise: Promise<T>,
   timeout: number,
   timeoutValue?: R,
-): Promise<T | R> => Promise.race<T | R>([promise, delay(timeout).then(() => timeoutValue as R)]);
+): Promise<T | R> => {
+  const { promise: delayPromise, cancel } = cancelableDelay(timeout);
+  const timeoutPromise = delayPromise.then(
+    () => timeoutValue as R,
+    (error: unknown) => {
+      if (error instanceof CanceledError) {
+        return new Promise<R>(() => void 0);
+      }
+
+      throw error;
+    },
+  );
+
+  return Promise.race<T | R>([promise.finally(cancel), timeoutPromise]);
+};

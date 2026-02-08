@@ -47,5 +47,11 @@ describe('emitnlog.utils.with-timeout', () => {
       vi.advanceTimersByTime(999);
       await expect(promise).resolves.toBe('success');
     });
+
+    test('should clear the timeout when the promise settles early', async () => {
+      const promise = withTimeout(Promise.resolve('success'), 1000);
+      await expect(promise).resolves.toBe('success');
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 });
