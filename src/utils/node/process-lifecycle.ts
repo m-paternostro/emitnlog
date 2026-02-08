@@ -43,7 +43,7 @@ import { exhaustiveCheck } from '../common/exhaustive-check.ts';
  * @returns `true` when the current file started the process, otherwise `false`.
  */
 export const isProcessMain = (moduleReference: string | URL | undefined) => {
-  if (testScope.processMain === true) {
+  if (testScope.processMain === true || process.env.EMITNLOG_PROCESS_MAIN === 'true') {
     return true;
   }
 
