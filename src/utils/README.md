@@ -19,6 +19,7 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [isNotNullable](#isnotnullable)
 - [Async Utilities](#async-utilities)
   - [delay](#delay)
+  - [cancelableDelay](#cancelabledelay)
   - [debounce](#debounce)
   - [withTimeout](#withtimeout)
   - [createDeferredValue](#createdeferredvalue)
@@ -510,6 +511,29 @@ async function rateLimitedRequests(urls: string[]) {
 ```
 
 Often useful in cooldowns, stabilization intervals, and tests.
+
+### cancelableDelay
+
+Waits for a specified duration before continuing execution, with cancellation support.
+
+```ts
+import { cancelableDelay, CanceledError } from 'emitnlog/utils';
+
+const { promise, cancel } = cancelableDelay(500);
+
+setTimeout(() => cancel(), 250);
+
+try {
+  await promise;
+  console.log('Delay completed');
+} catch (error) {
+  if (error instanceof CanceledError) {
+    console.log('Delay canceled');
+  }
+}
+```
+
+Useful when you need a time-based operation that can be safely aborted without keeping the event loop alive.
 
 ### debounce
 
