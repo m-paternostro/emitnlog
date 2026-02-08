@@ -1,5 +1,31 @@
 # emitnlog
 
+## 0.14.0
+
+### Minor Changes
+
+- e1c942c: Add `cancelableDelay` and ensure `withTimeout` cancels timers when the wrapped promise settles
+- 9c474c0: Add a property `iso` to the LogEntry to convey the ISO date time, making it easier to read log files.
+- 24c9e34: Add `closer.closing` as well as a better `close.close()` promise change logic, allowing clients to consult if the closer is actively closing closables.
+- c792c59: Adds durations (`stringifyDuration` and `stringifyElapsed`) and `toNonNegativeInteger` utilities
+- 6a27ddd: Allow JsonSafe to preserve optional undefined-only properties
+- 1e0ef87: Review `PrefixedLogger` types, empty values, and remove `applyPrefix` (`withPrefix` can be used instead)
+- 3b263f4: Add `emptyRecord`, `emptySet`, and `emptyMap` immutable singletons
+- cf4e6a7: Add parseLines to make it easier to handle NDJSON logs
+- 407cb4b: Add 'MemoryLogger' and 'createMemoryLogger'
+- 39b1fca: Add a lifecycle handler that can be passed when creating notifiers. The `onError` handler has been moved to the factory method as well.
+- 869adcb: Ensure that `closer.close()` is asynchronous
+- d9d953e: Add `withDedup` to avoid emitting duplicated log entries
+
+### Patch Changes
+
+- be951fb: Ensure `JsonSafe` respects the readonly flag for arrays
+- 2d76ed9: Expose ProcessMainInput used in runProcessMain
+- 8bb917a: Add support to a `EMITNLOG_PROCESS_MAIN` environment variable that can set to true to force `isProcessMain` to return true.
+- e2750c5: Add `Headers` support to `stringify`
+- b036b77: Make the JsonValue array readonly so it can be used with any array
+- 874f1c6: Include CHANGELOG.md on released package
+
 ## 0.13.0
 
 ### Minor Changes
