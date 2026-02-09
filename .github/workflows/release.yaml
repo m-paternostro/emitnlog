@@ -10,10 +10,16 @@ on:
 
 permissions:
   contents: read
+  id-token: write # Required for npm Trusted Publishing (OIDC)
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # Ensure we are not accidentally using legacy token-based auth.
+      # npm Trusted Publishing uses OIDC instead.
+      NODE_AUTH_TOKEN: ''
+      NPM_TOKEN: ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -45,5 +51,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Check npm auth (OIDC)
+        run: npm whoami
+
       - name: Publish
         run: npx changeset publish
+        env:
+          NODE_AUTH_TOKEN: ''
+          NPM_TOKEN: ''

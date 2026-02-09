@@ -126,6 +126,7 @@ jobs:
 
       - name: Use supported npm version
         # Keep npm version consistent with release workflow
+        if: steps.check_changesets.outputs.has_changesets == 'true'
         run: npm i -g npm@^11.5.1
 
       - name: Install dependencies
