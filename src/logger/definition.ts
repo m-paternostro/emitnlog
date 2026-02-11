@@ -1,8 +1,11 @@
 /**
  * The possible levels for the Logger, inspired by RFC5424, with an additional 'trace' level for ultra-detailed logging.
  *
- * The severity levels are assumed to be numerically ascending from most important (`emergency`) to least important
- * (`trace`).
+ * The severity levels are assumed to follow this order (least → most severe; most → least detailed):
+ *
+ * ```
+ * Trace → debug → info → notice → warning → error → critical → alert → emergency
+ * ```
  *
  * Level descriptions:
  *
@@ -18,7 +21,7 @@
  * trace     - Extremely detailed debugging information (e.g., per-iteration or per-call tracing)
  * ```
  *
- * @see RFC5424: https://tools.ietf.org/html/rfc5424
+ * @see RFC5424: https://datatracker.ietf.org/doc/html/rfc5424
  */
 export type LogLevel = 'emergency' | 'alert' | 'critical' | 'error' | 'warning' | 'notice' | 'info' | 'debug' | 'trace';
 
@@ -42,8 +45,11 @@ export type LogTemplateStringsArray = TemplateStringsArray | (() => TemplateStri
  * - Log entries with a severity level below the logger's configured level are filtered out
  * - When set to 'off', no log entries are emitted regardless of their level
  *
- * The severity filtering follows this hierarchy (from lowest to highest): debug < info < notice < warning < error <
- * critical < alert < emergency
+ * The severity filtering follows this order (least → most severe; most → least detailed):
+ *
+ * ```
+ * Trace → debug → info → notice → warning → error → critical → alert → emergency
+ * ```
  *
  * For example, if the logger's level is set to 'warning':
  *
@@ -56,6 +62,8 @@ export interface Logger {
    *
    * Log entries with a level below this threshold will not be emitted. For example, setting the level to `info` (which
    * is the default level) will cause `debug` logs to be ignored.
+   *
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, critical, alert, emergency.
    *
    * If set to 'off', no log entries are emitted regardless of level.
    */
@@ -86,11 +94,16 @@ export interface Logger {
   /**
    * Logs a trace-level entry for extremely detailed debugging information (e.g., per-iteration or call tracing).
    *
-   * Trace entries are only emitted if the logger's level is set to `trace`.
+   * Log levels (least → most severe): **trace**, debug, info, notice, warning, error, critical, alert, emergency.
    *
-   * The entry content can be either a direct value or a function that returns a value. Using a function is recommended
-   * when the content is expensive to construct, as the function will only be invoked if the entry will actually be
-   * emitted based on the current logger level.
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Trace entries are only emitted if `logger.level` is `trace`.
+   * - The entry content can be either a direct value or a function that returns a value. Using a function is recommended
+   *   when the content is expensive to construct, as the function will only be invoked if the entry will actually be
+   *   emitted based on the current logger level.
    *
    * @example
    *
@@ -105,21 +118,39 @@ export interface Logger {
   readonly trace: (message: LogMessage, ...args: unknown[]) => void;
 
   /**
-   * Logs a trace-level entry using a template string, which is only computed if the current log level (`logger.level`)
-   * is `trace`.
+   * Logs a trace-level entry for extremely detailed debugging information (e.g., per-iteration or call tracing).
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): **trace**, debug, info, notice, warning, error, critical, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('fail')}` becomes 'fail')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Trace entries are only emitted if `logger.level` is `trace`.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `trace`).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
    * ```ts
+   * // Basic template literal
    * logger.t`Entering loop body`;
-   * logger.t`Iteration ${i} with state: ${state}`;
+   *
+   * // With computed values
+   * logger.t`Processing item ${itemId} at ${new Date()}`;
+   * logger.t`Expensive computed value: ${() => expensiveOperation()}`;
+   *
+   * // With error objects - message is automatically extracted
+   * const error = new Error('Missing configuration');
+   * logger.args(error).t`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -130,11 +161,17 @@ export interface Logger {
   /**
    * Logs a debug-level entry for detailed debugging information (e.g., function entry/exit points).
    *
-   * Debug entries are only emitted if the logger's level is set to `debug` or `trace`.
+   * Log levels (least → most severe): trace, **debug**, info, notice, warning, error, critical, alert, emergency.
    *
-   * The entry content can be either a direct value or a function that returns a value. Using a function is recommended
-   * when the content is expensive to construct, as the function will only be invoked if the entry will actually be
-   * emitted based on the current logger level.
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Debug entries are only emitted if `logger.level` is `debug` or any level listed before `debug` in the level order
+   *   above.
+   * - The entry content can be either a direct value or a function that returns a value. Using a function is recommended
+   *   when the content is expensive to construct, as the function will only be invoked if the entry will actually be
+   *   emitted based on the current logger level.
    *
    * @example
    *
@@ -149,28 +186,39 @@ export interface Logger {
   readonly debug: (message: LogMessage, ...args: unknown[]) => void;
 
   /**
-   * Logs a debug-level entry using a template string, which is only computed if the current log level (`logger.level`)
-   * is `debug` or `trace`.
+   * Logs a debug-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, **debug**, info, notice, warning, error, critical, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `debug` or any level listed
+   *   before `debug` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
    * ```ts
    * // Basic template literal
-   * logger.d`Debug entry with simple text`;
+   * logger.d`Operation started`;
    *
    * // With computed values
-   * logger.d`Debug entry with computed value: ${expensiveOperation()}`;
+   * logger.d`Processing item ${itemId} at ${new Date()}`;
+   * logger.d`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const error = new Error('Something went wrong');
-   * logger.d`Operation failed: ${error}`; // Logs: "Operation failed: Something went wrong"
+   * const error = new Error('Missing configuration');
+   * logger.args(error).d`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -181,11 +229,17 @@ export interface Logger {
   /**
    * Logs an info-level entry for general informational messages (e.g., operation progress updates).
    *
-   * Info entries are only emitted if the logger's level is set to `info`, `debug`, or `trace`.
+   * Log levels (least → most severe): trace, debug, **info**, notice, warning, error, critical, alert, emergency.
    *
-   * The entry content can be either a direct value or a function that returns a value. Using a function is recommended
-   * when the message is expensive to construct, as the function will only be invoked if the entry will actually be
-   * emitted based on the current logger level.
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Info entries are only emitted if `logger.level` is `info` or any level listed before `info` in the level order
+   *   above.
+   * - The entry content can be either a direct value or a function that returns a value. Using a function is recommended
+   *   when the message is expensive to construct, as the function will only be invoked if the entry will actually be
+   *   emitted based on the current logger level.
    *
    * @example
    *
@@ -200,15 +254,25 @@ export interface Logger {
   readonly info: (message: LogMessage, ...args: unknown[]) => void;
 
   /**
-   * Logs an info-level entry using a template string, which is only computed if the current log level (`logger.level`)
-   * is `info`, `debug`, or `trace`.
+   * Logs an info-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, **info**, notice, warning, error, critical, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `info` or any level listed
+   *   before `info` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -217,11 +281,12 @@ export interface Logger {
    * logger.i`Operation started`;
    *
    * // With computed values
-   * logger.i`Processing item ${itemId} at ${new Date().toISOString()}`;
+   * logger.i`Processing item ${itemId} at ${new Date()}`;
+   * logger.i`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
    * const error = new Error('Missing configuration');
-   * logger.i`Config status: ${error}`; // Logs: "Config status: Missing configuration"
+   * logger.args(error).i`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -232,11 +297,17 @@ export interface Logger {
   /**
    * Logs a notice-level entry for normal but significant events (e.g., configuration changes).
    *
-   * Notice entries are only emitted if the logger's level is set to `notice`, `info`, `debug`, or `trace`.
+   * Log levels (least → most severe): trace, debug, info, **notice**, warning, error, critical, alert, emergency.
    *
-   * The entry content can be either a direct value or a function that returns a value. Using a function is recommended
-   * when the message is expensive to construct, as the function will only be invoked if the entry will actually be
-   * emitted based on the current logger level.
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Notice entries are only emitted if `logger.level` is `notice` or any level listed before `notice` in the level
+   *   order above.
+   * - The entry content can be either a direct value or a function that returns a value. Using a function is recommended
+   *   when the message is expensive to construct, as the function will only be invoked if the entry will actually be
+   *   emitted based on the current logger level.
    *
    * @example
    *
@@ -251,15 +322,25 @@ export interface Logger {
   readonly notice: (message: LogMessage, ...args: unknown[]) => void;
 
   /**
-   * Logs a notice-level entry using a template string, which is only computed if the current log level (`logger.level`)
-   * is `notice`, `info`, `debug`, or `trace`.
+   * Logs a notice-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, info, **notice**, warning, error, critical, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `notice` or any level
+   *   listed before `notice` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -268,11 +349,12 @@ export interface Logger {
    * logger.n`Configuration updated`;
    *
    * // With computed values
-   * logger.n`User ${userId} changed settings at ${new Date().toISOString()}`;
+   * logger.n`Processing item ${itemId} at ${new Date()}`;
+   * logger.n`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const warningObj = { message: 'Almost reached quota' };
-   * logger.n`Usage warning: ${warningObj}`; // Logs: "Usage warning: Almost reached quota"
+   * const error = new Error('Missing configuration');
+   * logger.args(error).n`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -283,11 +365,17 @@ export interface Logger {
   /**
    * Logs a warning-level entry for warning conditions (e.g., deprecated feature usage).
    *
-   * Warning entries are only emitted if the logger's level is set to `warning`, `notice`, `info`, `debug`, or `trace`.
+   * Log levels (least → most severe): trace, debug, info, notice, **warning**, error, critical, alert, emergency.
    *
-   * The entry content can be either a direct value or a function that returns a value. Using a function is recommended
-   * when the message is expensive to construct, as the function will only be invoked if the entry will actually be
-   * emitted based on the current logger level.
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Warning entries are only emitted if `logger.level` is `warning` or any level listed before `warning` in the level
+   *   order above.
+   * - The entry content can be either a direct value or a function that returns a value. Using a function is recommended
+   *   when the message is expensive to construct, as the function will only be invoked if the entry will actually be
+   *   emitted based on the current logger level.
    *
    * The warning entry content can be:
    *
@@ -312,15 +400,25 @@ export interface Logger {
   readonly warning: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
-   * Logs a warning-level entry using a template string, which is only computed if the current log level
-   * (`logger.level`) is `warning`, `notice`, `info`, `debug`, or `trace`.
+   * Logs a warning-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, info, notice, **warning**, error, critical, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `warning` or any level
+   *   listed before `warning` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -329,11 +427,12 @@ export interface Logger {
    * logger.w`Feature X is deprecated and will be removed in version 2.0`;
    *
    * // With computed values
-   * logger.w`Slow operation detected: ${operation} took ${duration}ms`;
+   * logger.w`Processing item ${itemId} at ${new Date()}`;
+   * logger.w`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const deprecationError = new Error('API version will be removed soon');
-   * logger.w`API usage warning: ${deprecationError}`; // Logs: "API usage warning: API version will be removed soon"
+   * const error = new Error('Missing configuration');
+   * logger.args(error).w`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -344,10 +443,16 @@ export interface Logger {
   /**
    * Logs an error-level entry for error conditions (e.g., operation failures).
    *
-   * Error entries are only emitted if the logger's level is set to `error`, `warning`, `notice`, `info`, `debug`, or
-   * `trace`.
+   * Log levels (least → most severe): trace, debug, info, notice, warning, **error**, critical, alert, emergency.
    *
-   * The error entry content can be:
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Error entries are only emitted if `logger.level` is `error` or any level listed before `error` in the level order
+   *   above.
+   *
+   * The error entry input can be:
    *
    * - A direct value that is logged as is,
    * - A function that returns a value, useful for messages that are expensive to compute,
@@ -370,15 +475,25 @@ export interface Logger {
   readonly error: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
-   * Logs an error-level entry using a template string, which is only computed if the current log level (`logger.level`)
-   * is `error`, `warning`, `notice`, `info`, `debug`, or `trace`.
+   * Logs an error-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, info, notice, warning, **error**, critical, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `error` or any level listed
+   *   before `error` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -386,15 +501,13 @@ export interface Logger {
    * // Basic template literal
    * logger.e`Failed to connect to database`;
    *
-   * // With automatic date formatting
-   * logger.e`Operation failed at ${new Date()}`;
+   * // With computed values
+   * logger.e`Processing item ${itemId} at ${new Date()}`;
+   * logger.e`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const error = new Error('Connection timeout');
-   * logger.e`Database error: ${error}`; // Logs: "Database error: Connection timeout"
-   *
-   * // Combined with args() to include the error object in the log
-   * logger.args(error).e`An error occurred while performing the operation: ${error}`;
+   * const error = new Error('Missing configuration');
+   * logger.args(error).e`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -405,10 +518,16 @@ export interface Logger {
   /**
    * Logs a critical-level entry for critical conditions (e.g., system component failures).
    *
-   * Critical entries are only emitted if the logger's level is set to `critical`, `error`, `warning`, `notice`, `info`,
-   * , `debug`, or `trace`.
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, **critical**, alert, emergency.
    *
-   * The critical entry content can be:
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Critical entries are only emitted if `logger.level` is `critical` or any level listed before `critical` in the
+   *   level order above.
+   *
+   * The critical entry input can be:
    *
    * - A direct value that is logged as is,
    * - A function that returns a value, useful for messages that are expensive to compute,
@@ -431,15 +550,25 @@ export interface Logger {
   readonly critical: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
-   * Logs a critical-level entry using a template string, which is only computed if the current log level
-   * (`logger.level`) is `critical`, `error`, `warning`, `notice`, `info`, `debug`, or `trace`.
+   * Logs a critical-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, **critical**, alert, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `critical` or any level
+   *   listed before `critical` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -448,11 +577,12 @@ export interface Logger {
    * logger.c`Database connection pool exhausted`;
    *
    * // With computed values
-   * logger.c`System memory usage critical: ${memoryUsage}%`;
+   * logger.c`Processing item ${itemId} at ${new Date()}`;
+   * logger.c`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const criticalError = new Error('Connection pool saturated');
-   * logger.c`Resource exhaustion: ${criticalError}`; // Logs: "Resource exhaustion: Connection pool saturated"
+   * const error = new Error('Missing configuration');
+   * logger.args(error).c`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -463,10 +593,16 @@ export interface Logger {
   /**
    * Logs an alert-level entry for conditions where action must be taken immediately (e.g., data corruption detected).
    *
-   * Alert entries are only emitted if the logger's level is set to `alert`, `critical`, `error`, `warning`, `notice`,
-   * `info`, `debug`, or `trace`.
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, critical, **alert**, emergency.
    *
-   * The alert entry content can be:
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Alert entries are only emitted if `logger.level` is `alert` or any level listed before `alert` in the level order
+   *   above.
+   *
+   * The alert entry input can be:
    *
    * - A direct value that is logged as is,
    * - A function that returns a value, useful for messages that are expensive to compute,
@@ -489,15 +625,25 @@ export interface Logger {
   readonly alert: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
-   * Logs an alert-level entry using a template string, which is only computed if the current log level (`logger.level`)
-   * is `alert`, `critical`, `error`, `warning`, `notice`, `info`, `debug`, or `trace`.
+   * Logs an alert-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, critical, **alert**, emergency.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is `alert` or any level listed
+   *   before `alert` in the level order above).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -506,11 +652,12 @@ export interface Logger {
    * logger.a`Data corruption detected in customer database`;
    *
    * // With computed values
-   * logger.a`Security breach detected from IP ${ipAddress}`;
+   * logger.a`Processing item ${itemId} at ${new Date()}`;
+   * logger.a`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const securityError = new Error('Unauthorized access detected');
-   * logger.a`Security alert: ${securityError}`; // Logs: "Security alert: Unauthorized access detected"
+   * const error = new Error('Missing configuration');
+   * logger.args(error).a`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -521,9 +668,15 @@ export interface Logger {
   /**
    * Logs an emergency-level entry for when the system is unusable (e.g., complete system failure).
    *
-   * Emergency entries are emitted at all logger levels except when the logger level is set to 'off'.
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, critical, alert, **emergency**.
    *
-   * The emergency entry content can be:
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - Emergency entries are emitted at all logger levels except when `logger.level` is `off`.
+   *
+   * The emergency entry input can be:
    *
    * - A direct value that is logged as is,
    * - A function that returns a value, useful for messages that are expensive to compute,
@@ -546,14 +699,24 @@ export interface Logger {
   readonly emergency: (input: LogMessage | Error | { error: unknown }, ...args: unknown[]) => void;
 
   /**
-   * Logs an emergency-level entry using a template string, which is computed at all logger levels except 'off'.
+   * Logs an emergency-level entry using a template string.
    *
-   * Values in template literals are automatically formatted:
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, critical, alert, **emergency**.
    *
-   * - Error objects will show their message text (e.g., `${new Error('Connection failed')}` becomes 'Connection failed')
-   * - Objects with a `message` property will display that message
-   * - Functions are executed and their return values formatted using the rules above
-   * - All other values are converted to their string representation
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - This template is only evaluated if the entry will be emitted (i.e. if `logger.level` is not `off`).
+   *
+   * Values in template literals are stringified using the logger's formatting rules (BaseLogger uses `stringify()` with
+   * its configured stringify options). In particular:
+   *
+   * - Error objects stringify to their message text by default (e.g., `${new Error('Connection failed')}` becomes
+   *   'Connection failed')
+   * - Dates stringify to ISO strings by default (unless configured otherwise)
+   * - Functions used as template values are executed and their return values stringified (useful for lazy/expensive
+   *   values)
    *
    * @example
    *
@@ -562,11 +725,12 @@ export interface Logger {
    * logger.em`System is shutting down due to critical failure`;
    *
    * // With computed values
-   * logger.em`Fatal error in primary system: ${errorDetails}`;
+   * logger.em`Processing item ${itemId} at ${new Date()}`;
+   * logger.em`Expensive computed value: ${() => expensiveOperation()}`;
    *
    * // With error objects - message is automatically extracted
-   * const fatalError = new Error('Catastrophic failure in database cluster');
-   * logger.em`EMERGENCY: ${fatalError}`; // Logs: "EMERGENCY: Catastrophic failure in database cluster"
+   * const error = new Error('Missing configuration');
+   * logger.args(error).em`Config status: ${error}`; // Logs: "Config status: Missing configuration"
    * ```
    *
    * @param strings The template strings
@@ -578,9 +742,16 @@ export interface Logger {
    * Logs an entry at a specific severity level. This method is useful for dynamically setting the level without having
    * to call the specific level method directly.
    *
-   * The entry content can be either a direct value or a function that returns a value. Using a function is recommended
-   * when the message is expensive to construct, as the function will only be invoked if the entry will actually be
-   * emitted based on the current logger level.
+   * Log levels (least → most severe): trace, debug, info, notice, warning, error, critical, alert, emergency.
+   *
+   * Details:
+   *
+   * - Role of the level: the level tags the entry's severity and is used for filtering (`logger.level`) and downstream
+   *   routing/alerting.
+   * - The entry is only emitted if `logger.level` is `level` or any level listed before `level` in the level order above.
+   * - The entry content can be either a direct value or a function that returns a value. Using a function is recommended
+   *   when the message is expensive to construct, as the function will only be invoked if the entry will actually be
+   *   emitted based on the current logger level.
    *
    * @example
    *
