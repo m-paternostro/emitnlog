@@ -148,7 +148,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
         expect(mainSpy).toHaveBeenCalledOnce();
       });
 
-      expect(logger).toHaveLoggedWith('info', 'starting the process main operation');
+      expect(logger).toHaveLoggedWith('info', /starting the process main operation at .+ on pid \d+/);
     });
 
     test('calls logger factory with start date when provided as function', async () => {
