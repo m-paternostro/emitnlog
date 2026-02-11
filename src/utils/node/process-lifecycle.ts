@@ -191,6 +191,13 @@ export const runProcessMain = (
   main: (input: ProcessMainInput) => Promise<void>,
   options?: {
     /**
+     * If `true`, a process exit event listener is not added to the closer. In this case clients are encouraged to add
+     * exit monitoring to the `main` operation and manually close the `closer` instance - not doing so can prevent the
+     * process to exit.
+     */
+    readonly skipOnProcessExit?: boolean;
+
+    /**
      * A logger or a factory function that creates one. If a factory is provided, it receives the same start `Date`
      * passed to the `main` method, to enable timestamp-based logger configuration.
      */
@@ -203,18 +210,29 @@ export const runProcessMain = (
 
     const closer = createCloser(logger);
 
-    logger.i`starting the process main operation at ${start} on pid ${process.pid}`;
+    if (!options?.skipOnProcessExit) {
+      closer.add(
+        onProcessExit(
+          () => {
+            void safeClose(closer);
+          },
+          { logger },
+        ),
+      );
+    }
+
+    logger.i`starting main operation at ${start} on process ${process.pid}`;
     void Promise.resolve()
       .then(() => main({ start, closer, logger }))
       .then(async () => {
         const end = new Date();
-        logger.i`the process has closed at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
+        logger.i`the main operation on process ${process.pid} finished at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
         await safeClose(closer);
       })
       .catch(async (error: unknown) => {
         const end = new Date();
         logger.args(error)
-          .e`an error occurred and the process has closed at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
+          .e`an error occurred while running the main operation on process ${process.pid} and the operation finished at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
         await safeClose(closer);
         process.exit(1);
       });
@@ -308,13 +326,13 @@ const onProcessExitSignal = (
       case 'SIGINT':
       case 'SIGTERM':
       case 'disconnect':
-        logger.d`process exited with signal '${signal}'`;
+        logger.i`process ${process.pid} exited with signal '${signal}'`;
         listener({ signal });
         break;
 
       case 'uncaughtException':
       case 'unhandledRejection':
-        logger.args(error).e`process exited with signal '${signal}' and error '${error}'`;
+        logger.args(error).e`process ${process.pid} exited with signal '${signal}' and error '${error}'`;
         listener({ signal, error });
         break;
 

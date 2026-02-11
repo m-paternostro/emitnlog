@@ -1166,6 +1166,10 @@ The `logger` option can be:
 - A `Logger` instance for lifecycle messages
 - A factory function `(start: Date) => Logger` that creates a logger using the start timestamp
 
+You can also disable the automatic process-exit listener by setting `skipOnProcessExit` to `true`. When enabled, you are
+responsible for adding your own exit monitoring (for example with `onProcessExit`) and manually closing the `closer`.
+This is useful for long-running processes that want full control over shutdown sequencing.
+
 #### Advanced Usage
 
 ```ts
