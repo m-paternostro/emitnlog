@@ -203,7 +203,7 @@ export const runProcessMain = (
 
     const closer = createCloser(logger);
 
-    logger.i`starting the process main operation at ${start}`;
+    logger.i`starting the process main operation at ${start} on pid ${process.pid}`;
     void Promise.resolve()
       .then(() => main({ start, closer, logger }))
       .then(async () => {
