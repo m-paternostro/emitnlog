@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 
 import type { LogEntry, MemoryLogger } from '../../../src/logger/index.ts';
 import { createMemoryLogger, OFF_LOGGER } from '../../../src/logger/index.ts';
-import type { Closer, ProcessExitEvent, ProcessNotifier } from '../../../src/utils/index-node.ts';
+import type { Closer, ProcessExitEvent, ProcessExitSignal, ProcessNotifier } from '../../../src/utils/index-node.ts';
 import {
   asClosable,
   createDeferredValue,
@@ -148,7 +148,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
         expect(mainSpy).toHaveBeenCalledOnce();
       });
 
-      expect(logger).toHaveLoggedWith('info', /starting the process main operation at .+ on pid \d+/);
+      expect(logger).toHaveLoggedWith('info', /starting main operation at .+ on process \d+/);
     });
 
     test('calls logger factory with start date when provided as function', async () => {
@@ -179,6 +179,61 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       expect(logger).toBe(OFF_LOGGER);
     });
 
+    test('closes registered resources when a process exit signal is emitted', async () => {
+      let closed = false;
+      const deferred = createDeferredValue();
+
+      runProcessMain(
+        moduleReference,
+        async ({ closer }) => {
+          closer.add({
+            close: () => {
+              closed = true;
+              deferred.resolve();
+            },
+          });
+
+          await deferred.promise;
+        },
+        { logger: OFF_LOGGER },
+      );
+
+      process.emit('SIGINT');
+
+      await vi.waitFor(() => {
+        expect(closed).toBe(true);
+      });
+    });
+
+    test('skips process exit listeners when skipOnProcessExit is true', async () => {
+      const deferred = createDeferredValue();
+      const signals: readonly ProcessExitSignal[] = [
+        'SIGINT',
+        'SIGTERM',
+        'disconnect',
+        'uncaughtException',
+        'unhandledRejection',
+      ];
+      const countListeners = () => signals.reduce((total, signal) => total + process.listenerCount(signal), 0);
+      const initialListeners = countListeners();
+
+      runProcessMain(
+        moduleReference,
+        async () => {
+          await deferred.promise;
+        },
+        { logger: OFF_LOGGER, skipOnProcessExit: true },
+      );
+
+      expect(countListeners()).toBe(initialListeners);
+
+      deferred.resolve();
+
+      await vi.waitFor(() => {
+        expect(countListeners()).toBe(initialListeners);
+      });
+    });
+
     test('exposes lifecycle logger to main input', async () => {
       const deferredClose = createDeferredValue();
 
@@ -207,7 +262,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       expect(entries).toEqual([
         {
           level: 'info',
-          message: expect.stringContaining('starting the process main operation at'),
+          message: expect.stringMatching(/starting main operation at .+ on process \d+/),
           timestamp: expect.any(Number),
           iso: expect.stringContaining('T'),
         },
@@ -219,7 +274,7 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
         },
         {
           level: 'info',
-          message: expect.stringContaining('the process has closed at'),
+          message: expect.stringMatching(/the main operation on process \d+ finished at .+ after .+/),
           timestamp: expect.any(Number),
           iso: expect.stringContaining('T'),
         },
