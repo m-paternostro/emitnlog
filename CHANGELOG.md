@@ -1,5 +1,16 @@
 # emitnlog
 
+## 0.15.0
+
+### Minor Changes
+
+- f3f83aa: Change `runProcessMain` to automatically handles process exit (the option `skipOnProcessExit` can be used to disable the new behavior)
+
+### Patch Changes
+
+- a48925d: Improve documentation for emit methods
+- 3cfa0f2: Outputs the pid on the first log entry emitted by `runProcessMain`
+
 ## 0.14.0
 
 ### Minor Changes
