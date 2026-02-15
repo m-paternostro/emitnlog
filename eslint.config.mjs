@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import prettier from 'eslint-config-prettier';
-import importPlugin from 'eslint-plugin-import';
 import stylistic from '@stylistic/eslint-plugin';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import noOnlyTests from 'eslint-plugin-no-only-tests';
@@ -20,7 +19,7 @@ export default defineConfig([
       parserOptions: { projectService: true, tsconfigRootDir: path.dirname(fileURLToPath(import.meta.url)) },
     },
 
-    extends: [prettier, ts.configs.strictTypeChecked, importPlugin.flatConfigs.recommended],
+    extends: [prettier, ts.configs.strictTypeChecked],
 
     plugins: {
       '@stylistic': stylistic,
@@ -139,12 +138,6 @@ export default defineConfig([
 
       // Enforce function expressions over declarations
       'func-style': ['error', 'expression', { allowArrowFunctions: true }],
-
-      // Disable warnings for importing default member that was also imported as a named import
-      'import/no-named-as-default-member': 'off',
-
-      // Disable checking module resolution
-      'import/no-unresolved': 'off',
 
       // Disallow await inside loops
       'no-await-in-loop': 'error',
