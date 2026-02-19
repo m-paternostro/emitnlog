@@ -5,6 +5,7 @@ import {
   createMemoryLogger,
   OFF_LOGGER,
   withDedup,
+  withFilter,
   withFixedLevel,
   withMinimumLevel,
   withPrefix,
@@ -1102,6 +1103,118 @@ describe('emitnlog.logger.with-utils', () => {
       expect(baseLogger.entries[0]).toMatchObject({ message: 'duplicate' });
       expect(baseLogger.entries[1]).toMatchObject({ message: 'duplicate', args: ['first'] });
       expect(baseLogger.entries[2]).toMatchObject({ message: 'duplicate', args: ['second'] });
+    });
+  });
+
+  describe('withFilter', () => {
+    test('should return OFF_LOGGER when logger is OFF_LOGGER', () => {
+      const logger = withFilter(OFF_LOGGER, () => true);
+      expect(logger).toBe(OFF_LOGGER);
+    });
+
+    test('should forward entries when predicate returns true', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const filteredLogger = withFilter(baseLogger, () => true);
+
+      filteredLogger.info('first');
+      filteredLogger.warning('second');
+      filteredLogger.error('third');
+
+      expect(baseLogger.entries).toHaveLength(3);
+      expect(baseLogger.entries[0]).toMatchObject({ level: 'info', message: 'first' });
+      expect(baseLogger.entries[1]).toMatchObject({ level: 'warning', message: 'second' });
+      expect(baseLogger.entries[2]).toMatchObject({ level: 'error', message: 'third' });
+    });
+
+    test('should drop entries when predicate returns false', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const filteredLogger = withFilter(baseLogger, () => false);
+
+      filteredLogger.info('dropped');
+      filteredLogger.warning('also dropped');
+
+      expect(baseLogger.entries).toHaveLength(0);
+    });
+
+    test('should filter by level when predicate checks level', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const errorOnlyLogger = withFilter(baseLogger, (level) => level === 'error' || level === 'critical');
+
+      errorOnlyLogger.info('info');
+      errorOnlyLogger.warning('warning');
+      errorOnlyLogger.error('error');
+      errorOnlyLogger.critical('critical');
+
+      expect(baseLogger.entries).toHaveLength(2);
+      expect(baseLogger.entries[0]).toMatchObject({ level: 'error', message: 'error' });
+      expect(baseLogger.entries[1]).toMatchObject({ level: 'critical', message: 'critical' });
+    });
+
+    test('should filter by message when predicate checks message', () => {
+      const baseLogger = createMemoryLogger('info');
+      const logger = withFilter(baseLogger, (_level, message) => message.startsWith('AUTH:'));
+
+      logger.info('AUTH: user logged in');
+      logger.info('Other message');
+      logger.info('AUTH: token refreshed');
+
+      expect(baseLogger.entries).toHaveLength(2);
+      expect(baseLogger.entries[0].message).toBe('AUTH: user logged in');
+      expect(baseLogger.entries[1].message).toBe('AUTH: token refreshed');
+    });
+
+    test('should pass level, message, and args to predicate', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const seen: { level: LogLevel; message: string; args: readonly unknown[] | undefined }[] = [];
+      const filteredLogger = withFilter(baseLogger, (level, message, args) => {
+        seen.push({ level, message, args });
+        return level === 'info';
+      });
+
+      filteredLogger.info('hello', { id: 1 });
+      filteredLogger.debug('skip');
+
+      expect(seen).toHaveLength(2);
+      expect(seen[0]).toMatchObject({ level: 'info', message: 'hello' });
+      expect(seen[0].args).toEqual([{ id: 1 }]);
+      expect(seen[1]).toMatchObject({ level: 'debug', message: 'skip' });
+      expect(baseLogger.entries).toHaveLength(1);
+      expect(baseLogger.entries[0]).toMatchObject({ level: 'info', message: 'hello', args: [{ id: 1 }] });
+    });
+
+    test('should respect base logger level', () => {
+      const baseLogger = createMemoryLogger('warning');
+      const filteredLogger = withFilter(baseLogger, () => true);
+
+      filteredLogger.info('below level');
+      filteredLogger.warning('at level');
+      filteredLogger.error('above level');
+
+      expect(baseLogger.entries).toHaveLength(2);
+      expect(baseLogger.entries[0].message).toBe('at level');
+      expect(baseLogger.entries[1].message).toBe('above level');
+    });
+
+    test('should reflect dynamic level of wrapped logger', () => {
+      let level: LogLevel = 'info';
+      const baseLogger = createMemoryLogger(() => level);
+      const filteredLogger = withFilter(baseLogger, () => true);
+
+      expect(filteredLogger.level).toBe('info');
+      level = 'error';
+      expect(filteredLogger.level).toBe('error');
+    });
+
+    test('should preserve prefix when wrapping a prefixed logger', () => {
+      const baseLogger = createMemoryLogger('trace');
+      const prefixedLogger = withPrefix(baseLogger, 'SVC');
+      const filteredLogger = withFilter(prefixedLogger, (l) => l === 'error');
+
+      filteredLogger.info('ignored');
+      filteredLogger.error('emitted');
+
+      expect(baseLogger.entries).toHaveLength(1);
+      expect(baseLogger.entries[0].message).toBe('SVC: emitted');
     });
   });
 });

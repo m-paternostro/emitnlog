@@ -275,3 +275,62 @@ export const withDedup = (
 };
 
 const DEFAULT_KEY_PROVIDER: SetReturnType<LogSink['sink'], string> = (level, message, _args) => `${level}-${message}`;
+
+/**
+ * Returns a logger that forwards only entries for which the predicate returns true.
+ *
+ * The predicate is invoked with the same `level`, `message`, and `args` that would be emitted; entries are delegated to
+ * the wrapped logger unchanged when the predicate returns `true`, and dropped when it returns `false`. The returned
+ * logger preserves the wrapped logger’s level (and dynamic level changes) and works correctly with prefixed loggers.
+ *
+ * Use this when you need custom filtering beyond level-based rules (e.g. by message pattern, args, or a combination).
+ *
+ * @example Filter by level
+ *
+ * ```ts
+ * import { createConsoleLogLogger, withFilter } from 'emitnlog/logger';
+ *
+ * const baseLogger = createConsoleLogLogger('trace');
+ * const errorOnlyLogger = withFilter(baseLogger, (level) => level === 'error' || level === 'critical');
+ *
+ * errorOnlyLogger.i`info`; // Not emitted
+ * errorOnlyLogger.e`error`; // Emitted
+ * errorOnlyLogger.c`critical`; // Emitted
+ * ```
+ *
+ * @example Filter by message pattern
+ *
+ * ```ts
+ * import { createConsoleLogLogger, withFilter } from 'emitnlog/logger';
+ *
+ * const baseLogger = createConsoleLogLogger('info');
+ * const logger = withFilter(baseLogger, (_level, message) => message.startsWith('AUTH:'));
+ *
+ * logger.info('AUTH: user logged in'); // Emitted
+ * logger.info('Other message'); // Not emitted
+ * ```
+ *
+ * @param logger The logger to decorate.
+ * @param predicate Function called for each entry with `(level, message, args)`; return `true` to forward the entry,
+ *   `false` to drop it.
+ * @returns A logger that forwards only entries for which `predicate` returns true.
+ */
+export const withFilter = (
+  logger: Logger,
+  predicate: (level: LogLevel, message: string, args: readonly unknown[] | undefined) => boolean,
+): Logger => {
+  if (logger === OFF_LOGGER) {
+    return OFF_LOGGER;
+  }
+
+  return handlePrefixWrapping(logger, (original: Logger) =>
+    createLogger(
+      () => original.level,
+      (level, message, args) => {
+        if (predicate(level, message, args)) {
+          original.log(level, message, ...(args ?? emptyArray()));
+        }
+      },
+    ),
+  );
+};

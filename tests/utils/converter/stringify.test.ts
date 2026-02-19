@@ -183,7 +183,6 @@ describe('emitnlog.utils.stringify', () => {
       ['X-Test', 'value2'],
     ]);
 
-    /* eslint-disable no-undef */
     const OriginalHeaders = globalThis.Headers;
     try {
       (globalThis.Headers as unknown) = undefined;
@@ -191,7 +190,6 @@ describe('emitnlog.utils.stringify', () => {
     } finally {
       globalThis.Headers = OriginalHeaders;
     }
-    /* eslint-enable no-undef */
   });
 
   test('should handle a global `Headers` is not properly defined', () => {
@@ -201,7 +199,6 @@ describe('emitnlog.utils.stringify', () => {
       ['X-Test', 'value2'],
     ]);
 
-    /* eslint-disable no-undef */
     const OriginalHeaders = globalThis.Headers;
     try {
       (globalThis.Headers as unknown) = true;
@@ -209,7 +206,6 @@ describe('emitnlog.utils.stringify', () => {
     } finally {
       globalThis.Headers = OriginalHeaders;
     }
-    /* eslint-enable no-undef */
   });
 
   test('should never throw errors on problematic values', () => {
