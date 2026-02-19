@@ -507,6 +507,26 @@ errorLogger.i`info`; // Emitted as an error
 errorLogger.c`error`; // Emitted as an error
 ```
 
+### withFilter
+
+Returns a logger that forwards only entries for which a predicate returns true. The predicate receives `(level, message, args)` for each entry; when it returns `true`, the entry is delegated to the wrapped logger unchanged; when it returns `false`, the entry is dropped. Useful for custom filtering by message pattern, level, or args (e.g. only log auth-related messages).
+
+```ts
+import { createConsoleLogLogger, withFilter } from 'emitnlog/logger';
+
+const baseLogger = createConsoleLogLogger('trace');
+
+// Only forward error and critical
+const errorOnlyLogger = withFilter(baseLogger, (level) => level === 'error' || level === 'critical');
+errorOnlyLogger.i`info`; // Not emitted
+errorOnlyLogger.e`error`; // Emitted
+
+// Only forward messages with a given prefix
+const authLogger = withFilter(baseLogger, (_level, message) => message.startsWith('AUTH:'));
+authLogger.info('AUTH: user logged in'); // Emitted
+authLogger.info('Other message'); // Not emitted
+```
+
 ### withDedup
 
 Creates a logger that filters out duplicate entries (same level + formatted message) within a bounded buffer, helping keep noisy destinations like the console readable. Duplicates are tracked per decorated logger and cleared automatically when either the buffer reaches the configured size or the flush interval elapses.
