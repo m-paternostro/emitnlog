@@ -122,7 +122,7 @@ export const fileSink = (
   }
 
   let resolvedPath: string;
-  if (filePath.includes(path.sep)) {
+  if (filePath.includes('/') || filePath.includes('\\')) {
     if (filePath.startsWith('~')) {
       resolvedPath = path.join(os.homedir(), filePath.substring(1));
     } else if (path.isAbsolute(filePath)) {

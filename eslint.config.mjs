@@ -59,6 +59,9 @@ export default defineConfig([
       // Disallow usage of the any type
       '@typescript-eslint/no-explicit-any': 'error',
 
+      // Disallow floating promises
+      '@typescript-eslint/no-floating-promises': 'error',
+
       // Allow non-null assertions (obj!)
       '@typescript-eslint/no-non-null-assertion': 'off',
 
@@ -231,7 +234,6 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/unbound-method': 'off',
-      // Prevent committing .only tests
       'no-restricted-syntax': [
         'error',
         {

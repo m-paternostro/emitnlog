@@ -108,14 +108,14 @@ export const createEventNotifier = <T = void>(options?: {
   /**
    * Sets an error handler for the notifier, to be called whenever a listener throws an error.
    *
-   * Errors throw by the handler are ignored.
+   * Errors thrown by the handler are ignored.
    */
   readonly onError?: (error: unknown) => void;
 
   /**
    * Sets a handler for the notifier, to be called whenever the notifier state changes.
    *
-   * Errors throw by the handler are ignored.
+   * Errors thrown by the handler are ignored.
    */
   readonly onChange?: (event: {
     /**
