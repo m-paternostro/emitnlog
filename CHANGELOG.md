@@ -1,5 +1,15 @@
 # emitnlog
 
+## 0.16.0
+
+### Minor Changes
+
+- 4de3d2e: Add `withFilter` to allow controlling the emitted log entries
+
+### Patch Changes
+
+- c9093c7: Update main dependencies, including node, typescript, and eslint
+
 ## 0.15.0
 
 ### Minor Changes
