@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.16.1
+
+### Patch Changes
+
+- 12d4b22: Update node build targets to node22, add no-floating-promises eslint rule, and fix file sink path detection on Windows
+
 ## 0.16.0
 
 ### Minor Changes
