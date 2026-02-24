@@ -127,35 +127,28 @@ export interface DeferredValue<T> {
  * @returns An object containing the promise and functions to resolve or reject it.
  */
 export const createDeferredValue = <T = void>(): DeferredValue<T> => {
-  let resolve: (value: T | PromiseLike<T>) => void;
-  let reject: (reason?: unknown) => void;
-
   let resolved = false;
   let rejected = false;
 
-  const createPromise = () =>
-    new Promise<T>((res, rej) => {
-      resolve = (value) => {
-        if (resolved || rejected) {
-          return;
-        }
+  let { promise, resolve: res, reject: rej } = Promise.withResolvers<T>();
 
-        resolved = true;
-        res(value);
-      };
+  const resolve = (value: T | PromiseLike<T>) => {
+    if (resolved || rejected) {
+      return;
+    }
 
-      reject = (reason) => {
-        if (resolved || rejected) {
-          return;
-        }
+    resolved = true;
+    res(value);
+  };
 
-        rejected = true;
-        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
-        rej(reason);
-      };
-    });
+  const reject = (reason?: unknown) => {
+    if (resolved || rejected) {
+      return;
+    }
 
-  let promise = createPromise();
+    rejected = true;
+    rej(reason);
+  };
 
   const deferred: DeferredValue<T> = {
     get promise() {
@@ -174,20 +167,16 @@ export const createDeferredValue = <T = void>(): DeferredValue<T> => {
       return resolved || rejected;
     },
 
-    resolve: (value) => {
-      resolve!(value);
-    },
+    resolve,
 
-    reject: (reason) => {
-      reject!(reason);
-    },
+    reject,
 
     renew: () => {
       if (deferred.settled) {
         resolved = false;
         rejected = false;
 
-        promise = createPromise();
+        ({ promise, resolve: res, reject: rej } = Promise.withResolvers<T>());
       }
 
       return deferred;
