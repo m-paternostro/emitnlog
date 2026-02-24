@@ -10,7 +10,7 @@
     "declarationDir": "dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["es2023"],
+    "lib": ["es2024"],
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "Bundler",
@@ -23,6 +23,6 @@
     "skipLibCheck": true,
     "strict": true,
     "stripInternal": true,
-    "target": "ES2023"
+    "target": "ES2024"
   }
 }

@@ -1,32 +1,20 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 import stylistic from '@stylistic/eslint-plugin';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
-import noOnlyTests from 'eslint-plugin-no-only-tests';
 import ts from 'typescript-eslint';
-import * as nodeImportPrefix from 'eslint-plugin-require-node-import-prefix';
 
 export default defineConfig([
   globalIgnores(['coverage/**', 'dist/**', '**/*.js', '**/*.cjs', '**/*.mjs', 'tsup.config.ts', 'vitest.config.ts']),
   {
     name: 'default',
 
-    languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: path.dirname(fileURLToPath(import.meta.url)) },
-    },
+    languageOptions: { parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname } },
 
     extends: [prettier, ts.configs.strictTypeChecked],
 
-    plugins: {
-      '@stylistic': stylistic,
-      'simple-import-sort': simpleImportSort,
-      'require-node-import-prefix': nodeImportPrefix,
-      'no-only-tests': noOnlyTests,
-    },
+    plugins: { '@stylistic': stylistic, 'simple-import-sort': simpleImportSort },
 
     rules: {
       // Enforce consistent arrow function parentheses
@@ -82,6 +70,11 @@ export default defineConfig([
             { group: ['**/tests/**'], message: 'Do not import from tests' },
             { group: ['src/**'], message: 'Do not import from src root' },
             { regex: '^\\..+(?<!\\.ts)$', message: 'Do not import files without a .ts extension' },
+            {
+              regex:
+                '^(assert|async_hooks|buffer|child_process|cluster|console|constants|crypto|dgram|diagnostics_channel|dns|domain|events|fs|http|http2|https|inspector|module|net|os|path|perf_hooks|process|punycode|querystring|readline|repl|stream|string_decoder|sys|timers|tls|tty|url|util|v8|vm|worker_threads|zlib)(/.*)?$',
+              message: 'Use the node: prefix for Node.js built-in imports (e.g., node:fs instead of fs)',
+            },
           ],
         },
       ],
@@ -238,7 +231,14 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/unbound-method': 'off',
-      'no-only-tests/no-only-tests': 'error',
+      // Prevent committing .only tests
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'MemberExpression[property.name="only"][object.name=/^(test|it|describe)$/]',
+          message: 'Do not commit .only tests',
+        },
+      ],
     },
   },
 ]);

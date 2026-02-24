@@ -62,20 +62,19 @@ export const cancelableDelay = (milliseconds: number): CancelableDelay => {
   const duration = toNonNegativeInteger(milliseconds);
   let timeoutId: Timeout | undefined;
   let settled = false;
-  let rejectDelay: ((error: CanceledError) => void) | undefined;
 
-  const promise = new Promise<void>((resolve, reject) => {
-    rejectDelay = reject as (error: CanceledError) => void;
-    timeoutId = setTimeout(() => {
-      if (settled) {
-        return;
-      }
+  // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
 
-      settled = true;
-      timeoutId = undefined;
-      resolve();
-    }, duration);
-  });
+  timeoutId = setTimeout(() => {
+    if (settled) {
+      return;
+    }
+
+    settled = true;
+    timeoutId = undefined;
+    resolve();
+  }, duration);
 
   const cancel = (): void => {
     if (settled) {
@@ -89,7 +88,7 @@ export const cancelableDelay = (milliseconds: number): CancelableDelay => {
       timeoutId = undefined;
     }
 
-    rejectDelay?.(new CanceledError());
+    reject(new CanceledError());
   };
 
   return { promise, cancel };
