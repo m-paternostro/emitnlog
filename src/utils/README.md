@@ -1300,7 +1300,8 @@ logger.i`Application started - press Ctrl+C to stop`;
 
 ```ts
 import { EventEmitter } from 'node:events';
-import { onProcessExit, type ProcessNotifier } from 'emitnlog/utils';
+import type { ProcessNotifier } from 'emitnlog/utils';
+import { onProcessExit } from 'emitnlog/utils';
 
 // In tests, provide a fake process emitter
 const fakeProcess: ProcessNotifier = new EventEmitter();

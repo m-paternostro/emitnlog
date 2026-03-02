@@ -353,6 +353,89 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       });
     });
 
+    test('reports isClosing only after cleanup starts', async () => {
+      const deferred = createDeferredValue();
+      let isClosing: (() => boolean) | undefined;
+      let observedDuringMain: boolean | undefined;
+
+      runProcessMain(
+        moduleReference,
+        async (input) => {
+          isClosing = input.isClosing;
+          observedDuringMain = input.isClosing();
+          await deferred.promise;
+        },
+        { logger: OFF_LOGGER },
+      );
+
+      await vi.waitFor(() => {
+        expect(isClosing).toBeTypeOf('function');
+      });
+
+      expect(observedDuringMain).toBe(false);
+
+      deferred.resolve();
+
+      await vi.waitFor(() => {
+        expect(isClosing?.()).toBe(true);
+      });
+    });
+
+    test('does not close closer resources more than once when close is invoked multiple times', async () => {
+      const deferred = createDeferredValue();
+      const resource = { close: vi.fn().mockResolvedValue(undefined) };
+
+      runProcessMain(
+        moduleReference,
+        async ({ closer }) => {
+          closer.add(resource);
+          await deferred.promise;
+        },
+        { logger: OFF_LOGGER },
+      );
+
+      process.emit('SIGINT');
+
+      await vi.waitFor(() => {
+        expect(resource.close).toHaveBeenCalledTimes(1);
+      });
+
+      deferred.resolve();
+
+      await vi.waitFor(() => {
+        expect(resource.close).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    test('closes resources added while closing', async () => {
+      const deferred = createDeferredValue();
+      const lateResource = { close: vi.fn().mockResolvedValue(undefined) };
+      const resource = { close: vi.fn().mockResolvedValue(undefined) };
+
+      runProcessMain(
+        moduleReference,
+        async ({ closer }) => {
+          resource.close.mockImplementation(() => {
+            closer.add(lateResource);
+          });
+
+          closer.add(resource);
+          await deferred.promise;
+        },
+        { logger: OFF_LOGGER },
+      );
+
+      deferred.resolve();
+
+      await vi.waitFor(() => {
+        expect(resource.close).toHaveBeenCalledTimes(1);
+      });
+
+      await vi.waitFor(() => {
+        expect(lateResource.close).toHaveBeenCalledTimes(1);
+      });
+    });
+
     test('handles logger.close throwing without propagating error on success', async () => {
       const logger = createTestLogger();
       const closeSpy = vi.spyOn(logger, 'close').mockImplementation(() => {
