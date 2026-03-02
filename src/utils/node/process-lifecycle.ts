@@ -98,6 +98,16 @@ export type ProcessMainInput = {
   readonly closer: Closer;
 
   /**
+   * Returns true when the clean up phase of the run process has been initiated, i.e., after the main operation
+   * completes or if the process itself exits (for example, if the process receives a signal or an uncaught exception).
+   *
+   * After the first time this method returns true, it never returns false again.
+   *
+   * @returns A boolean indicating if the process is closing.
+   */
+  readonly isClosing: () => boolean;
+
+  /**
    * A logger instance, either the one passed via the `options` parameter or the `OFF_LOGGER`.
    *
    * This logger is closed when the process ends.
@@ -206,15 +216,56 @@ export const runProcessMain = (
 ): void => {
   if (isProcessMain(moduleReference)) {
     const start = new Date();
+    const closer = createCloser();
+
     const logger = withLogger(typeof options?.logger === 'function' ? options.logger(start) : options?.logger);
 
-    const closer = createCloser(logger);
+    let closedLogger = false;
+    const doClose = async (): Promise<void> => {
+      if (closer.size) {
+        await safeClose(closer, (error) => {
+          logger.args(error).e`an error occurred while closing the 'closer' on process ${process.pid}`;
+        });
+
+        if (closer.size) {
+          logger.w`the 'closer' on process ${process.pid} is still not empty after closing it, closing it again`;
+
+          // We are closing the 'closer' a few times as a precaution to cover the case in which
+          // closing a closable caused new closables to be added.
+          for (let i = 0; i < 3 && closer.size; i++) {
+            // eslint-disable-next-line no-await-in-loop
+            await safeClose(closer, (error) => {
+              logger.args(error).e`an error occurred while closing the 'closer' on process ${process.pid}`;
+            });
+          }
+        }
+      }
+
+      if (!closedLogger && logger.close) {
+        closedLogger = true;
+        try {
+          logger.i`closing the logger on process ${process.pid}`;
+          await logger.close();
+        } catch {
+          // ignore
+        }
+      }
+    };
+
+    let closingPromise: Promise<void> | undefined = undefined;
+    const close = (): Promise<void> => {
+      if (!closingPromise) {
+        logger.d`initiating clean up phase on process ${process.pid}`;
+        closingPromise = doClose();
+      }
+      return closingPromise;
+    };
 
     if (!options?.skipOnProcessExit) {
       closer.add(
         onProcessExit(
           () => {
-            void safeClose(closer);
+            void close();
           },
           { logger },
         ),
@@ -223,17 +274,17 @@ export const runProcessMain = (
 
     logger.i`starting main operation at ${start} on process ${process.pid}`;
     void Promise.resolve()
-      .then(() => main({ start, closer, logger }))
+      .then(() => main({ start, closer, isClosing: () => !!closingPromise, logger }))
       .then(async () => {
         const end = new Date();
         logger.i`the main operation on process ${process.pid} finished at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
-        await safeClose(closer);
+        await close();
       })
       .catch(async (error: unknown) => {
         const end = new Date();
         logger.args(error)
           .e`an error occurred while running the main operation on process ${process.pid} and the operation finished at ${end} after ${stringifyDuration(end.valueOf() - start.valueOf())}`;
-        await safeClose(closer);
+        await close();
         process.exit(1);
       });
   }

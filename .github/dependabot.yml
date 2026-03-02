@@ -23,3 +23,15 @@ updates:
       dependencies:
         patterns:
           - '*'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+      day: monday
+      time: '10:00'
+      timezone: America/Toronto
+    groups:
+      actions:
+        patterns:
+          - '*'
