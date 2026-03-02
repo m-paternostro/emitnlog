@@ -30,6 +30,7 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [asSafeClosable](#assafeclosable)
   - [createCloser](#createcloser)
 - [Process Lifecycle (NodeJS)](#process-lifecycle-nodejs)
+  - [isProcessRunning](#isprocessrunning)
   - [isProcessMain](#isprocessmain)
   - [runProcessMain](#runprocessmain)
   - [onProcessExit](#onprocessexit)
@@ -1035,6 +1036,38 @@ Errors thrown during closing are accumulated and reported consistently using the
 **Note:** These utilities are NodeJS-only and use Node-specific APIs like `process` signals and exit codes.
 
 Utilities for managing NodeJS process entry points and graceful shutdown. These help you build CLI tools, backend services, and applications that need robust lifecycle management.
+
+### isProcessRunning
+
+Checks whether the given PID refers to a currently running process. Uses a safe existence
+probe, and returns `true` even when the process exists but your user lacks permission to signal it. If you need to
+treat permission errors as "not running", pass the `assumeDeadOnEPERM` option.
+
+```ts
+import { isProcessRunning } from 'emitnlog/utils';
+
+if (isProcessRunning(process.pid)) {
+  console.log('current process is alive');
+}
+```
+
+```ts
+import { isProcessRunning } from 'emitnlog/utils';
+
+const pid = Number(process.env.WORKER_PID);
+if (!Number.isNaN(pid) && isProcessRunning(pid)) {
+  console.log('worker is still running');
+}
+```
+
+```ts
+import { isProcessRunning } from 'emitnlog/utils';
+
+const pid = Number(process.env.WORKER_PID);
+if (!Number.isNaN(pid) && !isProcessRunning(pid, { assumeDeadOnEperm: true })) {
+  console.log('worker is not accessible or already stopped');
+}
+```
 
 ### isProcessMain
 

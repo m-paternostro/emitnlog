@@ -13,6 +13,7 @@
     "cooldowns",
     "Dedup",
     "emitnlog",
+    "EPERM",
     "errorify",
     "Finalizable",
     "flushables",

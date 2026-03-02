@@ -121,6 +121,7 @@ The request to "prepare for sharing" (or similar) involves performing the follow
 3. After the tests:
    - If applicable, write the JSDoc on the code, following the guidelines described on the [Documentation](#documentation) section.
    - If applicable, update the appropriate `src/*/README.md`, following the guidelines described on the [Documentation](#documentation) section.
+4. Read the `CHANGELOG.md` to understand the project's style and suggest an appropriate change and change type (`patch`, `minor`, `major`).
 
 Note: NEVER COMMIT OR STAGE CHANGES without an explicit request.
 
