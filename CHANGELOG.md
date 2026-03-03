@@ -1,5 +1,17 @@
 # emitnlog
 
+## 0.17.0
+
+### Minor Changes
+
+- ef6b228: Add new (node) utility `isProcessRunning`
+
+### Patch Changes
+
+- 66ac952: Implement several fixes and improvements to the utilities code
+- 543e4f1: Add `isClosing()` method to ProcessMainInput
+- a74ddb5: Refactor file logger options and file sink: immutable options in createFileLogger, clearer state (needsOverwrite), idempotent directory init via promise, one newline per log line
+
 ## 0.16.1
 
 ### Patch Changes
