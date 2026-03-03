@@ -449,6 +449,66 @@ describe('emitnlog.logger.node.FileLogger', () => {
     expect(content2).toContain('Test message for both loggers');
   });
 
+  test('concurrent writes from three loggers to same file produce one entry per line with no blank or merged lines', async () => {
+    const concurrentFile = path.join(testDir, 'concurrent.log');
+    const opts = { flushDelayMs: 0 } as const satisfies FileLoggerOptions;
+
+    const logger1 = createFileLogger(concurrentFile, opts);
+    const logger2 = createFileLogger(concurrentFile, opts);
+    const logger3 = createFileLogger(concurrentFile, opts);
+
+    // Interleave writes so they can run concurrently
+    logger1.info('L1-a');
+    await delay(2);
+    logger2.info('L2-a');
+    await delay(2);
+    logger3.info('L3-a');
+    await delay(2);
+    logger1.info('L1-b');
+    await delay(2);
+    logger2.info('L2-b');
+    await delay(2);
+    logger3.info('L3-b');
+
+    await logger2.close();
+
+    logger1.info('L1-c');
+    await delay(2);
+    logger3.info('L3-c');
+    await delay(2);
+    logger1.info('L1-d');
+    logger3.info('L3-d');
+
+    await logger1.close();
+    await logger3.close();
+
+    const content = await readLogFile(concurrentFile);
+    const lines = content.split('\n').filter((line) => line.length > 0);
+
+    expect(lines.length).toBe(10);
+
+    expect(content).toContain('L1-a');
+    expect(content).toContain('L2-a');
+    expect(content).toContain('L3-a');
+    expect(content).toContain('L1-b');
+    expect(content).toContain('L2-b');
+    expect(content).toContain('L3-b');
+    expect(content).toContain('L1-c');
+    expect(content).toContain('L3-c');
+    expect(content).toContain('L1-d');
+    expect(content).toContain('L3-d');
+
+    // No blank lines (no double newline in the middle)
+    expect(content).not.toMatch(/\n\n/);
+
+    // Each line must contain exactly one level tag (no two entries merged on same line)
+    const levelTag = /\[(?:info|debug|warning|error)\s+\]/g;
+    for (const line of lines) {
+      const matches = line.match(levelTag) ?? [];
+      expect(matches.length).toBe(1);
+    }
+  });
+
   test('should include additional arguments by default', async () => {
     const logger = createFileLogger(testLogFile);
 

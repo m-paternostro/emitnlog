@@ -136,35 +136,27 @@ export const fileSink = (
 
   if (config.datePrefix) {
     const now = new Date();
-    const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const p = (n: number) => String(n).padStart(2, '0');
+    const datePrefix = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`;
     resolvedPath = path.join(path.dirname(resolvedPath), `${datePrefix}_${path.basename(resolvedPath)}`);
   }
 
-  let initialized = false;
   let closed = false;
-  let isAppending = !config.overwrite;
+  let needsOverwrite = config.overwrite;
   let writeQueue = Promise.resolve();
-  let isFirstEntry = true;
+  let initPromise: Promise<void> | undefined;
 
-  const ensureDirectory = async (): Promise<void> => {
-    if (initialized) {
-      return;
-    }
-
-    const dir = path.dirname(resolvedPath);
-    await fs.mkdir(dir, { recursive: true });
-    initialized = true;
-  };
+  const ensureDirectory = (): Promise<void> =>
+    (initPromise ??= fs.mkdir(path.dirname(resolvedPath), { recursive: true }).then(() => void 0));
 
   const writeMessage = async (message: string): Promise<void> => {
     await ensureDirectory();
 
-    if (isAppending) {
-      await fs.appendFile(resolvedPath, message, { encoding: config.encoding, mode: config.mode });
-    } else {
+    if (needsOverwrite) {
       await fs.writeFile(resolvedPath, message, { encoding: config.encoding, mode: config.mode });
-      // After first write, always append
-      isAppending = true;
+      needsOverwrite = false;
+    } else {
+      await fs.appendFile(resolvedPath, message, { encoding: config.encoding, mode: config.mode });
     }
   };
 
@@ -172,8 +164,6 @@ export const fileSink = (
     writeQueue = writeQueue.then(() => writeMessage(message).catch((error: unknown) => config.errorHandler(error)));
   };
 
-  const lineDelimiter = '\n';
-  const footer = lineDelimiter;
   return {
     sink: (level, message, args): void => {
       if (closed) {
@@ -182,14 +172,7 @@ export const fileSink = (
 
       // Format the message immediately to ensure correct timestamp
       const formattedMessage = formatter(level, message, args);
-
-      // Prepend delimiter to all entries except the first
-      if (isFirstEntry) {
-        queueMessage(formattedMessage);
-        isFirstEntry = false;
-      } else {
-        queueMessage(lineDelimiter + formattedMessage);
-      }
+      queueMessage(formattedMessage + '\n');
     },
 
     filePath: resolvedPath,
@@ -204,7 +187,6 @@ export const fileSink = (
       }
 
       closed = true;
-      queueMessage(footer);
       await writeQueue;
     },
   };
