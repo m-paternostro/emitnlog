@@ -3,7 +3,7 @@ import { withLogger } from '../../logger/off-logger.ts';
 import { withPrefix } from '../../logger/prefixed-logger.ts';
 import { stringifyDuration, toNonNegativeInteger } from '../common/duration.ts';
 import { createDeferredValue } from './deferred-value.ts';
-import { delay } from './delay.ts';
+import { cancelableDelay } from './delay.ts';
 
 /**
  * Configuration options for polling operations.
@@ -152,6 +152,7 @@ export const startPolling = <T, const V = undefined>(
   let invocationIndex = -1;
   let active = true;
   let lastResult: T | V | undefined;
+  let cancelTimeoutDelay: (() => void) | undefined;
 
   const logger = withPrefix(withLogger(options?.logger), 'poll', { fallbackPrefix: 'emitnlog' });
 
@@ -207,6 +208,7 @@ export const startPolling = <T, const V = undefined>(
   const close = async (): Promise<void> => {
     if (active) {
       active = false;
+      cancelTimeoutDelay?.();
 
       logger.d`closing the poll after ${invocationIndex + 1} invocations`;
       clearInterval(intervalId);
@@ -229,16 +231,20 @@ export const startPolling = <T, const V = undefined>(
 
   const timeout = options?.timeout;
   if (timeout !== undefined && timeout >= 0) {
-    void delay(timeout).then(() => {
-      if (active) {
-        if ('timeoutValue' in options!) {
-          lastResult = options.timeoutValue;
-        }
+    const { promise: timeoutPromise, cancel } = cancelableDelay(timeout);
+    cancelTimeoutDelay = cancel;
+    void timeoutPromise
+      .then(() => {
+        if (active) {
+          if ('timeoutValue' in options!) {
+            lastResult = options.timeoutValue;
+          }
 
-        logger.d`timeout for the operation reached after ${stringifyDuration(timeout)}`;
-        void close();
-      }
-    });
+          logger.d`timeout for the operation reached after ${stringifyDuration(timeout)}`;
+          void close();
+        }
+      })
+      .catch(() => void 0);
   }
 
   return { close, wait: deferred.promise };

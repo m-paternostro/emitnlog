@@ -39,7 +39,8 @@ describe('emitnlog.utils.empty', () => {
       const set: ReadonlySet<number> = emptySet();
       expect(() => (set as Set<unknown>).add(1)).toThrow(TypeError);
       expect((set as Set<unknown>).delete(1)).toBe(false);
-      expect(() => (set as Set<unknown>).clear()).toThrow(TypeError);
+      // clear() is a logical no-op on an already-empty set — postcondition already satisfied
+      expect(() => (set as Set<unknown>).clear()).not.toThrow();
       expect(set).toEqual(new Set());
     });
   });
@@ -56,8 +57,46 @@ describe('emitnlog.utils.empty', () => {
       const map: ReadonlyMap<string, unknown> = emptyMap();
       expect(() => (map as Map<unknown, unknown>).set('key', 1)).toThrow(TypeError);
       expect((map as Map<unknown, unknown>).delete('key')).toBe(false);
-      expect(() => (map as Map<unknown, unknown>).clear()).toThrow(TypeError);
+      // clear() is a logical no-op on an already-empty map — postcondition already satisfied
+      expect(() => (map as Map<unknown, unknown>).clear()).not.toThrow();
       expect(map).toEqual(new Map());
+    });
+
+    test('clear() leaves the map still empty and usable', () => {
+      const map = emptyMap<string, number>();
+      (map as Map<string, number>).clear();
+      expect(map.size).toBe(0);
+      expect(map).toEqual(new Map());
+    });
+  });
+
+  describe('mutation semantics', () => {
+    test('emptySet add() throws because postcondition is unsatisfiable', () => {
+      expect(() => (emptySet<number>() as Set<number>).add(42)).toThrow(TypeError);
+    });
+
+    test('emptySet delete() returns false (element is not present) without throwing', () => {
+      expect(() => (emptySet<number>() as Set<number>).delete(42)).not.toThrow();
+      expect((emptySet<number>() as Set<number>).delete(42)).toBe(false);
+    });
+
+    test('emptySet clear() is a no-op without throwing', () => {
+      expect(() => (emptySet<number>() as Set<number>).clear()).not.toThrow();
+      expect(emptySet<number>().size).toBe(0);
+    });
+
+    test('emptyMap set() throws because postcondition is unsatisfiable', () => {
+      expect(() => (emptyMap<string, number>() as Map<string, number>).set('k', 1)).toThrow(TypeError);
+    });
+
+    test('emptyMap delete() returns false (key is not present) without throwing', () => {
+      expect(() => (emptyMap<string, number>() as Map<string, number>).delete('k')).not.toThrow();
+      expect((emptyMap<string, number>() as Map<string, number>).delete('k')).toBe(false);
+    });
+
+    test('emptyMap clear() is a no-op without throwing', () => {
+      expect(() => (emptyMap<string, number>() as Map<string, number>).clear()).not.toThrow();
+      expect(emptyMap<string, number>().size).toBe(0);
     });
   });
 

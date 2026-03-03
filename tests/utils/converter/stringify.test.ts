@@ -53,6 +53,15 @@ describe('emitnlog.utils.stringify', () => {
     expect(result).toContain('at ');
   });
 
+  test('should not duplicate the error message when includeStack is true', () => {
+    // Before the fix: result was `"Test error\nError: Test error\n  at ..."` (message prefixed twice)
+    // After the fix:  result is  `"Error: Test error\n  at ..."` (stack only, message appears once)
+    const error = new Error('UniqueMessageXYZ');
+    const result = stringify(error, { includeStack: true });
+    const occurrences = (result.match(/UniqueMessageXYZ/g) ?? []).length;
+    expect(occurrences).toBe(1);
+  });
+
   test('should stringify complex objects', () => {
     const obj = { a: 1, b: { c: 2 }, d: [3, 4] };
     const result = stringify(obj);

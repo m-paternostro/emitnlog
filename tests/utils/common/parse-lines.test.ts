@@ -140,19 +140,29 @@ describe('emitnlog.utils.parseLines', () => {
     expect(errors).toStrictEqual(['bad', 'also bad']);
   });
 
-  test('throws the last error when all lines fail and onError does not throw', () => {
-    let lastError: Error | undefined;
+  test('throws the first error when all lines fail and onError does not throw', () => {
+    const errors: Error[] = [];
     const value = ['bad line 1', 'bad line 2', 'bad line 3'].join('\n');
 
-    expect(() =>
+    let thrown: unknown;
+    try {
       parseLines(value, {
         onError: (error) => {
-          lastError = error;
+          errors.push(error);
         },
-      }),
-    ).toThrow();
+      });
+    } catch (e) {
+      thrown = e;
+    }
 
-    expect(lastError).toBeInstanceOf(SyntaxError);
+    // onError receives each line's own error — three distinct error objects
+    expect(errors).toHaveLength(3);
+    expect(errors[0]).not.toBe(errors[1]);
+    expect(errors[1]).not.toBe(errors[2]);
+
+    // The thrown error must be the FIRST one encountered (??= semantics — first-error-wins)
+    expect(thrown).toBe(errors[0]);
+    expect(thrown).not.toBe(errors[2]);
   });
 
   test('handles JSON primitives on each line', () => {

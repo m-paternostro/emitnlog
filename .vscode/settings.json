@@ -25,7 +25,8 @@
     "stringifiable",
     "stringifier",
     "Stringifier",
-    "unregisters"
+    "unregisters",
+    "unstub"
   ],
   "diffEditor.ignoreTrimWhitespace": true,
   "editor.bracketPairColorization.enabled": true,

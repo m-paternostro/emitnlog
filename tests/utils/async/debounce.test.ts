@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { CanceledError, debounce, delay } from '../../../src/utils/index.ts';
+import { flushFakeTimePromises } from '../../test-kit.ts';
 
 describe('emitnlog.utils.debounce', () => {
   beforeEach(() => {
@@ -81,10 +82,10 @@ describe('emitnlog.utils.debounce', () => {
   });
 
   describe('waitForPrevious option', () => {
-    test('should wait for previous promise when waitForPrevious: true', async () => {
+    test('should execute a second time for callers that arrived during in-flight execution', async () => {
       let resolvePromise: (value: string) => void;
       const mockFn = vi.fn(
-        () =>
+        (_value: string) =>
           new Promise<string>((resolve) => {
             resolvePromise = resolve;
           }),
@@ -92,26 +93,36 @@ describe('emitnlog.utils.debounce', () => {
 
       const debouncedFn = debounce(mockFn, { delay: 300, waitForPrevious: true });
 
-      // First call
-      const promise1 = debouncedFn();
+      // First call — fires after the 300ms debounce timer
+      const promise1 = debouncedFn('first');
       vi.advanceTimersByTime(300);
 
-      // Function should be called
+      expect(mockFn).toHaveBeenCalledTimes(1);
+      expect(mockFn).toHaveBeenCalledWith('first');
+
+      // Second call arrives while first execution is still in-flight → queued in nextDeferred
+      const promise2 = debouncedFn('second');
+
+      // Function must NOT start a second execution yet
       expect(mockFn).toHaveBeenCalledTimes(1);
 
-      // Second call while first is still running
-      const promise2 = debouncedFn();
+      // Resolve the first execution
+      resolvePromise!('result-1');
+      await flushFakeTimePromises();
+
+      // promise1 resolves with the first execution's result
+      await expect(promise1).resolves.toBe('result-1');
+
+      // After the first execution completes, a new timer is scheduled for the queued call
       vi.advanceTimersByTime(300);
+      expect(mockFn).toHaveBeenCalledTimes(2);
+      expect(mockFn).toHaveBeenCalledWith('second');
 
-      // Function should not be called again (waiting for first)
-      expect(mockFn).toHaveBeenCalledTimes(1);
+      // Resolve the second execution
+      resolvePromise!('result-2');
 
-      // Resolve the first promise
-      resolvePromise!('result');
-      const [result1, result2] = await Promise.all([promise1, promise2]);
-
-      expect(result1).toBe('result');
-      expect(result2).toBe('result');
+      // promise2 resolves with the SECOND execution's result (not result-1)
+      await expect(promise2).resolves.toBe('result-2');
     });
 
     test('should not wait for previous promise when waitForPrevious: false', async () => {
@@ -341,6 +352,70 @@ describe('emitnlog.utils.debounce', () => {
       await expect(promise2).resolves.toBe(5);
       await expect(promise3).resolves.toBe(5);
 
+      expect(mockFn).toHaveBeenCalledTimes(1);
+    });
+
+    test('should use accumulated args (not raw args) for the leading edge execution', async () => {
+      // The accumulator prepends a sentinel item that is absent from the raw call args.
+      // Before the fix: executeFunction(args) — accumulator result was ignored for leading calls.
+      // After the fix:  executeFunction(lastArgs) — accumulated result is used.
+      const mockFn = vi.fn((items: string[]) => items.join(','));
+      const debouncedFn = debounce(mockFn, {
+        delay: 300,
+        leading: true,
+        accumulator: (prev, current) => {
+          // On first call prev is undefined — prepend 'sentinel' to distinguish from raw args
+          const prevItems = prev?.[0] ?? ['sentinel'];
+          return [[...prevItems, ...current[0]]];
+        },
+      });
+
+      // accumulator(undefined, [['a']]) → [['sentinel', 'a']]
+      // Bug:  executeFunction([['a']])           → mockFn(['a'])          → 'a'
+      // Fix:  executeFunction([['sentinel','a']]) → mockFn(['sentinel','a']) → 'sentinel,a'
+      const promise = debouncedFn(['a']);
+
+      expect(mockFn).toHaveBeenCalledTimes(1);
+      expect(mockFn).toHaveBeenCalledWith(['sentinel', 'a']);
+      await expect(promise).resolves.toBe('sentinel,a');
+    });
+
+    test('should cancel pending waitForPrevious-queued call when cancel is called', async () => {
+      let resolvePromise: (value: string) => void;
+      const mockFn = vi.fn(
+        (_value: string) =>
+          new Promise<string>((resolve) => {
+            resolvePromise = resolve;
+          }),
+      );
+
+      const debouncedFn = debounce(mockFn, { delay: 300, waitForPrevious: true });
+
+      const promise1 = debouncedFn('first');
+      vi.advanceTimersByTime(300);
+
+      // Second call arrives during in-flight first execution → queued in nextDeferred
+      const promise2 = debouncedFn('second');
+
+      // Pre-register rejection handlers before calling cancel to prevent Node's
+      // "unhandled rejection" warning (cancel rejects synchronously, before the awaits below).
+      const caught1 = promise1.catch((e: unknown) => e);
+      const caught2 = promise2.catch((e: unknown) => e);
+
+      // Cancel while first execution is running and second is queued.
+      // cancel() rejects both pendingDeferred (promise1) and nextDeferred (promise2).
+      debouncedFn.cancel();
+
+      // Resolve the in-flight fn() — pendingDeferred is already rejected so this is a no-op.
+      resolvePromise!('result-1');
+      await flushFakeTimePromises();
+
+      // Both promises should have been rejected with CanceledError
+      expect(await caught1).toBeInstanceOf(CanceledError);
+      expect(await caught2).toBeInstanceOf(CanceledError);
+
+      // No second execution should happen
+      vi.advanceTimersByTime(600);
       expect(mockFn).toHaveBeenCalledTimes(1);
     });
   });

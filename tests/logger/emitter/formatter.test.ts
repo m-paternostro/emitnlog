@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../../src/logger/index.ts';
 import { emitter } from '../../../src/logger/index.ts';
@@ -94,6 +94,16 @@ describe('emitnlog.logger.emitter.formatter', () => {
   });
 
   describe('colorfulFormatter', () => {
+    beforeEach(async () => {
+      vi.stubEnv('FORCE_COLOR', '1');
+      vi.resetModules();
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
+
     test('should format with dimmed timestamp, decorated level, and message', () => {
       const formatted = emitter.colorfulFormatter('info', 'Test message', []);
 

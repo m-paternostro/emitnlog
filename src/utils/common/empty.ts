@@ -42,9 +42,7 @@ const createImmutableSet = <T>(target = new Set<T>()): ReadonlySet<T> => {
 
   const deleteFn: Set<T>['delete'] = () => false;
 
-  const clear: Set<T>['clear'] = () => {
-    throw new TypeError('Cannot modify an immutable set.');
-  };
+  const clear: Set<T>['clear'] = () => void 0;
 
   Object.defineProperties(target, {
     add: { value: add, writable: false, enumerable: false, configurable: false },
@@ -80,9 +78,7 @@ const createImmutableMap = <K, V>(target = new Map<K, V>()): ReadonlyMap<K, V> =
 
   const deleteFn: Map<K, V>['delete'] = () => false;
 
-  const clear: Map<K, V>['clear'] = () => {
-    throw new TypeError('Cannot modify an immutable map.');
-  };
+  const clear: Map<K, V>['clear'] = () => void 0;
 
   Object.defineProperties(target, {
     set: { value: setValue, writable: false, enumerable: false, configurable: false },

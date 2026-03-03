@@ -74,8 +74,11 @@ export const parseLines = <T = unknown>(
 
         return parsed;
       } catch (e: unknown) {
-        error = errorify(e);
-        options?.onError?.(error, line);
+        const err = errorify(e);
+        if (!error) {
+          error = err;
+        }
+        options?.onError?.(err, line);
         return undefined;
       }
     })

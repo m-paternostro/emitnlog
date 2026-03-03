@@ -3,6 +3,20 @@
  */
 export const terminalFormatter = {
   /**
+   * Checks if color is enabled.
+   *
+   * Colors are suppressed when the `process` global value is defined and any of these conditions is true:
+   *
+   * - The NO_COLOR environment variable is set,
+   * - When FORCE_COLOR=0 is set.
+   * - When stdout is not a TTY (e.g. piped to a file or CI with no terminal), unless FORCE_COLOR is set to a non-zero
+   *   value.
+   *
+   * @returns True if color is enabled, false otherwise.
+   */
+  isColorEnabled: (): boolean => isTerminalColorEnabled(),
+
+  /**
    * Indents text with spaces.
    *
    * @example
@@ -35,7 +49,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as a dimmed text on a terminal
    */
-  dim: (text: string): string => text && `\x1b[0m\x1b[2m${text}\x1b[0m`,
+  dim: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[2m${text}\x1b[0m`),
 
   /**
    * Formats text in cyan, typically used for informational messages.
@@ -50,7 +64,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as cyan text on a terminal
    */
-  cyan: (text: string): string => text && `\x1b[0m\x1b[36m${text}\x1b[0m`,
+  cyan: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[36m${text}\x1b[0m`),
 
   /**
    * Formats text in green, typically used for positive or noticeable but not alarming messages.
@@ -65,7 +79,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as green text on a terminal
    */
-  green: (text: string): string => text && `\x1b[0m\x1b[32m${text}\x1b[0m`,
+  green: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[32m${text}\x1b[0m`),
 
   /**
    * Formats text in yellow, typically used for cautionary or warning messages.
@@ -80,7 +94,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as yellow text on a terminal
    */
-  yellow: (text: string): string => text && `\x1b[0m\x1b[33m${text}\x1b[0m`,
+  yellow: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[33m${text}\x1b[0m`),
 
   /**
    * Formats text in red, typically used to indicate problems or errors.
@@ -95,7 +109,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as red text on a terminal
    */
-  red: (text: string): string => text && `\x1b[0m\x1b[31m${text}\x1b[0m`,
+  red: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[31m${text}\x1b[0m`),
 
   /**
    * Formats text in magenta, typically used for critical or serious issues.
@@ -110,7 +124,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as magenta text on a terminal
    */
-  magenta: (text: string): string => text && `\x1b[0m\x1b[35m${text}\x1b[0m`,
+  magenta: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[35m${text}\x1b[0m`),
 
   /**
    * Formats text in bold red, typically used for alerts or very serious issues.
@@ -125,7 +139,7 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered as bold red text on a terminal
    */
-  boldRed: (text: string): string => text && `\x1b[0m\x1b[1;31m${text}\x1b[0m`,
+  boldRed: (text: string): string => (!text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[1;31m${text}\x1b[0m`),
 
   /**
    * Formats text with a red background, typically used for emergency or highest severity messages.
@@ -140,5 +154,34 @@ export const terminalFormatter = {
    * @param text
    * @returns A string formatted to be rendered with red background and white text on a terminal
    */
-  redBackground: (text: string): string => text && `\x1b[0m\x1b[41;37m${text}\x1b[0m`,
+  redBackground: (text: string): string =>
+    !text || !isTerminalColorEnabled() ? text : `\x1b[0m\x1b[41;37m${text}\x1b[0m`,
 } as const;
+
+let colorEnabled: boolean | undefined;
+const isTerminalColorEnabled = (): boolean => {
+  if (colorEnabled === undefined) {
+    const checkColorEnabled = (): boolean => {
+      // eslint-disable-next-line no-undef
+      const localProcess = process as unknown;
+      if (localProcess && typeof localProcess === 'object' && 'env' in localProcess && 'stdout' in localProcess) {
+        const { env, stdout } = localProcess as {
+          readonly env?: Record<string, string | undefined>;
+          readonly stdout?: { readonly isTTY?: unknown };
+        };
+
+        if (env?.NO_COLOR || env?.FORCE_COLOR === '0') {
+          return false;
+        }
+
+        if (!env?.FORCE_COLOR && stdout?.isTTY !== true) {
+          return false;
+        }
+      }
+
+      return true;
+    };
+    colorEnabled = checkColorEnabled();
+  }
+  return colorEnabled;
+};
