@@ -15,15 +15,27 @@ describe('emitnlog.logger.factory.createConsoleErrorLogger', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  test('should write logs to console.error', () => {
-    const logger = createConsoleErrorLogger();
+  describe('console.error', () => {
+    beforeEach(async () => {
+      vi.stubEnv('FORCE_COLOR', '1');
+      vi.resetModules();
+    });
 
-    logger.info('Test message');
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    });
 
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    expect(consoleErrorSpy.mock.calls[0][0]).toContain('Test message');
-    expect(consoleErrorSpy.mock.calls[0][0]).toContain('[info     ]');
-    expect(consoleErrorSpy.mock.calls[0][0]).toContain('\x1b[');
+    test('should write logs to console.error', () => {
+      const logger = createConsoleErrorLogger();
+
+      logger.info('Test message');
+
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(consoleErrorSpy.mock.calls[0][0]).toContain('Test message');
+      expect(consoleErrorSpy.mock.calls[0][0]).toContain('[info     ]');
+      expect(consoleErrorSpy.mock.calls[0][0]).toContain('\x1b[');
+    });
   });
 
   test('should pass additional arguments to console.error', () => {

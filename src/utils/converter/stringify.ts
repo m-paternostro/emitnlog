@@ -137,7 +137,8 @@ export const stringify = (value: unknown, options?: StringifyOptions): string =>
         if (safeInstanceOf(val, Error)) {
           try {
             const message = val.message || val.name || '[unknown error]';
-            return includeStack && val.stack ? `${message}\n${val.stack}` : message;
+            const stack = val.stack;
+            return includeStack && stack ? (stack.includes(message) ? stack : `${message}\n${val.stack}`) : message;
           } catch {
             return '[Invalid Error]';
           }

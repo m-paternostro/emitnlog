@@ -1,5 +1,5 @@
 import type { MockInstance } from 'vitest';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { LogLevel } from '../../src/logger/index.ts';
 import {
@@ -20,6 +20,10 @@ describe('emitnlog.logger.factory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+
+    vi.stubEnv('FORCE_COLOR', '1');
+    vi.resetModules();
+
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
@@ -27,6 +31,11 @@ describe('emitnlog.logger.factory', () => {
 
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-15T12:30:45.123Z'));
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
   });
 
   describe('createConsoleLogLogger', () => {

@@ -323,6 +323,30 @@ describe('emitnlog.utils.poll', () => {
     await expect(wait).resolves.toBe('result');
   });
 
+  test('should cancel the timeout timer when poll is closed before timeout expires', async () => {
+    // Before the fix: closing the poll left the delay() timer running; it would fire after close
+    // and call close() again — harmless but wasteful. With cancelableDelay the timer is cleaned up.
+    const operation = vi.fn().mockReturnValue('done');
+
+    const { wait, close } = startPolling(operation, 500, { timeout: 10000, timeoutValue: 'timed-out' });
+
+    vi.advanceTimersByTime(500);
+    expect(operation).toHaveBeenCalledTimes(1);
+
+    // Close the poll well before the 10-second timeout
+    await close();
+
+    // Advance far past the timeout — without cancellation the timeout callback would fire
+    // and overwrite lastResult with 'timed-out', changing the resolved value.
+    vi.advanceTimersByTime(15000);
+    await flushFakeTimePromises();
+
+    // Because the timeout timer was cancelled, wait must resolve with the last polled value
+    await expect(wait).resolves.toBe('done');
+    // No additional operations after close
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
   test('should stop polling based on the earliest of retryLimit, timeout or interrupt', async () => {
     const logger = createTestLogger();
     const operation = vi

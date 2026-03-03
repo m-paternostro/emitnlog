@@ -1,16 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { generateRandomString } from '../../../src/utils/index.ts';
 
 describe('emitnlog.utils.generateRandomString', () => {
-  beforeEach(() => {
-    vi.spyOn(Math, 'random');
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   test('should generate a string of default length (8)', () => {
     const id = generateRandomString();
     expect(id).toHaveLength(8);
@@ -53,17 +45,27 @@ describe('emitnlog.utils.generateRandomString', () => {
     }
   });
 
-  test('should use all character types', () => {
-    // Mock Math.random to return different values to ensure we get different characters
-    const mockRandom = vi.spyOn(Math, 'random');
-    mockRandom
-      .mockReturnValueOnce(0) // 'A'
-      .mockReturnValueOnce(0.5) // 'n'
-      .mockReturnValueOnce(0.99); // '9'
+  test('should use crypto.getRandomValues and not Math.random', () => {
+    expect(generateRandomString.crypto).toBe(crypto);
 
-    const id = generateRandomString();
-    expect(id).toMatch(/[A-Za-z0-9]/);
+    // Math.random should not be called — generation is now cryptographically secure
+    const mathRandomSpy = vi.spyOn(Math, 'random');
+    const getRandomValuesSpy = vi.spyOn(crypto, 'getRandomValues');
 
-    mockRandom.mockRestore();
+    generateRandomString(16);
+
+    expect(mathRandomSpy).not.toHaveBeenCalled();
+    expect(getRandomValuesSpy).toHaveBeenCalled();
+
+    mathRandomSpy.mockRestore();
+    getRandomValuesSpy.mockRestore();
+  });
+
+  test('should produce well-distributed output across the allowed character set', () => {
+    // Generate a large string and verify every character class appears
+    const sample = generateRandomString(128);
+    expect(sample).toMatch(/[A-Z]/); // uppercase
+    expect(sample).toMatch(/[a-z]/); // lowercase
+    expect(sample).toMatch(/[0-9]/); // digit
   });
 });

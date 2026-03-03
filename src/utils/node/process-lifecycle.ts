@@ -230,13 +230,16 @@ export const runProcessMain = (
         if (closer.size) {
           logger.w`the 'closer' on process ${process.pid} is still not empty after closing it, closing it again`;
 
-          // We are closing the 'closer' a few times as a precaution to cover the case in which
-          // closing a closable caused new closables to be added.
-          for (let i = 0; i < 3 && closer.size; i++) {
+          // Close repeatedly to cover the case where closing a closable registers new closables.
+          for (let i = 0; closer.size && i < 10; i++) {
             // eslint-disable-next-line no-await-in-loop
             await safeClose(closer, (error) => {
               logger.args(error).e`an error occurred while closing the 'closer' on process ${process.pid}`;
             });
+          }
+
+          if (closer.size) {
+            logger.w`the 'closer' on process ${process.pid} still has ${closer.size} item(s) after max close attempts, giving up`;
           }
         }
       }

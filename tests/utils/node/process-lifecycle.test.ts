@@ -436,6 +436,55 @@ describe('emitnlog.utils.node.process-lifecycle', () => {
       });
     });
 
+    test('closes resources through multiple levels of cascading registration', async () => {
+      // Before the fix the re-close loop was capped at 3 iterations; cascades deeper than that
+      // silently dropped the remaining resources. The loop is now capped at 10 with a warning.
+      const deferred = createDeferredValue();
+
+      // Build a chain where each resource registers the next one when closed (5 levels deep)
+      const resources = Array.from({ length: 6 }, () => ({ close: vi.fn().mockResolvedValue(undefined) }));
+      for (let i = 0; i < resources.length - 1; i++) {
+        //const next = resources[i + 1];
+        resources[i].close.mockImplementation(({ closer }: { closer: unknown }) => {
+          // Cast needed because mock doesn't capture closure naturally; we capture via runProcessMain below
+          void closer;
+          return Promise.resolve();
+        });
+      }
+
+      let capturedCloser: { add: (r: { close: () => Promise<void> }) => void } | undefined;
+
+      runProcessMain(
+        moduleReference,
+        async ({ closer }) => {
+          capturedCloser = closer as typeof capturedCloser;
+
+          // Wire up the cascade: closing resource[i] adds resource[i+1] to the closer
+          for (let i = 0; i < resources.length - 1; i++) {
+            const nextResource = resources[i + 1];
+            resources[i].close.mockImplementation(() => {
+              capturedCloser?.add(nextResource);
+              return Promise.resolve();
+            });
+          }
+
+          closer.add(resources[0]);
+          await deferred.promise;
+        },
+        { logger: OFF_LOGGER },
+      );
+
+      deferred.resolve();
+
+      // All 6 resources should eventually be closed, including those registered beyond the old cap of 3
+      for (const resource of resources) {
+        // eslint-disable-next-line no-await-in-loop
+        await vi.waitFor(() => {
+          expect(resource.close).toHaveBeenCalledTimes(1);
+        });
+      }
+    });
+
     test('handles logger.close throwing without propagating error on success', async () => {
       const logger = createTestLogger();
       const closeSpy = vi.spyOn(logger, 'close').mockImplementation(() => {

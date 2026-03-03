@@ -45,6 +45,8 @@ export const withTimeout = <T, const R = undefined>(
     () => timeoutValue as R,
     (error: unknown) => {
       if (error instanceof CanceledError) {
+        // The original promise won the race and cancelled the delay. Return a permanently-pending
+        // promise so this branch never settles and doesn't interfere with Promise.race.
         return new Promise<R>(() => void 0);
       }
 
