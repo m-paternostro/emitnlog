@@ -1,5 +1,3 @@
-import type { Writable } from 'type-fest';
-
 import { exhaustiveCheck } from '../../utils/common/exhaustive-check.ts';
 import type { Logger, LogLevel } from '../definition.ts';
 import type { BatchSinkOptions } from '../emitter/batch-sink.ts';
@@ -122,21 +120,8 @@ export function createFileLogger(
   option1?: LogLevel | FileLoggerOptions,
   option2?: LogFormat,
 ): FileLogger {
-  let options: Writable<FileLoggerOptions>;
-  if (isLogLevel(option1)) {
-    options = {};
-    options.level = option1;
-    options.format = option2;
-  } else {
-    options = option1 ?? {};
-  }
-
-  if (!options.level) {
-    options.level = 'info';
-  }
-  if (!options.format) {
-    options.format = 'plain';
-  }
+  const baseOptions: FileLoggerOptions = isLogLevel(option1) ? { level: option1, format: option2 } : (option1 ?? {});
+  const options = { ...baseOptions, level: baseOptions.level ?? 'info', format: baseOptions.format ?? 'plain' };
 
   let formatter = toLogFormatter(options.format);
   if (!options.omitArgs) {
