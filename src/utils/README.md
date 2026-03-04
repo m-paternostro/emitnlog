@@ -29,6 +29,9 @@ A set of helpful utilities for async operations, type safety, and data handling.
   - [asClosable](#asclosable)
   - [asSafeClosable](#assafeclosable)
   - [createCloser](#createcloser)
+- [File Writer (NodeJS)](#file-writer-nodejs)
+  - [createFileWriter](#createfilewriter)
+  - [resolvePath](#resolvepath)
 - [Process Lifecycle (NodeJS)](#process-lifecycle-nodejs)
   - [isProcessRunning](#isprocessrunning)
   - [isProcessMain](#isprocessmain)
@@ -1031,6 +1034,51 @@ If `close()` is called multiple times, previously registered closables are not i
 
 Errors thrown during closing are accumulated and reported consistently using the same strategy as [closeAll](#closeall).
 
+## File Writer (NodeJS)
+
+**Note:** These utilities are NodeJS-only and use Node's `fs` and `path` APIs.
+
+A sequential, queue-based file writer for appending or overwriting text files. Writes are serialized through an internal queue and flushed asynchronously. Useful for logging, audit trails, or any ordered file output.
+
+### createFileWriter
+
+Creates a `FileWriter` that writes to the given file path. The parent directory is created on the first write if it does not exist. Supports `~/` for home-directory expansion and an optional base `directory` for relative paths.
+
+```ts
+import { createFileWriter } from 'emitnlog/utils';
+
+const writer = createFileWriter('./logs/app.log');
+
+writer.write('first line');
+writer.write('second line');
+writer.w`entry ${index}: ${payload}`; // tagged template, interpolated values stringified
+await writer.flush(); // wait for pending writes
+await writer.close();
+```
+
+Options:
+
+- `overwrite` — overwrite the file on the first write; subsequent writes append (default: `false`).
+- `skipNewLine` — do not append a newline after each write (default: `false`).
+- `directory` — base directory when `file` is relative; ignored if `file` is absolute.
+- `encoding` — character encoding (default: `'utf8'`).
+- `mode` — file mode (permissions) when creating the file.
+- `errorHandler` — callback for file I/O errors; if omitted, errors are ignored.
+
+After `close()`, `write` and `w` are no-ops. Call `flush()` to wait for all enqueued writes before closing.
+
+### resolvePath
+
+Resolves a file path to an absolute path. Supports `~/` (home directory) and an optional base directory for relative paths.
+
+```ts
+import { resolvePath } from 'emitnlog/utils';
+
+resolvePath('/absolute/file.txt'); // '/absolute/file.txt'
+resolvePath('~/logs/app.log'); // e.g. '/Users/you/logs/app.log'
+resolvePath('output.log', '/var/app'); // '/var/app/output.log'
+```
+
 ## Process Lifecycle (NodeJS)
 
 **Note:** These utilities are NodeJS-only and use Node-specific APIs like `process` signals and exit codes.
@@ -1064,7 +1112,7 @@ if (!Number.isNaN(pid) && isProcessRunning(pid)) {
 import { isProcessRunning } from 'emitnlog/utils';
 
 const pid = Number(process.env.WORKER_PID);
-if (!Number.isNaN(pid) && !isProcessRunning(pid, { assumeDeadOnEperm: true })) {
+if (!Number.isNaN(pid) && !isProcessRunning(pid, { assumeDeadOnEPERM: true })) {
   console.log('worker is not accessible or already stopped');
 }
 ```
