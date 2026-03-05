@@ -1,10 +1,10 @@
-import { promises as fs } from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 import type { Simplify } from 'type-fest';
 
 import { errorify } from '../../utils/converter/errorify.ts';
+import { createFileWriter } from '../../utils/node/file-writer.ts';
 import type { LogFormatter } from '../emitter/formatter.ts';
 import { plainFormatter } from '../emitter/formatter.ts';
 import type { LogSink } from '../emitter/sink.ts';
@@ -111,13 +111,11 @@ export const fileSink = (
     overwrite: options?.overwrite ?? false,
     encoding: options?.encoding ?? 'utf8',
     mode: options?.mode ?? 0o666,
-    errorHandler: options?.errorHandler
-      ? (error: unknown) => options.errorHandler!(errorify(error))
-      : NO_OP_ERROR_HANDLER,
+    errorHandler: options?.errorHandler ? (error: unknown) => options.errorHandler!(errorify(error)) : undefined,
   } as const satisfies FileSinkOptions;
 
   if (!filePath) {
-    config.errorHandler(new Error('InvalidArgument: file path is required'));
+    config.errorHandler?.(new Error('InvalidArgument: file path is required'));
     return { sink: () => void 0, filePath: '', flush: () => Promise.resolve(), close: () => Promise.resolve() };
   }
 
@@ -141,55 +139,32 @@ export const fileSink = (
     resolvedPath = path.join(path.dirname(resolvedPath), `${datePrefix}_${path.basename(resolvedPath)}`);
   }
 
-  let closed = false;
-  let needsOverwrite = config.overwrite;
-  let writeQueue = Promise.resolve();
-  let initPromise: Promise<void> | undefined;
-
-  const ensureDirectory = (): Promise<void> =>
-    (initPromise ??= fs.mkdir(path.dirname(resolvedPath), { recursive: true }).then(() => void 0));
-
-  const writeMessage = async (message: string): Promise<void> => {
-    await ensureDirectory();
-
-    if (needsOverwrite) {
-      await fs.writeFile(resolvedPath, message, { encoding: config.encoding, mode: config.mode });
-      needsOverwrite = false;
-    } else {
-      await fs.appendFile(resolvedPath, message, { encoding: config.encoding, mode: config.mode });
-    }
-  };
-
-  const queueMessage = (message: string): void => {
-    writeQueue = writeQueue.then(() => writeMessage(message).catch((error: unknown) => config.errorHandler(error)));
-  };
+  const errorHandler = options?.errorHandler && ((error: unknown) => options.errorHandler!(errorify(error)));
+  const writer = createFileWriter(resolvedPath, {
+    overwrite: config.overwrite,
+    errorHandler,
+    encoding: options?.encoding ?? 'utf8',
+    mode: options?.mode ?? 0o666,
+  });
 
   return {
     sink: (level, message, args): void => {
-      if (closed) {
+      if (writer.isClosed()) {
         return;
       }
 
       // Format the message immediately to ensure correct timestamp
-      const formattedMessage = formatter(level, message, args);
-      queueMessage(formattedMessage + '\n');
+      writer.write(formatter(level, message, args));
     },
 
     filePath: resolvedPath,
 
-    async flush(): Promise<void> {
-      await writeQueue;
+    flush(): Promise<void> {
+      return writer.flush();
     },
 
-    async close(): Promise<void> {
-      if (closed) {
-        return;
-      }
-
-      closed = true;
-      await writeQueue;
+    close(): Promise<void> {
+      return writer.close();
     },
   };
 };
-
-const NO_OP_ERROR_HANDLER = (): void => void 0;
