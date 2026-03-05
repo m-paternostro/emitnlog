@@ -1,5 +1,11 @@
 # emitnlog
 
+## 0.18.0
+
+### Minor Changes
+
+- f7f6a86: Add `createFileWriter` and `resolvePath` (Node utils), and refactor file sink to use them.
+
 ## 0.17.0
 
 ### Minor Changes
